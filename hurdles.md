@@ -234,7 +234,7 @@ These come from decisions already made. They're accepted for the first release, 
 These are corrections to the documents themselves, not decisions.
 
 - **The database diagram in v1.md (§4.5) is out of date.** It doesn't show invitations, guard credentials, gates, delegations or inventory reservations. Phase 1 produces a new one from the final schema; until then, the tables in v1.md §4 are correct.
-- **The event lifecycle needs a "closed" state.** Guard passwords are deleted when an event closes, so "closed" should appear in the state machine alongside draft, published, cancelled and archived.
+- ~~**The event lifecycle needs a "closed" state.**~~ **Done (13 October 2026):** v1.md 1.5 adds "closed" to the event state model (§4.6), entered automatically when the last gate closes.
 - **v2.md is out of date.** It's the earlier requirements review and still uses old names. Mark it as replaced by v1.md.
 - **The SOW still has commercial blanks:** the project fee, intellectual property ownership, and support and maintenance after the 30-day warranty.
 

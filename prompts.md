@@ -80,7 +80,7 @@ Don't fix anything yet — just report.
 Read v1.md, techstack.md, sow.md, implementation-plan.md, hurdles.md and limitation.md. v1.md is the single source of truth for table names, roles and API paths. Don't write code yet.
 
 1. Check that techstack.md, sow.md, implementation-plan.md and limitation.md agree with v1.md on table names, roles, API paths, business rules, the QR storage rule and the short code rules. Also check that every Decided hurdle in hurdles.md has been recorded in v1.md and the decision log. List every mismatch with its file and line, and which document should change. Don't edit the documents yourself.
-2. Create doc/state-machines.md with the complete state machines for events, orders, payments, tickets, seats and inventory reservations: every state, every allowed transition, what triggers it, and who may trigger it. Include the states v1.md mentions only in prose (cancelled, expired, partially refunded, refunded, revoked), Pesapal's reversed payments, and a "closed" event state for when the last gate closes (hurdles.md §6).
+2. Create doc/state-machines.md with the complete state machines for events, orders, payments, tickets, seats and inventory reservations: every state, every allowed transition, what triggers it, and who may trigger it. Include the states v1.md mentions only in prose (cancelled, expired, partially refunded, refunded, revoked), Pesapal's reversed payments, and the event state model in v1.md §4.6, including the closed state that a published event enters automatically when its last gate closes.
 3. List anything still ambiguous in the specification, written as questions for me. Include every hurdle still marked Open, with the prompts it blocks.
 ```
 
@@ -267,14 +267,15 @@ No real credentials in any file.
 Implement events in /api as described in implementation-plan.md Phase 2 steps 1–3.
 
 - Create, update, list and show events for organizers; public list and show return published events only.
-- States follow the event state machine in doc/state-machines.md (draft, published, closed, cancelled, archived), with transitions enforced by an enum and a single service. Every transition is audited.
+- States follow the event state model in v1.md §4.6 and doc/state-machines.md (draft, published, closed, cancelled, archived), with transitions enforced by an enum and a single service. Every transition is audited.
+- A scheduled job runs every minute and moves published events to closed once their last gate closing time has passed. No user can set or undo closed. Closed events can't be bought or scanned, and drop out of the public list.
 - Cancelling here only changes the event's state. What happens to tickets already sold follows hurdles.md H5 and is built in P4.4.
 - Name, slug (unique per organizer), description, venue, timezone (an IANA name) and images stored in Supabase Storage with validated type and size.
 - Separate time windows, each validated: sales start and end, gate opening and closing, event start and end. Store times in UTC and return them together with the event's timezone.
 - Policies, tenant-isolation tests and feature tests for every rule.
 ```
 
-**Done when:** the lifecycle and time-window rules are tested, and the public endpoints never return draft events.
+**Done when:** the lifecycle and time-window rules are tested, events close automatically when their last gate closes, and the public endpoints never return draft or closed events.
 
 ### P2.2 — Ticket types, categories, offerings and delegations
 
