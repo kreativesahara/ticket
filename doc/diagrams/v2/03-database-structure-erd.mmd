@@ -1,0 +1,18 @@
+erDiagram
+    USERS ||--o{ EVENTS : organizes
+    EVENTS ||--o{ TICKET_TYPES : offers
+    EVENTS ||--o{ TICKET_CATEGORIES : defines
+    EVENTS ||--o{ DELEGATIONS : contains
+    EVENTS ||--o{ EVENT_GUARDS : assigns
+    EVENTS ||--o{ ORDERS : receives
+    USERS ||--o{ ORDERS : places
+    ORDERS ||--|{ TICKETS : contains
+    ORDERS ||--o{ PAYMENTS : has
+    TICKET_TYPES ||--o{ TICKETS : classifies
+    TICKET_CATEGORIES ||--o{ TICKETS : categorizes
+    DELEGATIONS ||--o{ TICKETS : allocates
+    TICKETS ||--o{ TICKET_SCANS : records
+    EVENTS ||--o{ SEATS : defines
+    SEATS |o--o| TICKETS : reserves
+    EVENTS ||--o{ PROMOTIONS : configures
+    PROMOTIONS |o--o{ ORDERS : discounts

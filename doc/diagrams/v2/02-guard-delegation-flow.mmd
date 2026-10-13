@@ -1,0 +1,12 @@
+flowchart TD
+    A[Platform Admin] --> B[Organizer Account]
+    B --> C[Create Event]
+    C --> D[Invite or Register Guard]
+    D --> E[Assign Event and Gate]
+    E --> F[Guard Login]
+    F --> G[Open Assigned Event]
+    G --> H[Scan QR Code]
+    H --> I{Ticket Valid?}
+    I -- Yes --> J[Mark Ticket Redeemed]
+    J --> K[Show Entry Confirmation]
+    I -- No --> L[Reject and Display Reason]

@@ -1,0 +1,21 @@
+flowchart LR
+    Attendees --> PW[Public Website]
+    Organizers --> OD[Organizer Dashboard]
+    Guards --> GS[Guard Scanner]
+    PA[Platform Admin] --> AD[Admin Dashboard]
+
+    PW --> API[Backend API]
+    OD --> API
+    GS --> API
+    AD --> API
+
+    API --> AUTH[Authentication and Permissions]
+    API --> DB[(Relational Database)]
+    API --> PAY[Payment Service]
+    API --> EMAIL[Email Service]
+    API --> QR[Ticket and QR Service]
+
+    PAY --> MPESA[M-Pesa Gateway]
+    PAY --> CARD[Card Payment Gateway]
+    MPESA -- Verified Webhooks --> API
+    CARD -- Verified Webhooks --> API

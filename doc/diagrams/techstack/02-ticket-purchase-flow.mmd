@@ -1,0 +1,12 @@
+flowchart TD
+    A[Select event and ticket type] --> B[Validate price and availability]
+    B --> C[Reserve inventory transactionally]
+    C --> D[Create pending order]
+    D --> E[Redirect to Pesapal checkout: M-Pesa or card]
+    E --> F{Verified payment result}
+    F -- Successful --> G[Mark payment paid]
+    G --> H[Issue unique tickets]
+    H --> I[Send secure ticket retrieval link]
+    F -- Failed --> J[Fail or expire order]
+    J --> K[Release reserved inventory]
+    F -- Pending --> L[Await callback or reconciliation]
