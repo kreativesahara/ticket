@@ -66,7 +66,7 @@ Rules for guard password accounts:
 
 ### 3. Events
 
-- **3.1** An event goes through these stages: **draft** → **published** → **closed** or **cancelled** → **archived**. A published event closes automatically when its last gate closes. Only published events can be seen and bought by the public.
+- **3.1** An event goes through these stages: **draft** → **published** → **closed** or **cancelled** → **archived**. A published event closes automatically when its last gate closes. Only published events can be seen and bought by the public. A draft that was never published can be deleted; an event that was ever published is never deleted, only archived, so its sales and entry records are kept.
 - **3.2** Each event has: name, description, images, venue, date and time (with its timezone), ticket sales start and end, gate opening and closing times, total capacity, the attendee details required, ticket options, optional seating, gates and guards, and a cancellation and refund policy.
 - **3.3** Three sets of times are separate and independent:
   - **Ticket sales:** when buying starts and stops.

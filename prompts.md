@@ -269,6 +269,7 @@ Implement events in /api as described in implementation-plan.md Phase 2 steps 1โ
 - Create, update, list and show events for organizers; public list and show return published events only.
 - States follow the event state model in v1.md ยง4.6 and doc/state-machines.md (draft, published, closed, cancelled, archived), with transitions enforced by an enum and a single service. Every transition is audited.
 - A scheduled job runs every minute and moves published events to closed once their last gate closing time has passed. No user can set or undo closed. Closed events can't be bought or scanned, and drop out of the public list.
+- DELETE /api/v1/organizer/events/{id} deletes a draft that was never published, with an audit log entry. Any other event returns a conflict response: once published, an event can only be archived (from closed or cancelled), never deleted.
 - Cancelling here only changes the event's state. What happens to tickets already sold follows hurdles.md H5 and is built in P4.4.
 - Name, slug (unique per organizer), description, venue, timezone (an IANA name) and images stored in Supabase Storage with validated type and size.
 - Separate time windows, each validated: sales start and end, gate opening and closing, event start and end. Store times in UTC and return them together with the event's timezone.

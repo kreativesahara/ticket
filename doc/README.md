@@ -12,6 +12,7 @@ Rendered from the Mermaid blocks in the project specifications. Each diagram is 
 | 4 | Order states | §4.6 Important state models | [mmd](diagrams/v1/04-order-states.mmd) · [svg](diagrams/v1/04-order-states.svg) · [png](diagrams/v1/04-order-states.png) |
 | 5 | Ticket states | §4.6 Important state models | [mmd](diagrams/v1/05-ticket-states.mmd) · [svg](diagrams/v1/05-ticket-states.svg) · [png](diagrams/v1/05-ticket-states.png) |
 | 6 | Payment-to-ticket issuance sequence | §6 Payment-to-ticket issuance workflow | [mmd](diagrams/v1/06-payment-to-ticket-sequence.mmd) · [svg](diagrams/v1/06-payment-to-ticket-sequence.svg) · [png](diagrams/v1/06-payment-to-ticket-sequence.png) |
+| 7 | Event states | §4.6 Important state models | [mmd](diagrams/v1/07-event-states.mmd) · [svg](diagrams/v1/07-event-states.svg) · [png](diagrams/v1/07-event-states.png) |
 
 ### 1. High-level architecture
 
@@ -21,7 +22,9 @@ Rendered from the Mermaid blocks in the project specifications. Each diagram is 
 
 ![Core relationships ERD](diagrams/v1/02-core-relationships-erd.svg)
 
-### 3–5. State models
+### 3–5 and 7. State models
+
+![Event states](diagrams/v1/07-event-states.svg)
 
 | Payment | Order | Ticket |
 |---|---|---|

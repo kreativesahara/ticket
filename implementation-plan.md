@@ -228,7 +228,7 @@ These items can delay launch no matter how fast development goes:
 
 ### Backend
 
-1. **Event lifecycle.** Draft → published → closed (set automatically when the last gate closes) or cancelled → archived, as in v1.md §4.6, enforced by the backend. A scheduled job moves published events to closed. Store times in UTC alongside the event's own timezone.
+1. **Event lifecycle.** Draft → published → closed (set automatically when the last gate closes) or cancelled → archived, as in v1.md §4.6, enforced by the backend. A scheduled job moves published events to closed. Unpublished drafts can be deleted; events that were ever published are only archived, never deleted. Store times in UTC alongside the event's own timezone.
 2. **Event details and media.** Name, description, venue and images, with images stored in Supabase Storage.
 3. **Time windows.** Store and validate each window separately: sales start and end, gate opening and closing, and event start and end.
 4. **Ticket types and categories.** Seed the defaults (Early Bird, Normal, At the Gate, Group and Promoted; VVIP, VIP and Media) and let organizers add their own.

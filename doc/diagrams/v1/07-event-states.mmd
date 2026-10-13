@@ -1,0 +1,8 @@
+stateDiagram-v2
+    [*] --> Draft
+    Draft --> [*] : deleted
+    Draft --> Published
+    Published --> Closed : last gate closes
+    Published --> Cancelled
+    Closed --> Archived
+    Cancelled --> Archived
