@@ -4,7 +4,7 @@ Ready-to-paste prompts for an AI coding assistant (such as Claude Code or Cursor
 
 ## How to use these prompts
 
-1. **Finish Phase 0's human tasks first.** Settle the decision log (implementation-plan.md §11), submit the Pesapal merchant application and run the hosting check. Several prompts depend on those answers.
+1. **Finish Phase 0's human tasks first.** Settle the decision log (implementation-plan.md §11), work through the open hurdles in [hurdles.md](hurdles.md) (H1–H5 first, because they change the database and payment design), get the business rules in [limitation.md](limitation.md) signed off, submit the Pesapal merchant application and run the hosting check. Several prompts depend on those answers, and each one names the hurdles it depends on.
 2. **Give the assistant the project context.** Paste [the context block](#project-context) at the start of every new session. Alternatively, save it in your tool's project instructions file (`CLAUDE.md` for Claude Code) so it loads automatically.
 3. **Run one prompt at a time, in order.** Review the changes and the test results. Don't move on until the prompt's **Done when** checks pass.
 4. **Commit after every prompt**, so any step can be undone on its own.
@@ -24,9 +24,11 @@ You are building a multi-organizer event ticketing platform. Organizers create e
 SOURCE DOCUMENTS (they are the specification — read the relevant parts before each task):
 - implementation-plan.md — phases, steps, exit criteria and the decision log (§11). Follow it.
 - v1.md — requirements, and the single source of truth for table names, roles and API paths: permissions matrix (§3), schema (§4), state models (§4.6), API (§5).
-- doc/state-machines.md — complete state machines for orders, payments, tickets, seats and reservations (created in P0.1).
+- doc/state-machines.md — complete state machines for events, orders, payments, tickets, seats and reservations (created in P0.1).
 - techstack.md — architecture and stack.
 - sow.md — contractual scope. Never build anything listed in §9 "Out of scope".
+- hurdles.md — known gaps (H1–H13), each marked Open or Decided. An open hurdle is an undecided requirement: don't guess, ask me.
+- limitation.md — the client-facing business rules (Part A), accepted limitations (Part B) and client decisions (Part C). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
 
 STACK:
 - /api — Laravel (latest stable release), PostgreSQL on Supabase. Admins, organizers and staff sign in with Google OAuth through Laravel Socialite. Guards can also use an email and password that is valid only for their assigned event. Sanctum SPA cookie sessions after sign-in.
@@ -48,7 +50,7 @@ NON-NEGOTIABLE RULES:
 
 HOW TO WORK:
 - Before coding, restate the task as a short plan and name the files you'll change.
-- If the task depends on a decision that is still open in implementation-plan.md §11, stop and ask me.
+- If the task depends on a decision that is still open in implementation-plan.md §11, or on a hurdle still marked Open in hurdles.md, stop and ask me.
 - Stay within the scope of the current prompt. Note anything else you notice, but don't build it.
 - Keep the OpenAPI contract (/api/docs/openapi.yaml) up to date whenever endpoints change.
 - When finished: run the full test suite, linters and type checks; show the results; summarize what changed; list any deviation from the specification and why.
@@ -63,6 +65,7 @@ Run this at the end of every phase.
 ```text
 Check Phase <N> of implementation-plan.md against the current code.
 For each exit criterion, report: PASS, FAIL or NOT TESTED; the test or file that proves it; and what's missing.
+List any hurdle in hurdles.md that should be decided by the next phase and is still Open.
 Then run the full test suite and report the results.
 Don't fix anything yet — just report.
 ```
@@ -74,11 +77,11 @@ Don't fix anything yet — just report.
 ### P0.1 — Specification check and state machines
 
 ```text
-Read v1.md, techstack.md, sow.md and implementation-plan.md. v1.md is the single source of truth for table names, roles and API paths. Don't write code yet.
+Read v1.md, techstack.md, sow.md, implementation-plan.md, hurdles.md and limitation.md. v1.md is the single source of truth for table names, roles and API paths. Don't write code yet.
 
-1. Check that techstack.md, sow.md and implementation-plan.md agree with v1.md on table names, roles, API paths and the QR storage rule. List every mismatch with its file and line, and which document should change. Don't edit the documents yourself.
-2. Create doc/state-machines.md with the complete state machines for orders, payments, tickets, seats and inventory reservations: every state, every allowed transition, what triggers it, and who may trigger it. Include the states v1.md mentions only in prose (cancelled, expired, partially refunded, refunded, revoked) and Pesapal's reversed payments.
-3. List anything still ambiguous in the specification, written as questions for me.
+1. Check that techstack.md, sow.md, implementation-plan.md and limitation.md agree with v1.md on table names, roles, API paths, business rules, the QR storage rule and the short code rules. Also check that every Decided hurdle in hurdles.md has been recorded in v1.md and the decision log. List every mismatch with its file and line, and which document should change. Don't edit the documents yourself.
+2. Create doc/state-machines.md with the complete state machines for events, orders, payments, tickets, seats and inventory reservations: every state, every allowed transition, what triggers it, and who may trigger it. Include the states v1.md mentions only in prose (cancelled, expired, partially refunded, refunded, revoked), Pesapal's reversed payments, and a "closed" event state for when the last gate closes (hurdles.md §6).
+3. List anything still ambiguous in the specification, written as questions for me. Include every hurdle still marked Open, with the prompts it blocks.
 ```
 
 **Done when:** no mismatches remain, the state machines are written down, and you've answered the open questions.
@@ -138,6 +141,8 @@ Any failure must fail the build.
 ```text
 Using v1.md §4 (every table and column) and doc/state-machines.md, write Laravel migrations for the full MVP schema, including seating, so that later phases need no structural rework.
 
+First check hurdles.md H1 (settlement and payout records), H3 (zero-total orders and delegation claim codes), H5 (cancelled and postponed events) and H12 (anonymizing personal data while keeping financial records). Each can add tables or columns. If any is still Open, ask me before writing migrations.
+
 Requirements:
 - UUID primary keys for records referenced from outside the system.
 - A foreign key for every ownership relationship. Choose delete behavior deliberately: never cascade-delete orders, payments, tickets or audit logs.
@@ -146,11 +151,11 @@ Requirements:
 - Money as bigint minor units plus a char(3) currency column.
 - Status columns as strings backed by PHP enums, one enum per state machine in doc/state-machines.md.
 
-Also create Eloquent models with relationships and enum casts, a factory for every model, and a Mermaid ERD of the final schema at doc/diagrams/erd.mmd.
+Also create Eloquent models with relationships and enum casts, a factory for every model, and a Mermaid ERD of the final schema at doc/diagrams/erd.mmd. It replaces the outdated diagram in v1.md §4.5; follow the tables in v1.md §4, not that diagram.
 Run the migrations from scratch against local PostgreSQL and show the output.
 ```
 
-**Done when:** `migrate:fresh` succeeds, every model has a factory, and the ERD matches v1.md §4.
+**Done when:** `migrate:fresh` succeeds, every model has a factory, and the ERD matches the tables in v1.md §4.
 
 ### P1.4a — Google sign-in
 
@@ -212,6 +217,8 @@ Then implement the conventions in /api:
 - One pagination format with a standard response envelope.
 - A request correlation ID: accept X-Request-Id or generate one, return it in the response, and include it in every log line.
 
+Guest buyers have no account, so an order must never be readable by its ID alone. Follow hurdles.md H11 for how guests reach their order (the recommendation is through their retrieval link only, with GET /api/v1/orders/{id} for organizers and admins); ask me if it's still Open.
+
 Add a test that checks the implemented endpoints match the contract (route list against the OpenAPI paths).
 ```
 
@@ -260,7 +267,8 @@ No real credentials in any file.
 Implement events in /api as described in implementation-plan.md Phase 2 steps 1–3.
 
 - Create, update, list and show events for organizers; public list and show return published events only.
-- States: draft → published → cancelled or archived, with transitions enforced by an enum and a single service. Every transition is audited.
+- States follow the event state machine in doc/state-machines.md (draft, published, closed, cancelled, archived), with transitions enforced by an enum and a single service. Every transition is audited.
+- Cancelling here only changes the event's state. What happens to tickets already sold follows hurdles.md H5 and is built in P4.4.
 - Name, slug (unique per organizer), description, venue, timezone (an IANA name) and images stored in Supabase Storage with validated type and size.
 - Separate time windows, each validated: sales start and end, gate opening and closing, event start and end. Store times in UTC and return them together with the event's timezone.
 - Policies, tenant-isolation tests and feature tests for every rule.
@@ -277,6 +285,7 @@ Implement ticket configuration as described in implementation-plan.md Phase 2 st
 - Offerings: each allowed type × category combination, with a price in minor units, a currency, capacity, a sales window, a minimum and maximum per order, and a status. Group types define their required quantity. Media can be flagged "approval required".
 - Delegations: name, allocation, allowed categories, price rule and status.
 - Validation: the total capacity of all offerings can't exceed the event's capacity, and an offering's capacity can't drop below what has been sold plus what is held.
+- How delegation members claim their tickets (hurdles.md H3, for example a private link or access code) and how At the Gate tickets are sold (H4) are still to be decided. Ask me before building either, if they're still Open.
 - Policies, tenant-isolation tests and feature tests.
 ```
 
@@ -304,7 +313,7 @@ Implement gates and staff as described in implementation-plan.md Phase 2 step 8.
 - Gates for each event, with a name, opening and closing times, and a status.
 - Guard invitations by email, using the invitation flow from P1.5 with the role guard and the event (and optional gate) attached. The guard accepts by signing in with a Google account that uses the invited email. Invitations expire and can only be used once.
 - Guard password accounts (techstack.md §3): POST /api/v1/organizer/guards creates the account (name and email) with managed_by_organizer_id set to the creating organizer. A password account is assigned to one event at a time. POST /api/v1/organizer/guards/{id}/password issues a temporary password for the guard's current assignment: it creates a guard_credentials row, returns the password once in the response and never again, and revokes any earlier credential and its sessions. PATCH /api/v1/organizer/guards/{id} disables or re-enables the account. Only the owning organizer or a platform admin can assign, issue passwords for or disable a password guard.
-- Revocation when the event closes: a scheduled job runs every minute. For every event that has closed (last gate closing time passed, or cancelled or archived), it deletes the password hash of each of its guard credentials, sets revoked_at, deletes the guards' sessions, ends their assignments and writes an audit log entry. Cancelling or archiving an event triggers the same revocation immediately. Keep the guard's user record, so scan records still name them.
+- Revocation when the event closes: a scheduled job runs every minute. For every event that has closed (last gate closing time passed, or cancelled or archived), it deletes the password hash of each of its guard credentials, sets revoked_at, deletes the guards' sessions, ends their assignments and writes an audit log entry. Cancelling or archiving an event triggers the same revocation immediately. Keep the guard's user record, so scan records still name them. Whether the same job also ends the assignments of Google-signed-in guards follows hurdles.md H8 (recommended: yes); ask me if it's still Open.
 - Assignments link a guard to an event and, optionally, a gate. Organizers can remove assignments. Assignment changes are audited.
 - An endpoint for a guard to list only their current assignments.
 - Tests: a guard sees only their own assignments and can't reach any organizer endpoint; an expired or reused invitation fails; signing in with a different Google email doesn't accept the invitation; another organizer can't assign or issue a password for a password guard; a temporary password can't be retrieved after it's issued; a password account can't be assigned to a second open event; once the last gate closes, the password hash is gone, the guard can't sign in and their session has ended; cancelling an event revokes its guard passwords immediately; and the guard's past scans still show their name.
@@ -401,7 +410,7 @@ Show me the test output.
 Implement hold expiry as described in implementation-plan.md Phase 3 step 3.
 - A scheduled job runs every minute. It finds expired active reservations, releases them (decrementing reserved_count in the same transaction) and marks their pending orders as expired.
 - It must be safe to run concurrently and to run twice, so a reservation is never released twice.
-- An endpoint that returns an order's status and its hold expiry time for the checkout countdown.
+- An endpoint that returns an order's status and its hold expiry time for the checkout countdown. It follows the guest access rule from P1.6 (hurdles.md H11): knowing the order ID alone isn't enough.
 - Tests: expired holds return inventory; paid orders are never expired; running the job twice changes nothing the second time.
 ```
 
@@ -413,7 +422,8 @@ Implement hold expiry as described in implementation-plan.md Phase 3 step 3.
 Implement the rest of order building, as described in implementation-plan.md Phase 3 steps 4–7.
 
 - Validate purchaser and attendee data with the validator from P2.3, and store the purchaser separately from ticket holders.
-- Pricing service (backend only): unit price × quantity, group rules, then discounts. Order items keep a snapshot of the unit price, discount, fees and currency.
+- Pricing service (backend only): unit price × quantity, group rules, then discounts. Order items keep a snapshot of the unit price, discount, fees and currency. Any platform fee follows implementation-plan.md §11 #2 (ask me if it's still open).
+- Orders that total zero (a 100% discount or a free delegation) follow hurdles.md H3. The recommendation is to skip payment and issue tickets with the same checks and audit trail; ask me if it's still Open.
 - Core promotions: percentage or fixed discount; eligible offerings; start and end dates; a total usage limit; a per-buyer limit (by email); a minimum quantity or order value. Count usage against the hold so concurrent orders can't exceed a limit, and release the usage when the hold expires.
 - POST /api/v1/orders/{id}/apply-promotion, which recalculates the totals.
 - Order states follow doc/state-machines.md.
@@ -429,6 +439,7 @@ Build checkout in /web.
 - From the event page: choose an offering and quantity → purchaser and attendee forms generated from the event's setup (per-ticket forms only in "every ticket" mode) → promo code → order summary from the API → a "Continue to payment" placeholder.
 - A visible countdown for the hold. When it expires, explain clearly and offer to start again.
 - Handle sold-out and sales-closed responses gracefully.
+- Bot protection for high-demand events (for example a CAPTCHA) follows hurdles.md H13. Don't add it unless it has been decided.
 - The forms are accessible, with labels, keyboard support and readable error messages.
 - Component tests for the dynamic attendee form, plus one Playwright test of the happy path up to the payment placeholder.
 ```
@@ -496,6 +507,7 @@ Implement the Pesapal provider adapter, following the Pesapal API 3.0 documentat
 Implement implementation-plan.md Phase 4 steps 6–8.
 - Reconciliation job: every few minutes (configurable), query the provider about payments that have been pending longer than a threshold. Resolve them through the same transactional path as notifications, or flag them. Record a reconciliation report.
 - Refunds: start them through the provider where it supports refunds, and track their status. Move the order to partially refunded or refunded. After a full refund, revoke its tickets. Follow the refund approval rules in implementation-plan.md §11 #12, and audit every refund.
+- Cancelled and postponed events: follow hurdles.md H5 (recommended: cancelling revokes every ticket, refunds in bulk and emails every buyer; postponing keeps tickets valid and offers refunds for a set period). Ask me if it's still Open.
 - Payment history endpoints: organizers see their own events; platform admins see everything, with filters by status, provider and date.
 - Tests for each.
 ```
@@ -508,7 +520,7 @@ Implement implementation-plan.md Phase 4 steps 6–8.
 Build the payment step in /web.
 - "Pay now" starts the payment and sends the buyer to Pesapal's hosted checkout, where they choose M-Pesa or card. Use a full-page redirect unless I ask for an embedded frame.
 - The callback page Pesapal returns the buyer to shows "Confirming your payment…" and checks the order status from the API every few seconds until it's final. It shows clear outcomes for paid, failed and still pending (with a note that the email will follow), plus a retry button for failed payments while the hold is still active.
-- The result always comes from the API's status, never from redirect parameters.
+- The result always comes from the API's status, never from redirect parameters. The status check follows the guest access rule from P1.6 (hurdles.md H11).
 In /manage, add payment history and reconciliation screens for organizers and admins, showing the Pesapal payment method and confirmation code.
 Add a Playwright test of the payment flow against the FakeProvider.
 ```
@@ -542,6 +554,7 @@ Implement implementation-plan.md Phase 5 steps 3–4.
 - GET /api/v1/ticket-access/{token} returns the order's tickets for a valid token only.
 - POST /api/v1/ticket-access/resend: the buyer enters their email address and order reference, and a new link is emailed. Rate-limit it, and always return the same response so it doesn't reveal whether an order exists.
 - Email: a queued Laravel notification, sent from the outbox record written in P4.2, with retries and logged failures. Use the provider from implementation-plan.md §11 #9.
+- Other buyer messages (order confirmation, event changes, cancellations, and whether SMS is in scope) follow hurdles.md H9, and receipts follow H10. Build only what has been decided, and ask me about anything still Open.
 - Document the SPF, DKIM and DMARC DNS records the client must add, in doc/email-setup.md.
 - Tests for valid, expired and revoked tokens, for the resend rate limit, and for the email being queued exactly once per order.
 ```
@@ -593,6 +606,7 @@ Redeem with one atomic update:
 - Log every attempt in ticket_scans, including rejected ones: result, gate, guard, time and method (qr or short_code).
 - The response contains only: the result, the reason, the category, the attendee name where collected, the seat or delegation, and, for a ticket already used, the earlier time and gate.
 - Rate-limit by guard.
+- Re-entry is not supported: a redeemed ticket never admits again (hurdles.md H7, limitation.md rule 9.10). If that decision has changed, stop and ask me.
 ```
 
 **Done when:** valid tickets are admitted once, and every rejection reason is returned correctly.
@@ -640,6 +654,8 @@ Implement implementation-plan.md Phase 7 steps 1–3.
 - Complete any promotion rules from SOW §2.8 that P3.4 didn't cover, plus redemption tracking.
 - Organizer report endpoints (own events only): sales by offering, payment status, remaining capacity, promotion performance, attendance, and gate activity by time and gate.
 - Admin report endpoints: platform-wide summaries, transaction oversight, and an audit log search filtered by actor, organizer, action and date.
+- If hurdles.md H1 has been decided: a settlement report per organizer and event (sales, refunds, fees and amount owed) and a log for recording each manual payout.
+- Build the scope items in hurdles.md §4 (for example CSV exports of attendee and sales lists) only if they have been confirmed as in scope.
 - Reports must match the order and payment records exactly. Write tests that compare report totals with direct sums.
 - Tenant-isolation tests for every report endpoint.
 ```
@@ -716,7 +732,7 @@ First report your findings ranked by severity, each with its location and the fi
 ### P8.3 — Performance tests
 
 ```text
-Write k6 scripts for the performance targets recorded in implementation-plan.md Phase 0 step 6:
+Write k6 scripts for the performance targets recorded in implementation-plan.md Phase 0 step 6, sized to the client's largest expected event and peak buyer numbers (hurdles.md H13):
 - A checkout burst: many buyers ordering from one event at the same moment (FakeProvider for payments).
 - Scan throughput: several guards scanning in parallel.
 Report response times (median and 95th percentile) against the targets, and identify the slowest queries. Suggest indexes or fixes and apply them after I approve.
@@ -740,8 +756,9 @@ Set up production monitoring as described in implementation-plan.md Phase 8 step
 
 ```text
 Prepare the go-live and handover documents described in implementation-plan.md Phase 8 steps 7–11:
-- doc/go-live-checklist.md: production environment variables, cron, HTTPS on all subdomains, Sanctum production domains, the production Google OAuth client with its callback URL and published consent screen, production Pesapal keys and the production IPN registration, email DNS records, backups confirmed, monitoring active, the smoke test, and one real low-value payment with each method followed by a refund.
+- doc/go-live-checklist.md: production environment variables, cron, HTTPS on all subdomains, Sanctum production domains, the production Google OAuth client with its callback URL and published consent screen, production Pesapal keys and the production IPN registration, email DNS records, backups confirmed, monitoring active, the privacy notice and retention rules in place (hurdles.md H12), every hurdle in hurdles.md Decided or accepted, limitation.md signed off, the smoke test, and one real low-value payment with each method followed by a refund.
 - Update doc/deployment.md and the OpenAPI contract so they match the final code.
+- A known issues list for the handover, starting from the known limitations in hurdles.md §5 and limitation.md Part B.
 - doc/admin-guide.md and doc/organizer-guide.md: plain-language guides with the main tasks step by step.
 - A test results summary for deliverable D11, mapping each SOW §5 acceptance criterion to the tests that prove it.
 ```
