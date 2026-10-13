@@ -141,7 +141,7 @@ Using v1.md §4 (every table and column) and doc/state-machines.md, write Larave
 Requirements:
 - UUID primary keys for records referenced from outside the system.
 - A foreign key for every ownership relationship. Choose delete behavior deliberately: never cascade-delete orders, payments, tickets or audit logs.
-- Unique constraints: user email; event slug per organizer; ticket_number; qr_token_hash; (provider, provider_reference) on payments, where the reference is Pesapal's order tracking ID; idempotency_key; and one active ticket per seat per event (a partial unique index). Pesapal notifications carry no unique event ID, so don't add a unique key on webhook events; idempotency comes from the payment and order checks in P4.2.
+- Unique constraints: user email; event slug per organizer; ticket_number; qr_token_hash; (event_id, short_code_hash); (provider, provider_reference) on payments, where the reference is Pesapal's order tracking ID; idempotency_key; and one active ticket per seat per event (a partial unique index). Pesapal notifications carry no unique event ID, so don't add a unique key on webhook events; idempotency comes from the payment and order checks in P4.2.
 - CHECK constraints where they're cheap: non-negative counts and amounts, and capacity - sold_count - reserved_count >= 0.
 - Money as bigint minor units plus a char(3) currency column.
 - Status columns as strings backed by PHP enums, one enum per state machine in doc/state-machines.md.
@@ -527,8 +527,9 @@ Add a Playwright test of the payment flow against the FakeProvider.
 Implement ticket issuance as described in implementation-plan.md Phase 5 steps 1–2.
 - Issue tickets inside the payment transaction from P4.2: one ticket per unit bought, each with a unique, non-sequential ticket number, linked to its attendee, offering, delegation and seat where applicable.
 - QR credential: a random token with at least 128 bits of entropy. The QR code contains only this token. Store its hash in qr_token_hash for lookups and an encrypted copy in qr_token_encrypted (Laravel's encrypted cast) so the ticket page can show the QR again, as v1.md §4.3 requires. Never store it in plain text.
+- Short code: a random 6-character code from an alphabet without easily confused characters (no 0/O or 1/I/L), unique within the event (generate again on a collision). Store a keyed hash (HMAC with a server-side secret) in short_code_hash for lookups and an encrypted copy in short_code_encrypted for display. A plain hash isn't enough, because every six-character combination can be tried in seconds.
 - Issuing must be idempotent: processing the same paid order twice never creates extra tickets.
-- Tests: the correct number of tickets, uniqueness, no personal data in the QR payload, and repeated processing creating no duplicates.
+- Tests: the correct number of tickets, uniqueness of QR tokens and of short codes within an event, no personal data in the QR payload, no plain-text QR tokens or short codes in the database, and repeated processing creating no duplicates.
 ```
 
 **Done when:** paid orders produce exactly the right tickets, even when a notification is processed twice.
@@ -562,7 +563,7 @@ Implement implementation-plan.md Phase 5 steps 5–6.
 
 ```text
 Build:
-- /web ticket page at /t/{token}: event details in the event's timezone, category, attendee name (where collected), ticket number, seat or delegation, and the QR code rendered from the token. Add a download as PDF or image, and a link to request a new retrieval link.
+- /web ticket page at /t/{token}: event details in the event's timezone, category, attendee name (where collected), ticket number, seat or delegation, the QR code rendered from the token, and the 6-character short code printed clearly beside it (grouped as three and three characters, for example K7P 3QX). Add a download as PDF or image that includes the short code, and a link to request a new retrieval link.
 - /manage organizer screens: a ticket list with search by ticket number, name or email; revoke with a reason; and the Media approval queue and manual issue form.
 Add a Playwright test: complete a fake payment → open the emailed link (captured in test mode) → the ticket page shows the right number of QR codes.
 ```
@@ -587,7 +588,9 @@ Redeem with one atomic update:
     WHERE id = :id AND event_id = :event_id AND status = 'valid';
 1 row updated = admit. 0 rows = already redeemed (or the status changed).
 
-- Log every attempt in ticket_scans, including rejected ones: result, gate, guard and time.
+- The endpoint accepts either a QR token or a 6-character short code (case-insensitive; spaces and dashes ignored). A short code is looked up by its keyed hash within this event only, then goes through exactly the same checks and the same atomic update.
+- Short code entry is rate-limited per guard (for example, 10 per minute). After 5 invalid codes in a row, lock short code entry for that guard until the organizer unlocks it, and notify the organizer. QR scanning keeps working during a lock.
+- Log every attempt in ticket_scans, including rejected ones: result, gate, guard, time and method (qr or short_code).
 - The response contains only: the result, the reason, the category, the attendee name where collected, the seat or delegation, and, for a ticket already used, the earlier time and gate.
 - Rate-limit by guard.
 ```
@@ -599,6 +602,7 @@ Redeem with one atomic update:
 ```text
 Write tests for implementation-plan.md Phase 6 steps 9–10:
 - Simultaneous scans: 10 parallel requests from different guards for the same ticket. Exactly one is admitted and nine get "already redeemed". Run against PostgreSQL with real parallel processes.
+- Short codes: a valid short code admits once; a QR scan and a short code entry for the same ticket at the same moment admit exactly once; a short code from another event is rejected; 5 invalid codes in a row lock short code entry for that guard, while QR scanning still works.
 - One test for each rejection case: wrong event, wrong gate, revoked, unpaid, before the gate opens, after it closes, unknown token, a guard not assigned, a guard whose assignment was removed, a password guard scanning a ticket from a different event, and a password guard whose event has closed (their session must already be gone).
 - Every attempt appears in ticket_scans.
 Show me the output.
@@ -611,6 +615,7 @@ Show me the output.
 ```text
 Build the guard area in /manage, designed for phones first:
 - Sign in (with Google, or with a guard email and password) → list of assigned events → choose a gate → full-screen camera scanner. Include a visible "Sign out" button for shift changes on shared phones. When a password guard's event closes, show that their access has ended. Use a maintained browser QR-scanning library and tell me which one you chose and why. Note that camera access requires HTTPS.
+- An "Enter code" button for when a QR code won't scan. The guard asks the attendee to show their downloaded or printed ticket and types its 6-character short code on a large keypad with letters and numbers. The result screen shows the attendee name (where collected) and category, so the guard can compare it with the ticket shown. If short code entry is locked, say so clearly and point the guard back to QR scanning.
 - Result screens: large and high-contrast, readable at arm's length, each with a distinct color and icon, plus a sound or vibration where the device supports it. The four states are VALID (admit), ALREADY USED (show the time and gate), INVALID (show the reason) and UNABLE TO VERIFY.
 - Fail closed: a timeout (about 5 seconds, configurable) or a network error shows "Unable to verify — do not admit". It must never show success.
 - After each result, the scanner returns to scanning with one tap.
@@ -689,7 +694,7 @@ Build:
 Write Playwright end-to-end tests for the full journey, running against staging-like settings with the FakeProvider:
 1. An organizer creates and publishes an event with two offerings.
 2. A buyer purchases tickets (one simulated M-Pesa payment and one simulated card payment), receives the email (captured in test mode) and opens the tickets.
-3. A guard signed in with a guard password account scans each ticket: admitted. Scanning one again: "already used".
+3. A guard signed in with a guard password account scans each ticket: admitted. One ticket is admitted by typing its short code instead. Scanning one again: "already used".
 4. The organizer sees the sale, the payment and the attendance in the reports.
 5. A refund revokes the tickets, and a scan then shows "invalid".
 6. When the event's last gate closes, the password guard is signed out and can't sign in again.

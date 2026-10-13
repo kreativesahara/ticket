@@ -204,7 +204,9 @@ Buyers choose M-Pesa or card on Pesapal's hosted checkout, so card details never
 flowchart TD
     A[Guard signs in] --> B[Validate assigned event and gate]
     B --> C[Scan QR code]
+    B --> C2[QR fails: enter 6-character code from the ticket]
     C --> D[Laravel validates ticket credential]
+    C2 --> D
     D --> E{Ticket eligible?}
     E -- No --> F[Reject with reason]
     E -- Yes --> G[Atomically redeem ticket]
@@ -217,6 +219,8 @@ flowchart TD
 The redemption must happen in a database transaction with appropriate locking or a conditional atomic update. A frontend check followed by a separate database update is not enough: two guards could scan the same ticket almost simultaneously.
 
 For the MVP, online-only scanning is sensible. The scanner should clearly distinguish **valid**, **already-used**, **invalid** and **unavailable** results.
+
+If a QR code won't scan, the guard asks the attendee to show their downloaded or printed ticket and types its **6-character short code**. The short code goes through the same checks and the same one-time redemption as a scan, and the result shows the attendee's name (where collected) so the guard can compare it with the ticket. Six characters are much easier to guess than a QR token, so short code entry is rate-limited per guard and locks after repeated invalid codes. Short codes are stored as a keyed hash for lookup plus an encrypted copy for display (v1.md §4.3).
 
 ---
 

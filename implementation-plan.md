@@ -1,6 +1,6 @@
 # Implementation Plan: Multi-Organizer Event Ticketing Platform
 
-**Version 1.3 · 13 October 2026 · System design and analysis**
+**Version 1.4 · 13 October 2026 · System design and analysis**
 
 **Based on:** [v1.md](v1.md) (requirements specification), [sow.md](sow.md) (statement of work), [techstack.md](techstack.md) (architecture blueprint) and [v2.md](v2.md) (requirements review).
 
@@ -372,7 +372,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 ### Backend
 
 1. **Issuance**, inside the payment transaction: one ticket per unit bought, each with a unique, non-sequential ticket number, plus its attendee, offering, delegation and seat where applicable.
-2. **QR credential.** Generate a random, hard-to-guess token. The QR code contains only this token and no personal details. Store it twice, as v1.md §4.3 requires: a hash (`qr_token_hash`) to find the ticket when it's scanned, and an encrypted copy (`qr_token_encrypted`) so the ticket page can show the QR code again. Never store it in plain text. The encryption uses Laravel's application key, so keep that key stable and backed up.
+2. **QR credential.** Generate a random, hard-to-guess token. The QR code contains only this token and no personal details. Store it twice, as v1.md §4.3 requires: a hash (`qr_token_hash`) to find the ticket when it's scanned, and an encrypted copy (`qr_token_encrypted`) so the ticket page can show the QR code again. Never store it in plain text. The encryption uses Laravel's application key, so keep that key stable and backed up. Also generate each ticket's 6-character short code (characters that are hard to confuse, unique within the event), stored as a keyed hash plus an encrypted copy (v1.md §4.3). Guards type it in when a QR code won't scan.
 3. **Retrieval links.** Each link uses a random token whose hash is stored in `ticket_access_tokens`, with an expiry date and the ability to revoke it. Buyers can request a new link by entering their email address. This request is rate-limited and doesn't reveal whether an email address has an order.
 4. **Email delivery** through the queue, driven by the outbox records, with retries and logging of failures.
 5. **Revocation.** Organizers and admins can revoke a ticket with a reason. Revocations are audited, and revoked tickets are rejected at the gate.
@@ -380,7 +380,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 
 ### Frontend
 
-7. **Ticket page** on the public website: event details, category, attendee name (where collected), ticket number, seat or delegation, and the QR code, with a download as PDF or image.
+7. **Ticket page** on the public website: event details, category, attendee name (where collected), ticket number, seat or delegation, the QR code and the 6-character short code, with a download as PDF or image that shows the short code too.
 8. **Organizer dashboard:** ticket list and search, revocation, and manual issuance of Media tickets.
 
 ### Deliverables
@@ -389,7 +389,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 
 ### Exit criteria
 
-- [ ] Each confirmed purchase produces the expected number of tickets, each with a unique QR code.
+- [ ] Each confirmed purchase produces the expected number of tickets, each with a unique QR code and a short code that is unique within its event.
 - [ ] Repeated payment notifications never produce duplicate tickets.
 - [ ] Revoked or invalid retrieval links are rejected.
 - [ ] The email arrives with a working link, and failed sends are retried.
@@ -404,7 +404,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 
 ### Backend
 
-1. **Scan checks**, in this order: the guard is logged in → the guard is assigned to this event (and gate) → the gate is open, judged by server time → the ticket exists (looked up by hash) → it belongs to this event → it is paid and not revoked → redeem it.
+1. **Scan checks**, in this order: the guard is logged in → the guard is assigned to this event (and gate) → the gate is open, judged by server time → the ticket exists (looked up by hash) → it belongs to this event → it is paid and not revoked → redeem it. The same checks apply when a guard types a ticket's short code instead of scanning; short code entry is rate-limited per guard and locks after repeated invalid codes.
 2. **Redemption with one atomic update:**
 
    ```sql
@@ -416,20 +416,20 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
      AND  status = 'valid';
    ```
 
-3. **Scan log.** Record every attempt in `ticket_scans`, including rejected ones, with the result, gate, guard and time.
+3. **Scan log.** Record every attempt in `ticket_scans`, including rejected ones, with the result, gate, guard, time and method (QR scan or short code).
 4. **Minimal response.** Return only what the guard needs: the result and reason, the category, the attendee name where collected, the seat or delegation, and, for a ticket already used, when and at which gate.
 
 ### Frontend (guard area in `/manage`)
 
-5. **Designed for phones first:** sign in (with Google, or with a guard email and password) → see assigned events → choose a gate → scan with the camera. A visible "Sign out" button supports shift changes on shared phones. Browsers only allow camera access over HTTPS.
+5. **Designed for phones first:** sign in (with Google, or with a guard email and password) → see assigned events → choose a gate → scan with the camera. A visible "Sign out" button supports shift changes on shared phones. Browsers only allow camera access over HTTPS. If a QR code won't scan, an "Enter code" button lets the guard type the 6-character short code from the attendee's downloaded or printed ticket.
 6. **Result screens** that are large and high-contrast: valid, already used, invalid (with the reason), and unable to verify.
 7. **Fail closed.** A timeout or network error shows "Unable to verify — do not admit" and never a success.
 8. **Organizer dashboard:** live gate activity and attendance counts.
 
 ### Tests
 
-9. **Simultaneous scans:** two devices scan the same ticket at the same moment, and exactly one admits.
-10. **Rejection cases:** wrong event, wrong gate, revoked, unpaid, before the gate opens, after it closes, an unknown QR code, and a password guard whose event has closed.
+9. **Simultaneous scans:** two devices scan the same ticket at the same moment, and exactly one admits. The same holds when one guard scans the QR code and another types the short code.
+10. **Rejection cases:** wrong event, wrong gate, revoked, unpaid, before the gate opens, after it closes, an unknown QR code, an invalid short code or one from another event, and a password guard whose event has closed.
 11. **Field rehearsal:** real phones in poor light on slow mobile data, in conditions close to a real venue. Measure scan time against the Phase 0 target.
 
 ### Deliverables
@@ -439,6 +439,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 ### Exit criteria
 
 - [ ] A ticket cannot be used twice, even when scanned on two devices at the same moment.
+- [ ] A ticket entered by short code is admitted once, exactly like a scan, and repeated invalid codes lock short code entry for that guard.
 - [ ] Every rejection case shows the correct reason.
 - [ ] The scanner fails closed when it can't reach the server.
 - [ ] Every scan record includes the event, gate, guard and time.
@@ -538,6 +539,7 @@ These decisions affect the database, the integrations or the schedule. Each need
 | 13 | Sign-in method                        | —                                                           | **Decided: Google OAuth** for admins, organizers and staff; guards use Google or a guard password account. Buyers still check out as guests | Decided   |
 | 14 | Guard sign-in without Google          | —                                                           | **Decided:** individual email-and-password guard accounts, created by the guard's organizer or a platform admin. Each password is valid for one event and deleted as soon as that event closes | Decided   |
 | 15 | Guards change the temporary password at first sign-in | Required; optional                          | Required, so only the guard knows their password and their scans are truly theirs. The organizer can still reset it at any time | Phase 1   |
+| 16 | Entry when a QR code won't scan       | —                                                           | **Decided:** the attendee shows their downloaded or printed ticket, and the guard types its 6-character short code | Decided   |
 
 ---
 

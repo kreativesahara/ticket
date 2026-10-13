@@ -1,7 +1,7 @@
 # STATEMENT OF WORK (SOW)
 ## Event Ticketing, Management and Access Control Platform
 
-**Document Version:** 1.3  
+**Document Version:** 1.4  
 **Date:** 13 October 2026  
 **Project Name:** Multi-Organizer Event Ticketing Platform  
 **Client:** [Client / Organization Name]  
@@ -174,7 +174,8 @@ The system shall provide:
 - Email delivery of ticket retrieval links.
 - A secure ticket retrieval page.
 - Ticket display and download functionality.
-- Display of event information, ticket category, ticket number, attendee details where collected, and seat details where applicable.
+- A 6-character short code on every ticket, unique within its event, for entry when the QR code can't be scanned.
+- Display of event information, ticket category, ticket number, short code, attendee details where collected, and seat details where applicable.
 - Ticket revocation controls for authorized users.
 - Secure access-token management.
 
@@ -192,6 +193,7 @@ Guard functionality shall include:
 - Scanning limited to tickets for the events and gates the event organizer has assigned to the guard.
 - Viewing assigned events and gates.
 - QR-code scanning using supported mobile devices.
+- Manual entry of the ticket's 6-character short code when a QR code can't be scanned, with the same validation and single-use redemption, rate-limited per guard.
 - Online ticket validation through the backend.
 - Verification of ticket status and event association.
 - Confirmation of successful entry.
@@ -369,6 +371,7 @@ The project shall be considered functionally complete when the following criteri
 
 - Valid tickets can be scanned and redeemed online.
 - Already-redeemed tickets are rejected.
+- When a QR code can't be scanned, entering the ticket's short code admits the attendee once, and invalid codes are rejected.
 - Invalid tickets and tickets belonging to other events are rejected.
 - Concurrent scans do not produce multiple successful redemptions.
 - Scan records include the required event, gate, guard and timestamp information.
