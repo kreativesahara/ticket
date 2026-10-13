@@ -1,7 +1,9 @@
 flowchart TD
     A[Guard signs in] --> B[Validate assigned event and gate]
     B --> C[Scan QR code]
+    B --> C2[QR fails: enter 6-character code from the ticket]
     C --> D[Laravel validates ticket credential]
+    C2 --> D
     D --> E{Ticket eligible?}
     E -- No --> F[Reject with reason]
     E -- Yes --> G[Atomically redeem ticket]

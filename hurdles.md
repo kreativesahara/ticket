@@ -1,6 +1,6 @@
 # Hurdles: Gaps, Risks and Limitations
 
-**Version 1.0 · 13 October 2026**
+**Version 1.1 · 13 October 2026**
 
 **Based on:** [v1.md](v1.md) (version 1.3), [sow.md](sow.md) (version 1.3), [techstack.md](techstack.md) and [implementation-plan.md](implementation-plan.md) (version 1.3).
 
@@ -14,21 +14,21 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 
 **Impact:** **High** = could block launch, lose money or break a legal obligation. **Medium** = causes problems at events or in operations. **Low** = a consistency fix or a scope question.
 
-| #   | Hurdle                                          | Area              | Impact | Decide by | Owner    |
-| --- | ----------------------------------------------- | ----------------- | ------ | --------- | -------- |
-| H1  | No record of what each organizer is owed        | Money             | High   | Phase 0   | Client   |
-| H2  | Collecting for other businesses; unverified organizers | Money      | High   | Phase 0   | Client   |
-| H3  | No path for free tickets or delegation claims   | Money             | High   | Phase 1   | Both     |
-| H4  | "At the gate" tickets have no way to be sold    | Money             | High   | Phase 1   | Client   |
-| H5  | No process for cancelled or postponed events    | Money             | High   | Phase 1   | Client   |
-| H6  | No fallback when a QR code can't be scanned     | Gate              | Medium | Phase 5   | Provider |
-| H7  | Re-entry rule not stated                        | Gate              | Medium | Phase 1   | Client   |
-| H8  | Google-invited guards keep their assignment after the event | Gate  | Low    | Phase 2   | Provider |
-| H9  | No buyer messages beyond the ticket email; SMS undecided | Buyers   | Medium | Phase 1   | Client   |
-| H10 | No receipts; tax position unconfirmed           | Compliance        | High   | Phase 0   | Client   |
-| H11 | Guest buyers have no defined way to view their order | Buyers       | Medium | Phase 1   | Provider |
-| H12 | No rules for keeping or deleting personal data  | Compliance        | Medium | Phase 1   | Both     |
-| H13 | Sale-day rush and ticket bots                   | Operations        | Medium | Phase 0   | Both     |
+| #   | Hurdle                                          | Area              | Impact | Decide by | Owner    | Status  |
+| --- | ----------------------------------------------- | ----------------- | ------ | --------- | -------- | ------- |
+| H1  | No record of what each organizer is owed        | Money             | High   | Phase 0   | Client   | Open    |
+| H2  | Collecting for other businesses; unverified organizers | Money      | High   | Phase 0   | Client   | Open    |
+| H3  | No path for free tickets or delegation claims   | Money             | High   | Phase 1   | Both     | Open    |
+| H4  | "At the gate" tickets have no way to be sold    | Money             | High   | Phase 1   | Client   | Open    |
+| H5  | No process for cancelled or postponed events    | Money             | High   | Phase 1   | Client   | Open    |
+| H6  | No fallback when a QR code can't be scanned     | Gate              | Medium | Phase 5   | Provider | Decided |
+| H7  | Re-entry rule not stated                        | Gate              | Medium | Phase 1   | Client   | Open    |
+| H8  | Google-invited guards keep their assignment after the event | Gate  | Low    | Phase 2   | Provider | Open    |
+| H9  | No buyer messages beyond the ticket email; SMS undecided | Buyers   | Medium | Phase 1   | Client   | Open    |
+| H10 | No receipts; tax position unconfirmed           | Compliance        | High   | Phase 0   | Client   | Open    |
+| H11 | Guest buyers have no defined way to view their order | Buyers       | Medium | Phase 1   | Provider | Open    |
+| H12 | No rules for keeping or deleting personal data  | Compliance        | Medium | Phase 1   | Both     | Open    |
+| H13 | Sale-day rush and ticket bots                   | Operations        | Medium | Phase 0   | Both     | Open    |
 
 ---
 
@@ -98,15 +98,23 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 
 ## 2. Gate operations
 
-### H6. No fallback when a QR code can't be scanned
+### H6. No fallback when a QR code can't be scanned — Decided
 
-**Gap:** Guards can only admit someone by scanning their QR code. There's no way to find a ticket by its ticket number or the attendee's name.
+**Gap:** Guards could only admit someone by scanning their QR code.
 
-**Why it matters:** Dead phone batteries, cracked screens and badly printed tickets are common at the gate. Without a fallback, a guard must either turn away a paying attendee or wave them in without any record.
+**Why it matters:** Cracked screens, glare and badly printed tickets are common at the gate. Without a fallback, a guard must either turn away a paying attendee or wave them in without any record.
 
-**Recommendation:** Let guards look up a ticket by its ticket number, or by name for events that collect attendee names. A lookup admits the attendee with the same one-time check-in and logging as a scan.
+**Decision (13 October 2026):** Every ticket carries a 6-character short code, shown on the ticket page and on the downloaded ticket. When the QR code won't scan, the attendee shows their downloaded or printed ticket and the guard types the code.
+- The code goes through the same checks and the same one-time check-in as a scan, and it is logged as a short-code entry.
+- The result shows the attendee's name (where collected), so the guard can compare it with the ticket shown.
+- Codes use characters that are hard to confuse and are unique within each event. They are stored as a keyed hash plus an encrypted copy, never in plain text.
+- Six characters are easier to guess than a QR code, so code entry is accepted only from an assigned guard at an open gate, is rate-limited per guard, and locks after repeated invalid codes.
 
-**Decide by:** Phase 5 · **Owner:** Provider
+Recorded in v1.md (FR-09, FR-10 and §4.3), sow.md (Modules Six and Seven, §5.5) and decision #16 in the implementation plan.
+
+**Remaining risk:** The fallback needs the attendee to show their ticket. If their phone is dead and they have no printout, the guard still can't find the ticket. See the known limitations below.
+
+**Owner:** Provider
 
 ### H7. Re-entry rule not stated
 
@@ -206,6 +214,7 @@ These come from decisions already made. They're accepted for the first release, 
 | Limitation                                   | What it means                                                                                   | When to revisit                                        |
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | Online-only scanning                         | Gates need an internet connection. If it drops, the scanner shows "Unable to verify — do not admit". | If venues have poor connectivity; offline scanning is out of scope (SOW §9) |
+| Short-code fallback needs the ticket         | If a QR code won't scan, the attendee must show their downloaded or printed ticket so the guard can type its short code. With a dead phone and no printout, there's no way in. | If this happens often; a lookup by attendee name could be added |
 | Google sign-in for admins, organizers and staff | Anyone without a Google account must create one (it's free, and can use an existing email address). | If organizers push back                                |
 | Guard passwords last one event               | A password guard works one event at a time, gets a new password for each event, and sets their own password at each first sign-in. | If the extra step slows gate setup (decision log #15)  |
 | One payment gateway                          | If Pesapal is down, no one can buy tickets.                                                     | If outages occur; another gateway can be added later   |
