@@ -58,6 +58,7 @@ Rendered from the Mermaid blocks in the project specifications. Each diagram is 
 | 1 | System architecture | §2 System architecture | [mmd](diagrams/techstack/01-system-architecture.mmd) · [svg](diagrams/techstack/01-system-architecture.svg) · [png](diagrams/techstack/01-system-architecture.png) |
 | 2 | Ticket purchase flow | §5A Ticket purchase | [mmd](diagrams/techstack/02-ticket-purchase-flow.mmd) · [svg](diagrams/techstack/02-ticket-purchase-flow.svg) · [png](diagrams/techstack/02-ticket-purchase-flow.png) |
 | 3 | Gate QR scanning flow | §5B QR scanning at the gate | [mmd](diagrams/techstack/03-gate-qr-scanning-flow.mmd) · [svg](diagrams/techstack/03-gate-qr-scanning-flow.svg) · [png](diagrams/techstack/03-gate-qr-scanning-flow.png) |
+| 4 | Google sign-in flow | §3 Authentication and role design | [mmd](diagrams/techstack/04-google-sign-in.mmd) · [svg](diagrams/techstack/04-google-sign-in.svg) · [png](diagrams/techstack/04-google-sign-in.png) |
 
 ### 1. System architecture
 
@@ -70,6 +71,10 @@ Rendered from the Mermaid blocks in the project specifications. Each diagram is 
 ### 3. Gate QR scanning flow
 
 ![Gate QR scanning flow](diagrams/techstack/03-gate-qr-scanning-flow.svg)
+
+### 4. Google sign-in flow
+
+![Google sign-in flow](diagrams/techstack/04-google-sign-in.svg)
 
 ## Implementation Plan ([implementation-plan.md](../implementation-plan.md))
 

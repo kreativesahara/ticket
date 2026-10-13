@@ -1,7 +1,7 @@
 # STATEMENT OF WORK (SOW)
 ## Event Ticketing, Management and Access Control Platform
 
-**Document Version:** 1.1  
+**Document Version:** 1.3  
 **Date:** 13 October 2026  
 **Project Name:** Multi-Organizer Event Ticketing Platform  
 **Client:** [Client / Organization Name]  
@@ -54,24 +54,24 @@ The system shall provide secure authentication and role-based access control for
 
 Functional requirements include:
 
-- User registration and login.
-- Email verification and password recovery.
+- Sign-in with Google accounts (Google OAuth) for platform administrators, organizers and organizer staff.
+- Guard sign-in with Google or with an individual email and password account created by the guard's organizer or a platform administrator. The guard shall set their own password at first sign-in, and passwords shall be stored only as secure hashes. Each guard password shall be valid only for the event it was issued for, and shall be revoked and deleted as soon as that event closes (when its last gate closes, or when it is cancelled or archived).
 - User profile management.
 - Account activation and suspension.
-- Organizer account creation and management.
-- Organizer membership and staff assignment.
-- Guard account invitation or registration.
+- Organizer account applications, approval and management.
+- Organizer membership, with owner and staff roles.
+- Staff and guard invitations by email, accepted by signing in with a Google account that uses the invited email address, and guard password accounts created directly by the organizer.
 - Event-specific and gate-specific staff permissions.
 - Enforcement of access restrictions through the backend API.
 
 The platform shall support the following primary roles:
 
 - Platform Administrator
-- Event Organizer
+- Event Organizer (owner, or staff with permissions granted by the owner)
 - Guard / Gate Officer
 - Attendee / Ticket Purchaser
 
-Attendees may purchase tickets as guests. Mandatory attendee accounts are not required for the initial release unless subsequently agreed.
+Attendees may purchase tickets as guests, without signing in. Mandatory attendee accounts are not required for the initial release unless subsequently agreed.
 
 ### 2.2 Module Two: Event Management
 
@@ -188,7 +188,8 @@ The platform shall provide a dedicated interface for authorized guards.
 
 Guard functionality shall include:
 
-- Secure login.
+- Secure sign-in with Google or with a guard email and password account.
+- Scanning limited to tickets for the events and gates the event organizer has assigned to the guard.
 - Viewing assigned events and gates.
 - QR-code scanning using supported mobile devices.
 - Online ticket validation through the backend.
@@ -336,7 +337,8 @@ The project shall be considered functionally complete when the following criteri
 
 ### 5.1 Identity and Access
 
-- Authorized users can authenticate and access their assigned interfaces.
+- Authorized users can sign in, with Google or with a guard password account, and access their assigned interfaces.
+- Guard password accounts can reach only the guard interface, for their assigned event and gates, and their passwords stop working as soon as that event closes.
 - Organizers cannot access another organizer's private resources.
 - Guards can access only assigned events and permitted gates.
 - Unauthorized actions are rejected by the backend.
@@ -406,7 +408,7 @@ The Client shall:
 1. Provide complete business requirements and timely decisions.
 2. Nominate an authorized representative for approvals and project coordination.
 3. Supply branding assets, event examples, content and other required materials.
-4. Arrange access to required hosting, domain, email and payment provider accounts.
+4. Arrange access to required hosting, domain, email, payment provider and Google Cloud accounts (Google Cloud is used for Google sign-in).
 5. Complete payment provider onboarding, merchant verification and any required approvals.
 6. Provide test accounts and participate in integration testing.
 7. Review designs, milestone deliverables and UAT submissions within agreed timelines.
@@ -429,6 +431,7 @@ This SOW is based on the following assumptions:
 - Gate validation will require internet connectivity in the initial release.
 - Reserved seating will be an optional event configuration.
 - Attendee data requirements will be configurable per event.
+- Platform administrators, organizers and organizer staff have, or can create, a Google account to sign in. Guards without one use a guard password account.
 - The Client will supply or approve the required branding, content and policies.
 - Hosting, domains, third-party service subscriptions and transaction fees will be identified separately in the commercial agreement.
 - The initial release will be developed in one agreed language and currency configuration unless additional requirements are approved.
@@ -467,7 +470,7 @@ The platform shall implement reasonable technical and organizational safeguards 
 These shall include:
 
 - HTTPS for production communications.
-- Secure password hashing and protected authentication tokens.
+- Google OAuth sign-in with protected session cookies. Passwords exist only for guard password accounts, stored as secure hashes, with rate-limited sign-in.
 - Server-side authorization and tenant isolation.
 - Input validation and protection against common web application vulnerabilities.
 - Secure storage of integration credentials.

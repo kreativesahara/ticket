@@ -14,6 +14,7 @@ We're locking in **Laravel + Sanctum + Supabase PostgreSQL**, with Laravel initi
 | **Management frontend** | React + Vite + TypeScript  | Organizer dashboard, platform admin and guard interface                                                             |
 | **UI and styling**      | shadcn/ui + Tailwind CSS   | Shared component library and design system for both frontends                                                       |
 | **Backend**             | Laravel REST API           | Sanctum, policies, event management, orders, payments, tickets, QR validation and reporting                         |
+| **Authentication**      | Google OAuth (Laravel Socialite) + Sanctum | Google sign-in for admins, organizers and staff; guards use Google or an email and password created by their organizer; Sanctum cookie sessions keep everyone signed in |
 | **Database**            | Supabase PostgreSQL        | Persistent records, relationships, transactions, constraints and inventory                                          |
 | **Payment gateway**     | Pesapal (API 3.0)          | M-Pesa and card payments through Pesapal's hosted checkout, with IPN notifications and transaction status checks    |
 | **Initial deployment**  | cPanel                     | Laravel API, provided the hosting supports the required PHP version, extensions, HTTPS, database connectivity and background tasks |
@@ -42,6 +43,7 @@ flowchart LR
     D -- HTTPS REST API --> API
 
     API --> S[Laravel Sanctum]
+    API --> GO[Google OAuth sign-in]
     API --> P[Policies and Tenant Authorization]
     API --> DB[(Supabase PostgreSQL)]
     API --> PAY[Pesapal: M-Pesa and cards]
@@ -58,7 +60,57 @@ The frontends must never write directly to ticket inventory, payment records, or
 
 ## 3. Authentication and role design
 
-Use Laravel Sanctum with **cookie-based SPA authentication** for your first-party web applications, rather than creating long-lived bearer tokens for the browsers. Laravel's documentation recommends this approach for first-party SPAs and explains the CSRF and cookie configuration requirements. See [Laravel Sanctum — SPA Authentication](https://laravel.com/docs/sanctum#spa-authentication).
+Admins, organizer owners and organizer staff sign in with their **Google account**. Guards can also use Google, or sign in with an **email and password** that their organizer creates for them (see [Guard password accounts](#guard-password-accounts)). Laravel Socialite handles the Google OAuth flow. Once Google confirms who the user is, Laravel starts a Sanctum **cookie-based SPA session** that keeps them signed in, rather than giving the browser long-lived bearer tokens. Buyers don't sign in at all: they check out as guests.
+
+### Google sign-in flow
+
+```mermaid
+sequenceDiagram
+    participant B as Browser (manage dashboard)
+    participant A as Laravel API
+    participant G as Google
+
+    B->>A: GET /auth/google/redirect
+    A-->>B: Redirect to Google (client ID, scopes, state)
+    B->>G: Sign in and approve
+    G-->>B: Redirect to callback with code and state
+    B->>A: GET /auth/google/callback
+    A->>G: Exchange code for verified profile
+    A->>A: Find or link user, check status, start session
+    A-->>B: Session cookie, redirect to dashboard
+    B->>A: GET /api/v1/auth/me (with cookie)
+    A-->>B: User, roles and organizers
+```
+
+### Sign-in rules
+
+- **Identity scopes only.** Request `openid`, `email` and `profile`. Don't store Google's access or refresh tokens; the platform only needs to know who the user is.
+- **Verified emails only.** Reject Google accounts whose email address Google hasn't verified.
+- **Link by Google account ID.** Store Google's stable account ID in `users.google_id` and look users up by it, not by email.
+- **Invitations decide access.** Staff, and guards who use Google, are invited by email and accept by signing in with a Google account that uses that address. A new user with no invitation can apply for an organizer account, which a platform admin approves. Platform admins are designated by an existing admin, never through sign-in.
+- **Suspended users stay out.** A valid Google sign-in doesn't let a suspended user in.
+- **Browser routes, not API routes.** The redirect and callback are browser navigations that need the session for Google's `state` check, so they live in Laravel's web routes, not under `/api/v1`.
+- **No open redirects.** After sign-in, send users only to allowed frontend addresses.
+- **Fresh session.** Regenerate the session ID after sign-in, and invalidate the session on logout.
+
+See [Laravel Socialite](https://laravel.com/docs/socialite) and [Laravel Sanctum — SPA Authentication](https://laravel.com/docs/sanctum#spa-authentication).
+
+### Guard password accounts
+
+Guards who can't or don't want to use Google sign in with an email and password instead.
+
+- **One account per guard.** An organizer owner, a staff member allowed to manage guards, or a platform admin creates the account. Never create one account for several guards: every scan is recorded against the signed-in guard.
+- **Temporary password, then the guard's own.** The platform generates a temporary password and shows it once. The organizer gives it to the guard in person or by direct message, never in a group chat. At first sign-in the guard must set their own password, so only they know it.
+- **Guard-only.** A password account can never become an organizer owner, staff member or platform admin, so a leaked password exposes at most the scanner. It is never linked to a Google sign-in, and Google sign-in with the same email is refused.
+- **Owned by one organizer.** The account belongs to the organizer that created it. Only that organizer, or a platform admin, can assign it to events, issue its password or disable it. Another organizer can't assign it, because the owning organizer could issue a new password and sign in as the guard.
+- **One event per password.** The account is assigned to one event at a time, and each password is issued for that event and stored in `guard_credentials`. It works only while that event is open, and only to scan that event's tickets at the gates the organizer assigned.
+- **Deleted when the event closes.** An event closes when its last gate closing time passes, or when the organizer cancels or archives it. At that moment the password is revoked: the platform deletes the password hash, ends the guard's sessions and ends their assignment. A scheduled job does this every minute, and every request from a password guard also checks that their event is still open, so there is no gap in between. The account itself is kept, without a password, so scan records still show who admitted whom.
+- **Organizer issues passwords, not email.** For a forgotten password, or for the guard's next event, the organizer issues a new temporary password, which revokes any earlier one and ends existing sessions. There is no email-based reset.
+- **Protected sign-in.** Passwords are hashed with Laravel's default hasher. Sign-in is rate-limited by email and IP, locks temporarily after repeated failures, and returns the same error for an unknown email and a wrong password.
+- **Short sessions.** Guard sessions end when the event closes and expire after a set time anyway (for example, 12 hours). Guards sign out at the end of each shift, which matters on shared scanning phones. Use Laravel's database session driver, so the platform can end a specific guard's sessions.
+- **Standard Sanctum flow.** The scanner fetches Sanctum's CSRF cookie, then posts the email and password to `POST /api/v1/auth/guard/login`.
+
+### Domains
 
 A clean domain setup would look like this:
 
@@ -67,6 +119,8 @@ A clean domain setup would look like this:
 - `api.yourdomain.com` — Laravel API
 
 These are illustrative domains. Using a common top-level domain makes Sanctum's cookie-based approach practical, provided the session cookie, CORS, CSRF and stateful-domain settings are configured correctly. Preview deployments on unrelated Vercel domains need separate consideration.
+
+Create a Google OAuth client for each environment (local, staging and production), and register that environment's callback address, for example `https://api.yourdomain.com/auth/google/callback`, as an authorized redirect URI.
 
 ### Roles and permissions
 
@@ -193,7 +247,9 @@ All endpoints are versioned under `/api/v1` and follow v1.md §5, which has the 
 
 | Module               | Example endpoints                                                                                          |
 | -------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Authentication**   | `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me` |
+| **Authentication**   | `GET /auth/google/redirect`, `GET /auth/google/callback`, `POST /api/v1/auth/guard/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me` |
+| **Invitations**      | `POST /api/v1/organizer/invitations`, `POST /api/v1/invitations/{token}/accept`                            |
+| **Guard accounts**   | `POST /api/v1/organizer/guards`, `POST /api/v1/organizer/guards/{id}/password`                             |
 | **Organizers**       | `POST /api/v1/organizers`, `GET /api/v1/organizers/me`                                                     |
 | **Events**           | `GET /api/v1/events`, `POST /api/v1/organizer/events`, `PATCH /api/v1/organizer/events/{id}`               |
 | **Ticket offerings** | `GET /api/v1/events/{id}/tickets`, `POST /api/v1/organizer/events/{id}/offerings`                          |
@@ -203,7 +259,7 @@ All endpoints are versioned under `/api/v1` and follow v1.md §5, which has the 
 | **Gate scanning**    | `POST /api/v1/events/{id}/scans/validate`                                                                  |
 | **Reports**          | `GET /api/v1/organizer/events/{id}/reports/sales`                                                          |
 
-Public event discovery and guest checkout can be accessible without a login where appropriate. Ticket retrieval must use secure, expiring links or authenticated access, and must not expose sequential IDs as the sole authorization mechanism.
+Public event discovery and guest checkout are accessible without signing in. Ticket retrieval must use secure, expiring links or authenticated access, and must not expose sequential IDs as the sole authorization mechanism.
 
 ---
 

@@ -7,6 +7,7 @@ flowchart LR
     D -- HTTPS REST API --> API
 
     API --> S[Laravel Sanctum]
+    API --> GO[Google OAuth sign-in]
     API --> P[Policies and Tenant Authorization]
     API --> DB[(Supabase PostgreSQL)]
     API --> PAY[Pesapal: M-Pesa and cards]

@@ -1,0 +1,15 @@
+sequenceDiagram
+    participant B as Browser (manage dashboard)
+    participant A as Laravel API
+    participant G as Google
+
+    B->>A: GET /auth/google/redirect
+    A-->>B: Redirect to Google (client ID, scopes, state)
+    B->>G: Sign in and approve
+    G-->>B: Redirect to callback with code and state
+    B->>A: GET /auth/google/callback
+    A->>G: Exchange code for verified profile
+    A->>A: Find or link user, check status, start session
+    A-->>B: Session cookie, redirect to dashboard
+    B->>A: GET /api/v1/auth/me (with cookie)
+    A-->>B: User, roles and organizers

@@ -23,13 +23,13 @@ You are building a multi-organizer event ticketing platform. Organizers create e
 
 SOURCE DOCUMENTS (they are the specification — read the relevant parts before each task):
 - implementation-plan.md — phases, steps, exit criteria and the decision log (§11). Follow it.
-- doc/baseline-spec.md — final names, tables, roles and state machines (created in P0.1). Wins over older documents.
-- v1.md — requirements, permissions matrix (§3), schema (§4), state models (§4.6), API (§5).
+- v1.md — requirements, and the single source of truth for table names, roles and API paths: permissions matrix (§3), schema (§4), state models (§4.6), API (§5).
+- doc/state-machines.md — complete state machines for orders, payments, tickets, seats and reservations (created in P0.1).
 - techstack.md — architecture and stack.
 - sow.md — contractual scope. Never build anything listed in §9 "Out of scope".
 
 STACK:
-- /api — Laravel (latest stable release), Sanctum SPA cookie authentication, PostgreSQL on Supabase.
+- /api — Laravel (latest stable release), PostgreSQL on Supabase. Admins, organizers and staff sign in with Google OAuth through Laravel Socialite. Guards can also use an email and password that is valid only for their assigned event. Sanctum SPA cookie sessions after sign-in.
 - /web — Next.js + TypeScript: public event site, checkout, ticket retrieval.
 - /manage — React + Vite + TypeScript: organizer dashboard, platform admin, guard scanner.
 - /packages/ui — shared shadcn/ui components and theme, Tailwind CSS.
@@ -43,7 +43,7 @@ NON-NEGOTIABLE RULES:
 4. Tests run against PostgreSQL, never SQLite.
 5. Every new resource gets a tenant-isolation test.
 6. Sensitive actions write to the audit log.
-7. Never store raw card data, plaintext QR tokens or plaintext retrieval tokens. Never commit secrets.
+7. Never store raw card data, plaintext passwords (guard passwords are hashed, and deleted when their event closes), Google access tokens, plaintext QR tokens or plaintext retrieval tokens. Never commit secrets.
 8. The backend calculates all prices and decides all statuses. Never trust values from the browser or a payment redirect.
 
 HOW TO WORK:
@@ -71,20 +71,17 @@ Don't fix anything yet — just report.
 
 ## Phase 0 — Discovery and specification
 
-### P0.1 — Baseline specification
+### P0.1 — Specification check and state machines
 
 ```text
-Read v1.md, v2.md, techstack.md, sow.md and implementation-plan.md. Create doc/baseline-spec.md as the single source of truth for implementation. Don't write code yet.
+Read v1.md, techstack.md, sow.md and implementation-plan.md. v1.md is the single source of truth for table names, roles and API paths. Don't write code yet.
 
-Include:
-1. A naming table that resolves every conflict listed in implementation-plan.md Phase 0 step 1. Use the recommendation there unless §11 records a different decision.
-2. The final list of tables with their columns: v1.md §4 plus the gaps listed in implementation-plan.md Phase 1 step 1 (reserved count on offerings, QR token storage that allows the QR to be shown again, seat hold expiry, owner/staff role values).
-3. The final roles and what each may do, based on v1.md §3 with the organizer owner/staff split.
-4. State machines for orders, payments and tickets, listing every allowed transition, including the states v1.md mentions only in prose (cancelled, expired, refunded, partially refunded, revoked).
-5. A list of anything still ambiguous, written as questions for me.
+1. Check that techstack.md, sow.md and implementation-plan.md agree with v1.md on table names, roles, API paths and the QR storage rule. List every mismatch with its file and line, and which document should change. Don't edit the documents yourself.
+2. Create doc/state-machines.md with the complete state machines for orders, payments, tickets, seats and inventory reservations: every state, every allowed transition, what triggers it, and who may trigger it. Include the states v1.md mentions only in prose (cancelled, expired, partially refunded, refunded, revoked) and Pesapal's reversed payments.
+3. List anything still ambiguous in the specification, written as questions for me.
 ```
 
-**Done when:** the naming, tables, roles and state machines are written down, and you've answered the open questions.
+**Done when:** no mismatches remain, the state machines are written down, and you've answered the open questions.
 
 ### P0.2 — Hosting check script
 
@@ -139,7 +136,7 @@ Any failure must fail the build.
 ### P1.3 — Database schema and migrations
 
 ```text
-Using doc/baseline-spec.md, write Laravel migrations for the full MVP schema, including seating, so that later phases need no structural rework.
+Using v1.md §4 (every table and column) and doc/state-machines.md, write Laravel migrations for the full MVP schema, including seating, so that later phases need no structural rework.
 
 Requirements:
 - UUID primary keys for records referenced from outside the system.
@@ -147,38 +144,59 @@ Requirements:
 - Unique constraints: user email; event slug per organizer; ticket_number; qr_token_hash; (provider, provider_reference) on payments, where the reference is Pesapal's order tracking ID; idempotency_key; and one active ticket per seat per event (a partial unique index). Pesapal notifications carry no unique event ID, so don't add a unique key on webhook events; idempotency comes from the payment and order checks in P4.2.
 - CHECK constraints where they're cheap: non-negative counts and amounts, and capacity - sold_count - reserved_count >= 0.
 - Money as bigint minor units plus a char(3) currency column.
-- Status columns as strings backed by PHP enums, one enum per state machine in the baseline spec.
+- Status columns as strings backed by PHP enums, one enum per state machine in doc/state-machines.md.
 
 Also create Eloquent models with relationships and enum casts, a factory for every model, and a Mermaid ERD of the final schema at doc/diagrams/erd.mmd.
 Run the migrations from scratch against local PostgreSQL and show the output.
 ```
 
-**Done when:** `migrate:fresh` succeeds, every model has a factory, and the ERD matches the baseline spec.
+**Done when:** `migrate:fresh` succeeds, every model has a factory, and the ERD matches v1.md §4.
 
-### P1.4 — Authentication
+### P1.4a — Google sign-in
 
 ```text
-Implement authentication in /api as described in implementation-plan.md Phase 1 step 9, using Sanctum SPA cookie authentication rather than long-lived browser tokens.
+Implement sign-in with Google as described in implementation-plan.md Phase 1 step 9 and the sign-in rules in techstack.md §3. Use Laravel Socialite for Google OAuth and Sanctum SPA cookie sessions after sign-in. Passwords exist only for guard password accounts (P1.4b); there is no self-registration, email verification or email-based password reset.
 
-- Endpoints under /api/v1/auth: register, login, logout, me, email verification, forgot password and reset password.
-- Suspended users can't log in, and suspending a user ends their existing sessions.
-- Configure stateful domains, the session cookie domain, CORS (with credentials) and CSRF for the www, manage and api subdomains through environment variables. Document the values to use for local development.
-- Rate-limit login, registration and password reset.
-- Feature tests for every endpoint, including a suspended user and a wrong password.
+- Web routes, not under /api/v1, because they need the session for Google's state check: GET /auth/google/redirect and GET /auth/google/callback. Request only the openid, email and profile scopes. Don't store Google's access or refresh tokens.
+- On callback: reject Google accounts with unverified emails. Find the user by users.google_id. If the email belongs to a guard password account, refuse the sign-in with a clear message and never link the two. Otherwise create the user with their Google ID, name and email, with no memberships yet. Reject suspended users. Log the user in, regenerate the session, and redirect to the manage app, accepting only an allowlisted return path (no open redirects).
+- API endpoints: POST /api/v1/auth/logout (invalidates the session) and GET /api/v1/auth/me (the user, platform role, organizer memberships with roles and permissions, and guard assignments).
+- Suspending a user ends their existing sessions.
+- An artisan command to grant or remove platform admin (users.platform_role) by email, because no one can become an admin through sign-in.
+- Configure stateful domains, the session cookie domain, CORS (with credentials) and CSRF for the www, manage and api subdomains through environment variables. The Google client ID, secret and callback URL also come from environment variables. Document the values for local development, including the localhost callback URL to register in the Google OAuth client.
+- Rate-limit the callback route.
+- Feature tests with Socialite mocked: new user, returning user, unverified email, suspended user, tampered state and a disallowed return path.
 ```
 
-**Done when:** all auth tests pass, and a browser on another local port can log in through the CSRF-cookie flow.
+**Done when:** all auth tests pass, and you can sign in locally with a real Google account and call /api/v1/auth/me from the manage app.
+
+### P1.4b — Guard password sign-in
+
+```text
+Implement guard password sign-in as described in techstack.md §3 ("Guard password accounts") and v1.md FR-01. Organizers create these accounts and issue their passwords in P2.4; for now, use factories in tests.
+
+- Passwords live in guard_credentials (v1.md §4.1): one row per issued password, tied to one event, with the hash, password_change_required, who issued it, and revoked_at.
+- POST /api/v1/auth/guard/login (email and password) using Sanctum's SPA flow: the client fetches /sanctum/csrf-cookie first. Only users with sign_in_method = password can use it, and only with an unrevoked credential whose event is still open. An event is closed when its last gate closing time has passed or it has been cancelled or archived. On success, log in and regenerate the session.
+- Every request from a password guard checks again that their credential is unrevoked and its event still open. If not, end the session and return a clear "your access for this event has ended" error.
+- A password account can only ever hold the guard role. Enforce this in the models and policies, so it can never become an organizer member or platform admin.
+- Hash passwords with Laravel's default hasher. Rate-limit sign-in by email and IP, lock temporarily after repeated failures, and return the same error for an unknown email and a wrong password.
+- First sign-in: while password_change_required is true, every endpoint except POST /api/v1/auth/guard/password and logout returns a "password change required" error. The new password must meet Laravel's password rules (minimum length, not a commonly breached password) and differ from the temporary one.
+- Use the database session driver, so the platform can end a specific user's sessions. Guard sessions also expire after a configurable time (default 12 hours).
+- Feature tests: successful sign-in; wrong password and unknown email give the same error; lockout; forced password change; suspended account; a closed event refuses sign-in and ends an existing session; adding a password account as an organizer member is rejected; session expiry.
+```
+
+**Done when:** all tests pass, and a factory-made guard can sign in from the manage app, is forced to change their password, and is signed out once their event closes.
 
 ### P1.5 — Tenancy, roles, policies and audit log
 
 ```text
 Implement tenancy and authorization as described in implementation-plan.md Phase 1 steps 10, 11 and 13.
 
-- Organizers, and organizer members with the roles owner and staff. Platform admin is a separate role from organizer roles.
+- Organizers, and organizer members with the roles owner and staff (v1.md §3 and §4.1). Staff get only the capabilities an owner grants, stored in organizer_members.permissions; they can never manage members, roles or the organizer profile. Every organizer keeps at least one owner. Platform admin is users.platform_role, separate from organizer roles.
 - A policy for every organizer-owned model. It checks that the resource's organizer (directly, or through its event) is one the user belongs to, with a role that permits the action. Platform admins pass only where v1.md §3 allows it, and their cross-organizer actions are audited.
 - A safeguard so no route can skip authorization, for example a test that fails if any /api/v1 route has no policy check.
 - An AuditLogger service recording the actor, organizer, event, action, resource type and ID, metadata and time.
-- Endpoints: create an organizer, list my organizers, invite a member, change a member's role, remove a member.
+- Endpoints: apply to create an organizer (it stays pending until a platform admin approves it), list my organizers, invite a member, change a member's role and permissions, remove a member, and approve or reject organizer applications (platform admin only).
+- Invitations, used for organizer members now and for guards in P2.4: the invitations table from v1.md §4.1, with the token stored hashed, an expiry date and single use. POST /api/v1/invitations/{token}/accept succeeds only when the signed-in user's verified Google email matches the invited email.
 - A reusable tenant-isolation test helper: for a given endpoint, it asserts that a user from a different organizer is refused on read, update and delete. Apply it to every endpoint built so far.
 ```
 
@@ -187,7 +205,7 @@ Implement tenancy and authorization as described in implementation-plan.md Phase
 ### P1.6 — API contract and conventions
 
 ```text
-Write /api/docs/openapi.yaml covering every MVP endpoint, using the endpoints in v1.md §5 and techstack.md §7, the naming in doc/baseline-spec.md and the /api/v1 prefix. Include request and response schemas for each.
+Write /api/docs/openapi.yaml covering every MVP endpoint, using the endpoints and paths in v1.md §5. Include request and response schemas for each.
 
 Then implement the conventions in /api:
 - One JSON error format for validation, authentication, authorization, not found, conflict, rate limit and server errors.
@@ -207,12 +225,12 @@ Build the frontend foundation described in implementation-plan.md Phase 1 steps 
 - In /packages/ui, add the shadcn/ui components we'll need first: button, input, label, form, card, dialog, table, toast, dropdown menu, badge, select and tabs.
 - A typed API client generated from openapi.yaml. It sends cookies, calls /sanctum/csrf-cookie before any state-changing request, and turns the standard error format into typed errors.
 - A mock mode driven by the OpenAPI spec (for example with MSW), so screens can be built before their endpoints exist.
-- /manage: login, forgot password, reset password, email verification and logout. Route users by role to /organizer, /admin and /guard areas, inside an app shell with a sidebar, a header and an organizer switcher for users who belong to more than one organizer.
+- /manage: a "Sign in with Google" page; a "Guard sign-in" form (email and password) linked from it, with the first-sign-in password change screen; an invitation page (/invite/{token}) that sends the user through Google sign-in and then accepts the invitation; an "apply for an organizer account" form and a "waiting for approval" screen for users with no role yet; and logout. Route users by role to /organizer, /admin and /guard areas, inside an app shell with a sidebar, a header and an organizer switcher for users who belong to more than one organizer.
 - /web: the site layout, header, footer and a placeholder home page.
-- Component tests for the auth forms.
+- Component tests for both sign-in pages, the password change screen, and the invitation and application pages.
 ```
 
-**Done when:** you can log in to /manage against the real local API and in mock mode, and you land in the right area for your role.
+**Done when:** you can sign in with Google to /manage against the real local API (mock mode uses a fake signed-in user), and you land in the right area for your role.
 
 ### P1.8 — Deploy the working skeleton
 
@@ -223,11 +241,12 @@ Prepare the staging deployment described in implementation-plan.md Phase 1 step 
 - Cron: a single entry runs `php artisan schedule:run` every minute. Unless the hosting check showed that long-running processes are allowed, the scheduler processes the database queue with `queue:work --stop-when-empty`, without overlapping runs.
 - A /api/v1/health endpoint that checks the database connection and reports when the scheduler and queue last ran.
 - Frontend deployment configuration that follows the hosting decision in implementation-plan.md §11 #5.
+- The staging Google OAuth settings: document the callback URL to register in the staging OAuth client.
 - doc/deployment.md listing every step and every environment variable.
 No real credentials in any file.
 ```
 
-**Done when:** staging serves all three apps over HTTPS, login works across the subdomains, and the health endpoint shows the scheduler running.
+**Done when:** staging serves all three apps over HTTPS, Google sign-in works and the session holds across the subdomains, and the health endpoint shows the scheduler running.
 
 **Then run the [phase exit check](#phase-exit-check) for Phase 1.**
 
@@ -283,10 +302,12 @@ Implement attendee information settings for each event, as described in implemen
 Implement gates and staff as described in implementation-plan.md Phase 2 step 8.
 
 - Gates for each event, with a name, opening and closing times, and a status.
-- Guard invitations by email, which work for both new and existing users. Invitations expire and can only be used once.
+- Guard invitations by email, using the invitation flow from P1.5 with the role guard and the event (and optional gate) attached. The guard accepts by signing in with a Google account that uses the invited email. Invitations expire and can only be used once.
+- Guard password accounts (techstack.md §3): POST /api/v1/organizer/guards creates the account (name and email) with managed_by_organizer_id set to the creating organizer. A password account is assigned to one event at a time. POST /api/v1/organizer/guards/{id}/password issues a temporary password for the guard's current assignment: it creates a guard_credentials row, returns the password once in the response and never again, and revokes any earlier credential and its sessions. PATCH /api/v1/organizer/guards/{id} disables or re-enables the account. Only the owning organizer or a platform admin can assign, issue passwords for or disable a password guard.
+- Revocation when the event closes: a scheduled job runs every minute. For every event that has closed (last gate closing time passed, or cancelled or archived), it deletes the password hash of each of its guard credentials, sets revoked_at, deletes the guards' sessions, ends their assignments and writes an audit log entry. Cancelling or archiving an event triggers the same revocation immediately. Keep the guard's user record, so scan records still name them.
 - Assignments link a guard to an event and, optionally, a gate. Organizers can remove assignments. Assignment changes are audited.
 - An endpoint for a guard to list only their current assignments.
-- Tests: a guard sees only their own assignments, can't reach any organizer endpoint, and an expired or reused invitation fails.
+- Tests: a guard sees only their own assignments and can't reach any organizer endpoint; an expired or reused invitation fails; signing in with a different Google email doesn't accept the invitation; another organizer can't assign or issue a password for a password guard; a temporary password can't be retrieved after it's issued; a password account can't be assigned to a second open event; once the last gate closes, the password hash is gone, the guard can't sign in and their session has ended; cancelling an event revokes its guard passwords immediately; and the guard's past scans still show their name.
 ```
 
 **Done when:** the invitation-to-assignment flow works end to end, and guards are confined to their assignments.
@@ -298,7 +319,7 @@ Implement publishing rules and admin controls as described in implementation-pla
 
 - An event can be published only when it has at least one active offering, valid and consistent time windows, and capacity that covers all allocations. If not, return every failing rule at once.
 - After publishing: audit every change, and block or require explicit confirmation for changes that affect existing orders (lowering capacity below sold, changing the price of an offering that has sales, moving the event's dates).
-- Admin endpoints: list organizers, suspend and reactivate organizers (suspension unpublishes nothing but blocks new sales and logins), and view any event, with the access audited.
+- Admin endpoints: list organizers, suspend and reactivate organizers (suspension unpublishes nothing but blocks new sales and its members' sign-ins), and view any event, with the access audited.
 - Tests for each rule.
 ```
 
@@ -312,7 +333,7 @@ Build the organizer and admin screens in /manage for Phase 2, using shadcn/ui co
 Organizer:
 - Event list with status badges and filters.
 - A step-by-step event editor: details → times → tickets (an offerings grid of type × category) → attendee fields → gates and staff → review and publish. The publish step shows the API's failing rules if there are any.
-- Delegation management, and staff invitation and assignment.
+- Delegation management; staff invitations; guard invitations and guard password accounts (create, assign, "Issue password" with a one-time copy dialog, disable); and guard assignments, showing when each password guard's access ends.
 
 Admin:
 - Organizer list with suspend and reactivate actions behind a confirmation dialog.
@@ -395,7 +416,7 @@ Implement the rest of order building, as described in implementation-plan.md Pha
 - Pricing service (backend only): unit price × quantity, group rules, then discounts. Order items keep a snapshot of the unit price, discount, fees and currency.
 - Core promotions: percentage or fixed discount; eligible offerings; start and end dates; a total usage limit; a per-buyer limit (by email); a minimum quantity or order value. Count usage against the hold so concurrent orders can't exceed a limit, and release the usage when the hold expires.
 - POST /api/v1/orders/{id}/apply-promotion, which recalculates the totals.
-- Order states follow the baseline spec.
+- Order states follow doc/state-machines.md.
 - Tests: every promotion rule, a concurrent test on the last use of a promotion, and a snapshot that stays unchanged after an organizer edits the price.
 ```
 
@@ -505,7 +526,7 @@ Add a Playwright test of the payment flow against the FakeProvider.
 ```text
 Implement ticket issuance as described in implementation-plan.md Phase 5 steps 1–2.
 - Issue tickets inside the payment transaction from P4.2: one ticket per unit bought, each with a unique, non-sequential ticket number, linked to its attendee, offering, delegation and seat where applicable.
-- QR credential: a random token with at least 128 bits of entropy. The QR code contains only this token. Store its hash for lookups and an encrypted copy (Laravel's encrypted cast) so the ticket page can show the QR again. Never store it in plain text.
+- QR credential: a random token with at least 128 bits of entropy. The QR code contains only this token. Store its hash in qr_token_hash for lookups and an encrypted copy in qr_token_encrypted (Laravel's encrypted cast) so the ticket page can show the QR again, as v1.md §4.3 requires. Never store it in plain text.
 - Issuing must be idempotent: processing the same paid order twice never creates extra tickets.
 - Tests: the correct number of tickets, uniqueness, no personal data in the QR payload, and repeated processing creating no duplicates.
 ```
@@ -559,7 +580,7 @@ Add a Playwright test: complete a fake payment → open the emailed link (captur
 ```text
 Implement POST /api/v1/events/{event}/scans/validate as described in implementation-plan.md Phase 6 steps 1–4.
 
-Checks, in order: the guard is logged in → assigned to this event (and to this gate, if the assignment names one) → the gate is open by server time → the ticket exists (looked up by token hash) → it belongs to this event → it is paid and not revoked → redeem it.
+Checks, in order: the guard is logged in → assigned to this event by its organizer, and to this gate if the assignment names one (for a password guard, this must be the one event their password was issued for) → the gate is open by server time → the ticket exists (looked up by token hash) → it belongs to this event → it is paid and not revoked → redeem it.
 
 Redeem with one atomic update:
     UPDATE tickets SET status = 'redeemed', redeemed_at = now()
@@ -578,7 +599,7 @@ Redeem with one atomic update:
 ```text
 Write tests for implementation-plan.md Phase 6 steps 9–10:
 - Simultaneous scans: 10 parallel requests from different guards for the same ticket. Exactly one is admitted and nine get "already redeemed". Run against PostgreSQL with real parallel processes.
-- One test for each rejection case: wrong event, wrong gate, revoked, unpaid, before the gate opens, after it closes, unknown token, a guard not assigned, and a guard whose assignment was removed.
+- One test for each rejection case: wrong event, wrong gate, revoked, unpaid, before the gate opens, after it closes, unknown token, a guard not assigned, a guard whose assignment was removed, a password guard scanning a ticket from a different event, and a password guard whose event has closed (their session must already be gone).
 - Every attempt appears in ticket_scans.
 Show me the output.
 ```
@@ -589,7 +610,7 @@ Show me the output.
 
 ```text
 Build the guard area in /manage, designed for phones first:
-- Log in → list of assigned events → choose a gate → full-screen camera scanner. Use a maintained browser QR-scanning library and tell me which one you chose and why. Note that camera access requires HTTPS.
+- Sign in (with Google, or with a guard email and password) → list of assigned events → choose a gate → full-screen camera scanner. Include a visible "Sign out" button for shift changes on shared phones. When a password guard's event closes, show that their access has ended. Use a maintained browser QR-scanning library and tell me which one you chose and why. Note that camera access requires HTTPS.
 - Result screens: large and high-contrast, readable at arm's length, each with a distinct color and icon, plus a sound or vibration where the device supports it. The four states are VALID (admit), ALREADY USED (show the time and gate), INVALID (show the reason) and UNABLE TO VERIFY.
 - Fail closed: a timeout (about 5 seconds, configurable) or a network error shows "Unable to verify — do not admit". It must never show success.
 - After each result, the scanner returns to scanning with one tap.
@@ -605,35 +626,12 @@ Add component tests for each result state, including the network-error state.
 
 ## Phase 7 — Reserved seating, promotions and reporting
 
-### P7.1 — Reserved seating (backend)
+Reserved seating comes last in this phase because it is the first item to defer if the schedule slips (SOW §4.1). If it has been deferred by change control, skip P7.3 and P7.4.
+
+### P7.1 — Remaining promotion rules and reports (backend)
 
 ```text
-Implement reserved seating as described in implementation-plan.md Phase 7 steps 1–5.
-- Organizers manage sections, rows and seat numbers, including bulk creation (for example, row A, seats 1–30). No visual seat-map editor: it's out of scope (SOW §9).
-- Seat states: available, held, sold and released. Seat holds reuse the generic hold mechanism from P3.1 and the expiry job from P3.3.
-- During checkout for a seated event, the buyer picks specific seats, and the hold covers both the offering capacity and the seats, in one transaction.
-- The partial unique index ensures one active ticket per seat per event.
-- The seat appears on the ticket and in the scan response.
-- Events without seating need no seat setup.
-- Tests, including a simultaneous test where two buyers choose the same seat and exactly one gets it.
-```
-
-**Done when:** a seat can never be sold twice, and expired holds release seats.
-
-### P7.2 — Seat selection screens
-
-```text
-Build:
-- /manage: a seating setup screen (sections and rows, bulk seat creation, a seat list with states).
-- /web: seat selection during checkout, shown as an accessible grid by section and row with clear available, held and selected states, and fully usable with the keyboard. Seats taken by someone else while the buyer is choosing show a clear message.
-```
-
-**Done when:** a buyer can pick seats, and the chosen seats appear on their tickets.
-
-### P7.3 — Remaining promotion rules and reports (backend)
-
-```text
-Implement implementation-plan.md Phase 7 steps 6–8.
+Implement implementation-plan.md Phase 7 steps 1–3.
 - Complete any promotion rules from SOW §2.8 that P3.4 didn't cover, plus redemption tracking.
 - Organizer report endpoints (own events only): sales by offering, payment status, remaining capacity, promotion performance, attendance, and gate activity by time and gate.
 - Admin report endpoints: platform-wide summaries, transaction oversight, and an audit log search filtered by actor, organizer, action and date.
@@ -643,16 +641,41 @@ Implement implementation-plan.md Phase 7 steps 6–8.
 
 **Done when:** report figures match the records, and organizers only ever see their own events.
 
-### P7.4 — Report screens
+### P7.2 — Report screens
 
 ```text
-Build report screens in /manage for organizers and admins, using the P7.3 endpoints:
+Build report screens in /manage for organizers and admins, using the P7.1 endpoints:
 - Summary cards, tables with filters, and simple charts where they help: sales over time and attendance by gate.
 - An audit log viewer for admins.
 - Every number is labeled with its unit and time range.
 ```
 
 **Done when:** organizers and admins can answer "how many sold, how much paid, how many admitted" from the screens.
+
+### P7.3 — Reserved seating (backend)
+
+```text
+Implement reserved seating as described in implementation-plan.md Phase 7 steps 4–8.
+- Organizers manage sections, rows and seat numbers, including bulk creation (for example, row A, seats 1–30). No visual seat-map editor: it's out of scope (SOW §9).
+- Seat states: available, held, sold and released. Seat holds are inventory_reservations rows with seat_id set, so they reuse the hold mechanism from P3.1 and the expiry job from P3.3.
+- During checkout for a seated event, the buyer picks specific seats, and the hold covers both the offering capacity and the seats, in one transaction.
+- The partial unique index ensures one active ticket per seat per event.
+- The seat appears on the ticket and in the scan response.
+- Events without seating need no seat setup.
+- Tests, including a simultaneous test where two buyers choose the same seat and exactly one gets it.
+```
+
+**Done when:** a seat can never be sold twice, and expired holds release seats.
+
+### P7.4 — Seat selection screens
+
+```text
+Build:
+- /manage: a seating setup screen (sections and rows, bulk seat creation, a seat list with states).
+- /web: seat selection during checkout, shown as an accessible grid by section and row with clear available, held and selected states, and fully usable with the keyboard. Seats taken by someone else while the buyer is choosing show a clear message.
+```
+
+**Done when:** a buyer can pick seats, and the chosen seats appear on their tickets.
 
 **Then run the [phase exit check](#phase-exit-check) for Phase 7.**
 
@@ -666,9 +689,10 @@ Build report screens in /manage for organizers and admins, using the P7.3 endpoi
 Write Playwright end-to-end tests for the full journey, running against staging-like settings with the FakeProvider:
 1. An organizer creates and publishes an event with two offerings.
 2. A buyer purchases tickets (one simulated M-Pesa payment and one simulated card payment), receives the email (captured in test mode) and opens the tickets.
-3. A guard scans each ticket: admitted. Scanning one again: "already used".
+3. A guard signed in with a guard password account scans each ticket: admitted. Scanning one again: "already used".
 4. The organizer sees the sale, the payment and the attendance in the reports.
 5. A refund revokes the tickets, and a scan then shows "invalid".
+6. When the event's last gate closes, the password guard is signed out and can't sign in again.
 Add them to CI as a separate job.
 ```
 
@@ -678,7 +702,7 @@ Add them to CI as a separate job.
 
 ```text
 Review the whole codebase for security, as described in implementation-plan.md Phase 8 step 3, then fix what you find.
-Check: authorization on every route (compare against v1.md §3); tenant isolation; mass assignment; input validation; SQL injection; XSS in both frontends; CSRF; CORS; session and cookie flags; rate limits on login, resend, scan and webhook endpoints; webhook forgery; secrets in the repository or logs; personal data in logs; security headers; and dependency vulnerabilities (composer audit, pnpm audit).
+Check: authorization on every route (compare against v1.md §3); tenant isolation; the Google sign-in flow (state check, verified emails only, linking by Google account ID, session regeneration, no open redirects); guard password sign-in (hashing, rate limiting, lockout, identical errors, forced password change, guard-only scope, and deletion of the password when the event closes); mass assignment; input validation; SQL injection; XSS in both frontends; CSRF; CORS; session and cookie flags; rate limits on the sign-in callback, resend, scan and webhook endpoints; webhook forgery; secrets in the repository or logs; personal data in logs; security headers; and dependency vulnerabilities (composer audit, pnpm audit).
 First report your findings ranked by severity, each with its location and the fix. Wait for my go-ahead, then fix them one by one, adding a test for each.
 ```
 
@@ -711,7 +735,7 @@ Set up production monitoring as described in implementation-plan.md Phase 8 step
 
 ```text
 Prepare the go-live and handover documents described in implementation-plan.md Phase 8 steps 7–11:
-- doc/go-live-checklist.md: production environment variables, cron, HTTPS on all subdomains, Sanctum production domains, production Pesapal keys and the production IPN registration, email DNS records, backups confirmed, monitoring active, the smoke test, and one real low-value payment with each method followed by a refund.
+- doc/go-live-checklist.md: production environment variables, cron, HTTPS on all subdomains, Sanctum production domains, the production Google OAuth client with its callback URL and published consent screen, production Pesapal keys and the production IPN registration, email DNS records, backups confirmed, monitoring active, the smoke test, and one real low-value payment with each method followed by a refund.
 - Update doc/deployment.md and the OpenAPI contract so they match the final code.
 - doc/admin-guide.md and doc/organizer-guide.md: plain-language guides with the main tasks step by step.
 - A test results summary for deliverable D11, mapping each SOW §5 acceptance criterion to the tests that prove it.

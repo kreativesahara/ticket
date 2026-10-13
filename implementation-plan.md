@@ -1,6 +1,6 @@
 # Implementation Plan: Multi-Organizer Event Ticketing Platform
 
-**Version 1.0 · 12 October 2026 · System design and analysis**
+**Version 1.3 · 13 October 2026 · System design and analysis**
 
 **Based on:** [v1.md](v1.md) (requirements specification), [sow.md](sow.md) (statement of work), [techstack.md](techstack.md) (architecture blueprint) and [v2.md](v2.md) (requirements review).
 
@@ -29,8 +29,8 @@ This plan turns the requirements and architecture into phases that the team can 
 | 4     | Payments through Pesapal          | 7–8   | 4              | —                                         |
 | 5     | Ticket issuance and delivery      | 8–9   | 5              | **M3 (25%):** payments and ticketing      |
 | 6     | Gate access and scanning          | 9–10  | 6              | —                                         |
-| 7     | Seating, promotions and reporting | 10–11 | Modules 8–10   | —                                         |
-| 8     | Testing, deployment and handover  | 11–12 | 7              | **M4 (15%):** UAT, deployment and handover |
+| 7     | Seating, promotions and reporting | 10–11 | 7              | —                                         |
+| 8     | Testing, deployment and handover  | 11–12 | 8              | **M4 (15%):** UAT, deployment and handover |
 
 ### 1.3 Timeline
 
@@ -65,7 +65,7 @@ gantt
     M4 UAT, deployment and handover     :milestone, m4, 2024-03-25, 0d
 ```
 
-The SOW estimates 8–12 weeks. This plan uses the upper bound because the agreed scope covers two payment methods (M-Pesa and card, both through Pesapal), three user interfaces, reserved seating, promotions and reporting. Eight weeks is realistic only if reserved seating and the fuller reporting move to a release after launch.
+The SOW sets a 12-week delivery window (§4.1, revised 13 October 2026). The agreed scope covers two payment methods (M-Pesa and card, both through Pesapal), four user interfaces (public, organizer, admin and guard), reserved seating, promotions and reporting, so a shorter schedule isn't realistic. If the schedule slips, reserved seating is the first item to defer (see Phase 7).
 
 The durations assume about three to four developers plus part-time design and QA. Recalibrate them in Phase 0 once the team is confirmed. If the project starts in November, the December holidays fall inside Phases 4–7, so add one to two weeks of buffer.
 
@@ -96,22 +96,22 @@ These items can delay launch no matter how fast development goes:
 
 **Goal:** Merge the source documents into one approved specification, settle the open decisions, and remove the external blockers that could stall later phases.
 
-**Needed from the client:** availability of the decision-maker, payment provider applications started, hosting and domain access, and branding assets.
+**Needed from the client:** availability of the decision-maker, the Pesapal application started, access to hosting, domains and Google Cloud, and branding assets.
 
 ### Steps
 
-1. **Merge the source documents into one baseline.** v1.md and techstack.md use different names for the same things. Choose one set and record it:
+1. **Confirm the naming baseline.** v1.md is the single source of truth for table names, roles and API paths, and techstack.md has been aligned to it (13 October 2026). These decisions have been applied:
 
-   | Topic                 | v1.md                                    | techstack.md                         |
-   | --------------------- | ---------------------------------------- | ------------------------------------ |
-   | Tenant table          | `organizers`, `organizer_members`        | `organizations`, `organization_members` |
-   | Guard assignment      | `event_staff`                            | `guard_assignments`                  |
-   | Scan record           | `ticket_scans` (every attempt)           | `ticket_redemptions`                 |
-   | Sellable unit         | `event_ticket_offerings` (type × category) | `ticket_inventory`                 |
-   | Roles                 | 4 roles                                  | 5 roles (organizer owner and staff are separate) |
-   | API paths             | `/organizer/events/:id`                  | `/api/v1/events/{id}`                |
+   | Topic            | Standard (v1.md)                                                        | Replaced names                                  |
+   | ---------------- | ----------------------------------------------------------------------- | ----------------------------------------------- |
+   | Tenant tables    | `organizers`, `organizer_members`                                       | `organizations`, `organization_members`         |
+   | Guard assignment | `event_staff` (role `guard`)                                            | `guard_assignments`                             |
+   | Scan record      | `ticket_scans` (every attempt); redemption is a ticket status           | `ticket_redemptions`                            |
+   | Sellable unit    | `event_ticket_offerings` (type × category) with `inventory_reservations` | `ticket_inventory`                             |
+   | Roles            | Platform admin, organizer owner, organizer staff, guard, attendee       | The earlier four-role and five-role lists       |
+   | API paths        | `/api/v1/...`, with organizer endpoints under `/api/v1/organizer`       | `/organizer/events/:id`, `/api/v1/events/{id}`  |
 
-   **Recommendation:** use v1.md's schema as the base because it is the most complete. Add techstack.md's split between organizer owner and organizer staff, use the `/api/v1` prefix, and update techstack.md to match.
+   Confirm these with the client. Make any later change in v1.md first.
 
 2. **Settle the open business decisions** listed in [§11 Decision log](#11-decision-log). Give each one an owner and a deadline.
 
@@ -128,7 +128,7 @@ These items can delay launch no matter how fast development goes:
 
    Record the result as **go** or **no-go**. If it's no-go, fall back to a small VPS running the same Laravel application. No code changes are needed.
 
-5. **Decide where the frontends are hosted.** A Next.js site that renders on the server needs a Node runtime, for example Vercel, or cPanel's Node.js app support if the plan has it. The Vite dashboard builds to static files, which cPanel can serve. All three applications must share a parent domain for Sanctum's cookie login to work.
+5. **Decide where the frontends are hosted.** A Next.js site that renders on the server needs a Node runtime, for example Vercel, or cPanel's Node.js app support if the plan has it. The Vite dashboard builds to static files, which cPanel can serve. All three applications must share a parent domain for Sanctum's cookie sessions to work.
 
 6. **Set measurable performance targets.** v1.md requires these before launch. Proposed starting values for the client to confirm:
    - Scan validation: 95% of scans answered within 1 second over mobile data.
@@ -136,6 +136,8 @@ These items can delay launch no matter how fast development goes:
    - Peak load: ask the client for the largest expected event and how many buyers arrive in the first minutes of a sale.
 
 7. **Fix the baseline schedule and risk register.** Confirm the team, the dates and the milestone review windows.
+
+8. **Prepare Google sign-in.** The client creates, or gives access to, a Google Cloud project for the platform. Set up the OAuth consent screen with the app name, support email, privacy policy link and the platform's domains, requesting only the `openid`, `email` and `profile` scopes. Create OAuth clients for local development and staging now; the production client follows in Phase 8. Also confirm that every organizer and staff member has, or can create, a Google account. Guards without one will use guard password accounts.
 
 ### Deliverables
 
@@ -148,7 +150,8 @@ These items can delay launch no matter how fast development goes:
 - [ ] Client representative has signed off the requirements and decision log.
 - [ ] The Pesapal merchant application has been submitted and sandbox access requested.
 - [ ] Hosting go/no-go is recorded.
-- [ ] The naming baseline is agreed.
+- [ ] A Google Cloud project and OAuth consent screen exist, with OAuth clients for local development and staging.
+- [ ] The client has confirmed the naming baseline in v1.md.
 
 ---
 
@@ -156,17 +159,13 @@ These items can delay launch no matter how fast development goes:
 
 **Weeks 2–3 · SOW phase 2**
 
-**Goal:** Agree the data model, API contract and designs, and deploy a working skeleton to staging that already has login and tenant isolation.
+**Goal:** Agree the data model, API contract and designs, and deploy a working skeleton to staging that already has Google sign-in and tenant isolation.
 
 **Needed from the client:** design reviews, branding assets and access to DNS for the domain.
 
 ### Design track
 
-1. **Database design and migration plan (D3).** Cover every in-scope module, including seating, so later phases don't need schema rework. Fill the gaps found while reviewing v1.md:
-   - A reserved count on each ticket offering, so holds can be made with one atomic update (see Phase 3).
-   - Storage for the QR token that allows the ticket page to show the QR again. A hash alone can't be turned back into a QR code (see Phase 5).
-   - Hold expiry for seat holds.
-   - Organizer member role values for owner and staff.
+1. **Database design and migration plan (D3).** Turn v1.md §4 into the final database design, covering every in-scope module, including seating, so later phases don't need schema rework. v1.md already includes the items earlier drafts missed: `reserved_count` on offerings for atomic holds (see Phase 3), `qr_token_encrypted` alongside `qr_token_hash` (see Phase 5), seat holds through `inventory_reservations.seat_id`, and the owner and staff roles on `organizer_members`.
 2. **API contract** as an OpenAPI specification: endpoints, request and response formats, one standard error format, pagination and request correlation IDs.
 3. **Permission policy list.** Turn the permission matrix in v1.md into a rule for every endpoint: which role may call it, and which ownership check applies.
 4. **State machines.** Finalize the allowed transitions for orders, payments and tickets.
@@ -187,21 +186,21 @@ These items can delay launch no matter how fast development goes:
 
 7. **Continuous integration.** On every push, run linting, static analysis and the test suite against PostgreSQL.
 8. **Laravel foundation.** Install Laravel, connect to Supabase over SSL, and add migrations for the identity and tenancy tables. Use UUIDs for any record referenced from outside the system.
-9. **Authentication.** Set up Sanctum cookie login for the web apps: register, login, logout, email verification, password reset and account suspension. Configure stateful domains, the session cookie domain, CORS and CSRF for the `www`, `manage` and `api` subdomains.
+9. **Google sign-in.** Sign users in through Google OAuth with Laravel Socialite, following the rules in techstack.md §3: verified Google emails only, users matched by Google account ID, and a Sanctum cookie session started after sign-in. Add logout, the `me` endpoint, account suspension, invitation acceptance, organizer applications that a platform admin approves, and a command for granting platform admin. Passwords exist only for guard password accounts (techstack.md §3): add guard sign-in with email and password, the forced password change at first sign-in, rate limiting with temporary lockout, and shorter guard sessions. Use the database session driver, so a specific guard's sessions can be ended. There is no self-registration, email verification or email-based password reset. Configure stateful domains, the session cookie domain, CORS and CSRF for the `www`, `manage` and `api` subdomains.
 10. **Tenancy and authorization.** Build organizers, members and roles, with a Laravel policy for every resource. Keep platform admin permissions separate from organizer permissions.
 11. **Audit log.** A single service call records who acted, the organizer, the event, the action, the affected resource and details.
-12. **API conventions.** The `/api/v1` prefix, the standard error format, rate limits on login and registration, and a correlation ID on every request.
+12. **API conventions.** The `/api/v1` prefix, the standard error format, rate limits on the sign-in routes, and a correlation ID on every request.
 13. **Tenant-isolation test suite.** For every resource, a test checks that a user from organizer B is refused access to organizer A's records. The suite grows with every phase.
 
 ### Frontend track
 
 14. Create `/web` (Next.js and TypeScript) and `/manage` (Vite, React and TypeScript), both using Tailwind CSS and shadcn/ui with the shared theme.
-15. Build the login, password reset and email verification screens in `/manage`, with routing to the organizer, admin and guard areas by role.
+15. Build the "Sign in with Google" page, the guard email-and-password sign-in form with its first-sign-in password change, the invitation acceptance page and the organizer application form in `/manage`, with routing to the organizer, admin and guard areas by role.
 16. Generate a typed API client from the OpenAPI specification, plus a mock server so screens can be built before the backend is ready.
 
 ### Deployment track
 
-17. **Working skeleton on staging.** The API runs on cPanel over HTTPS, cron runs the scheduler, queued jobs are processed, both frontends are deployed, and login works end to end across the subdomains.
+17. **Working skeleton on staging.** The API runs on cPanel over HTTPS, cron runs the scheduler, queued jobs are processed, both frontends are deployed, and Google sign-in works end to end across the subdomains.
 
 ### Deliverables
 
@@ -214,7 +213,9 @@ These items can delay launch no matter how fast development goes:
 
 - [ ] Organizers cannot read or change another organizer's resources, and the automated tests prove it.
 - [ ] Every protected endpoint refuses requests that aren't logged in or aren't authorized.
-- [ ] Login works across `www`, `manage` and `api` on staging.
+- [ ] Google sign-in works on staging, and the session holds across `www`, `manage` and `api`.
+- [ ] Unverified Google accounts, suspended users and users without an invitation or approved organizer can't reach the organizer, guard or admin areas.
+- [ ] A guard password account must change its temporary password before doing anything else, and can never reach the organizer or admin areas.
 - [ ] The database design, API contract and designs are approved.
 
 ---
@@ -234,7 +235,7 @@ These items can delay launch no matter how fast development goes:
 5. **Offerings.** Each allowed type × category combination, with a price in minor units of KES, capacity, sales window, and minimum and maximum per order. Include group quantity rules, and an approval or manual-issue flag for Media tickets.
 6. **Delegations.** Each with its allocation, allowed categories and price rules.
 7. **Attendee details setup.** The collection mode (purchaser only, or details for every ticket) and the field definitions, including event-specific questions.
-8. **Gates and staff.** Create gates, invite guards by email, assign each guard to an event and optionally a gate, and remove assignments.
+8. **Gates and staff.** Create gates, add guards either by email invitation (the guard accepts by signing in with a Google account that uses that address) or by creating a guard password account and giving the guard its temporary password, assign each guard to an event and optionally a gate, and remove assignments. A guard password account works for one event at a time. When that event closes (its last gate closes, or it is cancelled or archived), the password is deleted, the guard's sessions end and the assignment ends. A job runs this every minute, and every request from a password guard also checks the event is still open (techstack.md §3).
 9. **Publishing rules.** An event can be published only if it has at least one active offering, valid time windows, and capacity that covers its allocations. Changes after publishing are audited. Changes that would affect existing orders, such as lowering capacity below tickets already sold, are blocked or need explicit confirmation.
 10. **Admin.** List organizers, suspend or reactivate them, and oversee events.
 
@@ -249,6 +250,7 @@ These items can delay launch no matter how fast development goes:
 - [ ] An organizer can publish an event with valid offerings and capacity limits.
 - [ ] Unpublished events never appear on public endpoints.
 - [ ] Guard invitation and assignment work, and guards see only the events assigned to them.
+- [ ] When an event closes, its guard passwords are deleted and those guards are signed out immediately; their past scans still show their names.
 - [ ] Tenant-isolation tests cover every new resource.
 
 ---
@@ -370,7 +372,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 ### Backend
 
 1. **Issuance**, inside the payment transaction: one ticket per unit bought, each with a unique, non-sequential ticket number, plus its attendee, offering, delegation and seat where applicable.
-2. **QR credential.** Generate a random, hard-to-guess token. The QR code contains only this token and no personal details, and tickets are looked up by the token's hash. The ticket page must be able to show the QR again, but a hash can't be turned back into the token. So either store the token encrypted alongside its hash, or generate the QR value as a signed reference. Never store the token in plain text.
+2. **QR credential.** Generate a random, hard-to-guess token. The QR code contains only this token and no personal details. Store it twice, as v1.md §4.3 requires: a hash (`qr_token_hash`) to find the ticket when it's scanned, and an encrypted copy (`qr_token_encrypted`) so the ticket page can show the QR code again. Never store it in plain text. The encryption uses Laravel's application key, so keep that key stable and backed up.
 3. **Retrieval links.** Each link uses a random token whose hash is stored in `ticket_access_tokens`, with an expiry date and the ability to revoke it. Buyers can request a new link by entering their email address. This request is rate-limited and doesn't reveal whether an email address has an order.
 4. **Email delivery** through the queue, driven by the outbox records, with retries and logging of failures.
 5. **Revocation.** Organizers and admins can revoke a ticket with a reason. Revocations are audited, and revoked tickets are rejected at the gate.
@@ -419,7 +421,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 
 ### Frontend (guard area in `/manage`)
 
-5. **Designed for phones first:** log in → see assigned events → choose a gate → scan with the camera. Browsers only allow camera access over HTTPS.
+5. **Designed for phones first:** sign in (with Google, or with a guard email and password) → see assigned events → choose a gate → scan with the camera. A visible "Sign out" button supports shift changes on shared phones. Browsers only allow camera access over HTTPS.
 6. **Result screens** that are large and high-contrast: valid, already used, invalid (with the reason), and unable to verify.
 7. **Fail closed.** A timeout or network error shows "Unable to verify — do not admit" and never a success.
 8. **Organizer dashboard:** live gate activity and attendance counts.
@@ -427,7 +429,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 ### Tests
 
 9. **Simultaneous scans:** two devices scan the same ticket at the same moment, and exactly one admits.
-10. **Rejection cases:** wrong event, wrong gate, revoked, unpaid, before the gate opens, after it closes, and an unknown QR code.
+10. **Rejection cases:** wrong event, wrong gate, revoked, unpaid, before the gate opens, after it closes, an unknown QR code, and a password guard whose event has closed.
 11. **Field rehearsal:** real phones in poor light on slow mobile data, in conditions close to a real venue. Measure scan time against the Phase 0 target.
 
 ### Deliverables
@@ -445,53 +447,53 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 
 ## 9. Phase 7 — Reserved seating, promotions and reporting
 
-**Weeks 10–11 · SOW modules 8, 9 and 10**
+**Weeks 10–11 · SOW phase 7 (modules 8, 9 and 10)**
 
 **Goal:** Finish the remaining in-scope modules without destabilizing the core flow from purchase to entry.
 
-Each part of this phase is built and tested on its own. The core flow doesn't depend on it, so if the schedule slips, this is the phase to move into a release after launch, with the client's approval through change control.
-
-### Reserved seating
-
-1. Organizers set up sections, rows and seat numbers through simple forms and bulk entry. The SOW (§9) excludes advanced visual seat-map editors.
-2. Seats can be available, held, sold or released. Seat holds reuse the Phase 3 hold mechanism and its expiry.
-3. A database constraint allows only one active ticket per seat per event.
-4. Buyers choose seats during checkout, and the assigned seat appears on the ticket and at the gate.
-5. Test that two buyers choosing the same seat at the same moment results in exactly one getting it.
+Each part of this phase is built and tested on its own, and the core flow doesn't depend on any of it. Reserved seating is built last because it is the first item to defer if the schedule slips. SOW §4.1 allows it to move to a release after launch, with the client's approval through change control. Building it last means deferring it leaves no half-finished work.
 
 ### Promotions (remaining rules)
 
-6. Complete the remaining rules from SOW §2.8, and add redemption tracking and reporting.
+1. Complete the remaining rules from SOW §2.8, and add redemption tracking and reporting.
 
 ### Reporting
 
-7. **Organizer reports**, for their own events only: sales by offering, payment status, remaining capacity, promotion performance, attendance and gate activity.
-8. **Admin reports:** platform-wide summaries, transaction oversight and an audit log viewer.
+2. **Organizer reports**, for their own events only: sales by offering, payment status, remaining capacity, promotion performance, attendance and gate activity.
+3. **Admin reports:** platform-wide summaries, transaction oversight and an audit log viewer.
+
+### Reserved seating
+
+4. Organizers set up sections, rows and seat numbers through simple forms and bulk entry. The SOW (§9) excludes advanced visual seat-map editors.
+5. Seats can be available, held, sold or released. Seat holds reuse the Phase 3 hold mechanism and its expiry, through `inventory_reservations.seat_id`.
+6. A database constraint allows only one active ticket per seat per event.
+7. Buyers choose seats during checkout, and the assigned seat appears on the ticket and at the gate.
+8. Test that two buyers choosing the same seat at the same moment results in exactly one getting it.
 
 ### Exit criteria
 
-- [ ] A seat can't be sold twice, expired holds release seats, and general-admission events need no seat setup.
 - [ ] Reports show only the organizer's own events, and their figures match the order and payment records.
+- [ ] A seat can't be sold twice, expired holds release seats, and general-admission events need no seat setup. If seating has been deferred by change control, this criterion moves with it.
 
 ---
 
 ## 10. Phase 8 — Testing, deployment and handover
 
-**Weeks 11–12 · SOW phase 7 · Ends with payment milestone M4 (15%)**
+**Weeks 11–12 · SOW phase 8 · Ends with payment milestone M4 (15%)**
 
 **Goal:** Demonstrate the agreed acceptance criteria in an environment like production, go live, and hand over.
 
-**Needed from the client:** people to run user acceptance testing (UAT), production payment credentials, DNS for the production domains, and the approved privacy notice and refund policy.
+**Needed from the client:** people to run user acceptance testing (UAT), production payment credentials, Google Cloud access for the production sign-in client, DNS for the production domains, and the approved privacy notice and refund policy.
 
 ### Steps
 
 1. **Feature freeze.** From here on, only defect fixes are made.
 2. **End-to-end tests** of the full journey: publish an event → buy tickets with each payment method → receive the email → open the ticket → scan it → see the second scan rejected.
-3. **Security review:** authorization tests across all endpoints, checks against common web vulnerabilities (the OWASP Top 10), rate limits, no secrets in the repository, security headers, a dependency audit, and attempts to forge payment notifications.
+3. **Security review:** authorization tests across all endpoints, the Google sign-in flow (state check, verified emails, linking by Google account ID, no open redirects), guard password sign-in (hashing, rate limiting, lockout, forced password change, guard-only scope), checks against common web vulnerabilities (the OWASP Top 10), rate limits, no secrets in the repository, security headers, a dependency audit, and attempts to forge payment notifications.
 4. **Performance test** against the Phase 0 targets: a burst of checkouts on one event, and scanning throughput.
 5. **Backup and recovery.** Confirm what backups the Supabase plan includes, run a restore into staging, and document the procedure.
 6. **Monitoring.** Error tracking, uptime checks on the API and both frontends, and alerts for failed jobs, payments stuck in pending, and email failures.
-7. **Production setup.** A production Supabase project; configuration stored outside the web root; cron; the agreed way of running queued jobs; HTTPS on all three subdomains; Sanctum configured for the production domains; and production Pesapal keys, with the production IPN URL registered.
+7. **Production setup.** A production Supabase project; configuration stored outside the web root; cron; the agreed way of running queued jobs; HTTPS on all three subdomains; Sanctum configured for the production domains; production Pesapal keys, with the production IPN URL registered; and a production Google OAuth client, with its callback URL registered and the consent screen published.
 8. **Data protection.** Publish the privacy notice and retention rules, and agree each party's role (controller or processor). Confirm any registration obligations with Kenya's Office of the Data Protection Commissioner.
 9. **UAT.** The client tests on staging against the acceptance criteria in SOW §5. Defects are logged and classified, and critical and high defects are fixed before sign-off. The client has five business days to review.
 10. **Go-live.** Deploy, run smoke tests, then make one real low-value payment with each method and refund it.
@@ -521,18 +523,21 @@ These decisions affect the database, the integrations or the schedule. Each need
 
 | #  | Decision                              | Options                                                     | Recommendation                                                                       | Needed by |
 | -- | ------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ | --------- |
-| 1  | Naming baseline                       | v1.md names or techstack.md names                           | v1.md schema, plus the owner/staff role split                                        | Phase 0   |
+| 1  | Naming baseline                       | —                                                           | **Decided:** v1.md names, organizer owner and staff roles, `/api/v1` paths; applied to v1.md and techstack.md | Decided   |
 | 2  | Booking or platform fees              | None; added to the buyer's total; deducted from the organizer | Business decision for the client; it changes how prices are stored on orders       | Phase 0   |
 | 3  | Payment gateway                       | —                                                           | **Decided: Pesapal**, for both M-Pesa and card payments through its hosted checkout  | Decided   |
 | 4  | Paying organizers                     | Manual payouts outside the platform; automated payouts      | All buyer payments land in the platform's Pesapal merchant account. Pay organizers manually from the reconciliation reports; automated payouts are out of scope (SOW §9) unless added by change request | Phase 0   |
 | 5  | Frontend hosting                      | Vercel, cPanel Node.js support, or static files             | Vercel for the Next.js site; cPanel static hosting for the Vite dashboard            | Phase 0   |
-| 6  | Attendee accounts at launch           | Guest checkout only, or optional accounts                   | Guest checkout with retrieval links (SOW §2.1); accounts later. techstack.md's `/me/tickets` waits until then | Phase 1   |
+| 6  | Attendee accounts at launch           | Guest checkout only, or optional accounts                   | Guest checkout with retrieval links (SOW §2.1); accounts later | Phase 1   |
 | 7  | Organizer onboarding                  | Self sign-up with admin approval, or created by admins      | Self sign-up with admin approval                                                     | Phase 1   |
 | 8  | Repository structure                  | One repository or several                                   | One repository (see Phase 1)                                                         | Phase 1   |
 | 9  | Email provider                        | Client's choice                                             | Any provider that supports domain authentication                                     | Phase 1   |
 | 10 | Hold duration                         | 5–20 minutes                                                | 10–15 minutes, configurable                                                          | Phase 3   |
 | 11 | Payment that arrives after the hold expired | Honor it if tickets remain; always refund; handle manually | Honor it if tickets remain, otherwise flag it for a refund                     | Phase 4   |
 | 12 | Refund policy and who can approve     | Organizer only; admin only; organizer requests and admin approves | Per-event policy: the organizer requests, the platform admin approves         | Phase 4   |
+| 13 | Sign-in method                        | —                                                           | **Decided: Google OAuth** for admins, organizers and staff; guards use Google or a guard password account. Buyers still check out as guests | Decided   |
+| 14 | Guard sign-in without Google          | —                                                           | **Decided:** individual email-and-password guard accounts, created by the guard's organizer or a platform admin. Each password is valid for one event and deleted as soon as that event closes | Decided   |
+| 15 | Guards change the temporary password at first sign-in | Required; optional                          | Required, so only the guard knows their password and their scans are truly theirs. The organizer can still reset it at any time | Phase 1   |
 
 ---
 
@@ -564,6 +569,8 @@ These decisions affect the database, the integrations or the schedule. Each need
 | Payment notifications are duplicated or late              | Duplicate checks, reconciliation job, late-payment policy                                 | Provider |
 | Poor connectivity at gates                                | Scanner fails closed; field rehearsal; check venue connectivity before each event         | Both     |
 | Ticket emails go to spam or fail                          | SPF, DKIM and DMARC records; retries; buyers can request a new link                       | Both     |
+| Some staff can't sign in with Google                      | Confirm in Phase 0; help them create a Google account with their existing email           | Client   |
+| Guard passwords get shared or written down                | One account per guard; forced change at first sign-in; guard-only scope; password deleted when the event closes; organizer can issue a new password or disable the account at any time; guard sign-in rehearsed before each event | Both     |
 | Scope grows during the build                              | Change control as set out in SOW §12                                                      | Both     |
 
 ---
