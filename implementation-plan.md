@@ -105,10 +105,10 @@ These items can delay launch no matter how fast development goes:
    | Topic            | Standard (v1.md)                                                        | Replaced names                                  |
    | ---------------- | ----------------------------------------------------------------------- | ----------------------------------------------- |
    | Tenant tables    | `organizers`, `organizer_members`                                       | `organizations`, `organization_members`         |
-   | Guard assignment | `event_staff` (role `guard`)                                            | `guard_assignments`                             |
+   | Guard assignment | `event_staff` (role `guard` or `event_owner`)                           | `guard_assignments`                             |
    | Scan record      | `ticket_scans` (every attempt); redemption is a ticket status           | `ticket_redemptions`                            |
    | Sellable unit    | `event_ticket_offerings` (type × category) with `inventory_reservations` | `ticket_inventory`                             |
-   | Roles            | Platform admin, organizer owner, organizer staff, guard, attendee       | The earlier four-role and five-role lists       |
+   | Roles            | Platform admin, organizer staff, event owner, guard, attendee           | The earlier four-role and five-role lists       |
    | API paths        | `/api/v1/...`, with organizer endpoints under `/api/v1/organizer`       | `/organizer/events/:id`, `/api/v1/events/{id}`  |
 
    Confirm these with the client. Make any later change in v1.md first.
@@ -165,7 +165,7 @@ These items can delay launch no matter how fast development goes:
 
 ### Design track
 
-1. **Database design and migration plan (D3).** Turn v1.md §4 into the final database design, covering every in-scope module, including seating, so later phases don't need schema rework. v1.md already includes the items earlier drafts missed: `reserved_count` on offerings for atomic holds (see Phase 3), `qr_token_encrypted` alongside `qr_token_hash` (see Phase 5), seat holds through `inventory_reservations.seat_id`, and the owner and staff roles on `organizer_members`.
+1. **Database design and migration plan (D3).** Turn v1.md §4 into the final database design, covering every in-scope module, including seating, so later phases don't need schema rework. v1.md already includes the items earlier drafts missed: `reserved_count` on offerings for atomic holds (see Phase 3), `qr_token_encrypted` alongside `qr_token_hash` (see Phase 5), seat holds through `inventory_reservations.seat_id`, the staff role on `organizer_members`, and the guard and event_owner roles on `event_staff`.
 2. **API contract** as an OpenAPI specification: endpoints, request and response formats, one standard error format, pagination and request correlation IDs.
 3. **Permission policy list.** Turn the permission matrix in v1.md into a rule for every endpoint: which role may call it, and which ownership check applies.
 4. **State machines.** Finalize the allowed transitions for orders, payments and tickets.
@@ -524,7 +524,7 @@ These decisions affect the database, the integrations or the schedule. Each need
 
 | #  | Decision                              | Options                                                     | Recommendation                                                                       | Needed by |
 | -- | ------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ | --------- |
-| 1  | Naming baseline                       | —                                                           | **Decided:** v1.md names, organizer owner and staff roles, `/api/v1` paths; applied to v1.md and techstack.md | Decided   |
+| 1  | Naming baseline                       | —                                                           | **Decided:** v1.md names; platform admin (full rights), organizer staff (full control), event owner (guest data read-only), guard, and attendee roles; `/api/v1` paths; applied to v1.md and techstack.md | Decided   |
 | 2  | Booking or platform fees              | None; added to the buyer's total; deducted from the organizer | Business decision for the client; it changes how prices are stored on orders       | Phase 0   |
 | 3  | Payment gateway                       | —                                                           | **Decided: Pesapal**, for both M-Pesa and card payments through its hosted checkout  | Decided   |
 | 4  | Paying organizers                     | Manual payouts outside the platform; automated payouts      | All buyer payments land in the platform's Pesapal merchant account. Pay organizers manually from the reconciliation reports; automated payouts are out of scope (SOW §9) unless added by change request | Phase 0   |

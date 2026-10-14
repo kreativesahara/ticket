@@ -60,7 +60,7 @@ The frontends must never write directly to ticket inventory, payment records, or
 
 ## 3. Authentication and role design
 
-Admins, organizer owners and organizer staff sign in with their **Google account**. Guards can also use Google, or sign in with an **email and password** that their organizer creates for them (see [Guard password accounts](#guard-password-accounts)). Laravel Socialite handles the Google OAuth flow. Once Google confirms who the user is, Laravel starts a Sanctum **cookie-based SPA session** that keeps them signed in, rather than giving the browser long-lived bearer tokens. Buyers don't sign in at all: they check out as guests.
+Admins, organizer staff and event owners sign in with their **Google account**. Guards can also use Google, or sign in with an **email and password** that their organizer creates for them (see [Guard password accounts](#guard-password-accounts)). Laravel Socialite handles the Google OAuth flow. Once Google confirms who the user is, Laravel starts a Sanctum **cookie-based SPA session** that keeps them signed in, rather than giving the browser long-lived bearer tokens. Buyers don't sign in at all: they check out as guests.
 
 ### Google sign-in flow
 
@@ -87,7 +87,7 @@ sequenceDiagram
 - **Identity scopes only.** Request `openid`, `email` and `profile`. Don't store Google's access or refresh tokens; the platform only needs to know who the user is.
 - **Verified emails only.** Reject Google accounts whose email address Google hasn't verified.
 - **Link by Google account ID.** Store Google's stable account ID in `users.google_id` and look users up by it, not by email.
-- **Invitations decide access.** Staff, and guards who use Google, are invited by email and accept by signing in with a Google account that uses that address. A new user with no invitation can apply for an organizer account, which a platform admin approves. Platform admins are designated by an existing admin, never through sign-in.
+- **Invitations decide access.** Staff, event owners, and guards who use Google, are invited by email and accept by signing in with a Google account that uses that address. A new user with no invitation can apply for an organizer account, which a platform admin approves. Platform admins are designated by an existing admin or system command, never through sign-in.
 - **Suspended users stay out.** A valid Google sign-in doesn't let a suspended user in.
 - **Browser routes, not API routes.** The redirect and callback are browser navigations that need the session for Google's `state` check, so they live in Laravel's web routes, not under `/api/v1`.
 - **No open redirects.** After sign-in, send users only to allowed frontend addresses.
@@ -99,9 +99,9 @@ See [Laravel Socialite](https://laravel.com/docs/socialite) and [Laravel Sanctum
 
 Guards who can't or don't want to use Google sign in with an email and password instead.
 
-- **One account per guard.** An organizer owner, a staff member allowed to manage guards, or a platform admin creates the account. Never create one account for several guards: every scan is recorded against the signed-in guard.
+- **One account per guard.** An organizer staff member or a platform admin creates the account. Never create one account for several guards: every scan is recorded against the signed-in guard.
 - **Temporary password, then the guard's own.** The platform generates a temporary password and shows it once. The organizer gives it to the guard in person or by direct message, never in a group chat. At first sign-in the guard must set their own password, so only they know it.
-- **Guard-only.** A password account can never become an organizer owner, staff member or platform admin, so a leaked password exposes at most the scanner. It is never linked to a Google sign-in, and Google sign-in with the same email is refused.
+- **Guard-only.** A password account can never become an organizer staff member, event owner or platform admin, so a leaked password exposes at most the scanner. It is never linked to a Google sign-in, and Google sign-in with the same email is refused.
 - **Owned by one organizer.** The account belongs to the organizer that created it. Only that organizer, or a platform admin, can assign it to events, issue its password or disable it. Another organizer can't assign it, because the owning organizer could issue a new password and sign in as the guard.
 - **One event per password.** The account is assigned to one event at a time, and each password is issued for that event and stored in `guard_credentials`. It works only while that event is open, and only to scan that event's tickets at the gates the organizer assigned.
 - **Deleted when the event closes.** An event closes when its last gate closing time passes, or when the organizer cancels or archives it. At that moment the password is revoked: the platform deletes the password hash, ends the guard's sessions and ends their assignment. A scheduled job does this every minute, and every request from a password guard also checks that their event is still open, so there is no gap in between. The account itself is kept, without a password, so scan records still show who admitted whom.
@@ -126,9 +126,9 @@ Create a Google OAuth client for each environment (local, staging and production
 
 | Role                | Access                                                                                                        |
 | ------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Platform admin**  | Manage platform users, organizer accounts and configuration; oversee events and platform-wide reports         |
-| **Organizer owner** | Full control of their organizer account: profile, members and roles, events, pricing, guards and reports      |
-| **Organizer staff** | Only the capabilities an organizer owner grants them; never members, roles or the organizer profile           |
+| **Platform admin**  | Full rights and privileges across the platform: manage platform users, organizer accounts, event oversight, dispute intervention, global configuration, and platform-wide reports |
+| **Organizer staff** | Full control of their organizer account: profile, members, events, pricing, offerings, delegations, guards, and settlement reports |
+| **Event owner**     | Access restricted strictly to assigned events to view, filter, and export guest/attendee data                 |
 | **Guard**           | Scan and redeem tickets only for assigned events and gates                                                    |
 | **Attendee**        | Buy tickets as a guest and view their own orders and tickets through a secure retrieval link; accounts are not required for the initial release |
 

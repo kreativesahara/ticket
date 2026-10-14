@@ -1,6 +1,6 @@
 # Roles, Privileges & Authorization Architecture
 
-**Multi-Organizer Event Ticketing Platform · Version 1.0 · October 2026**  
+**Multi-Organizer Event Ticketing Platform · Version 1.1 · October 2026**  
 **References:** [audit ticket business rules.md](../audit%20ticket%20business%20rules.md) (§1, §2), [v1.md](../v1.md) (§FR-01, §FR-02, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2).
 
 ---
@@ -9,11 +9,11 @@
 
 The platform is a multi-tenant event ticketing system where multiple organizers coexist on shared infrastructure while maintaining absolute isolation. The authorization and security framework is designed around five core principles:
 
-1. **Multi-Tenant Isolation:** An organizer or staff member must never be able to access, view, or alter another organizer’s events, sales, financial settlement reports, attendee details, or staff assignments through parameter tampering, URL guessing, or IDOR (Insecure Direct Object Reference).
-2. **Principle of Least Privilege:** Users receive only the minimum permissions required for their specific role and assigned resources.
-3. **Dual-Layer Authorization (Role + Resource Scope):** Having a role (e.g., `organizer_owner`) determines *what* operations are permitted; resource scoping determines *which* specific tenant or event can be operated on.
-4. **Zero Trust in Client Context:** The backend never trusts client-supplied identifiers (`organizer_id`, `event_id`, `gate_id`, or `role`) in request bodies. Ownership is always verified against authenticated session state in the database.
-5. **Fail-Closed Design:** Any unauthenticated request, unrecognized route, missing policy, or unverified credential defaults to immediate rejection (`401 Unauthorized` or `403 Forbidden`).
+1. **Platform Admin Full Authority:** System-level Platform Admins have full rights and privileges across the platform, including tenant management, event oversight, dispute intervention, refund execution, and aggregate analytics.
+2. **Tenant Operations Managed by Organizer Staff:** Organizer Staff have full operational and administrative authority over their organizer account, including profile settings, event creation, offerings, pricing, inventory, guard accounts, and financial settlement reports.
+3. **Dedicated, Scoped Event Owner Role:** An Event Owner role is scoped strictly to specific events, with privileges restricted solely to **viewing**, **filtering**, and **exporting** guest/attendee data. Event Owners cannot modify event details, alter pricing, manage guards, or process transactions.
+4. **Multi-Tenant Isolation:** An organizer or staff member must never be able to access, view, or alter another organizer’s events, sales, financial settlement reports, attendee details, or staff assignments through parameter tampering, URL guessing, or IDOR (Insecure Direct Object Reference).
+5. **Zero Trust in Client Context & Fail-Closed:** The backend never trusts client-supplied identifiers (`organizer_id`, `event_id`, `gate_id`, or `role`) in request bodies. Ownership is always verified against authenticated session state in the database. Any unauthorized call defaults immediately to `401 Unauthorized` or `403 Forbidden`.
 
 ---
 
@@ -22,200 +22,175 @@ The platform is a multi-tenant event ticketing system where multiple organizers 
 ```mermaid
 graph TD
     classDef admin fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef owner fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef staff fill:#dfd,stroke:#333,stroke-width:2px;
+    classDef staff fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef eventOwner fill:#dfd,stroke:#333,stroke-width:2px;
     classDef guard fill:#ffd,stroke:#333,stroke-width:2px;
     classDef guest fill:#eee,stroke:#333,stroke-width:2px;
 
     PA[Platform Admin]:::admin
-    OO[Organizer Owner]:::owner
     OS[Organizer Staff]:::staff
+    EO[Event Owner]:::eventOwner
     GD[Guard]:::guard
     BY[Buyer / Attendee]:::guest
 
-    PA -->|Approves & Oversees| OO
-    OO -->|Manages & Delegates| OS
-    OO -->|Creates & Assigns| GD
-    OS -->|Assigned Tasks| GD
+    PA -->|Full System Authority| OS
+    PA -->|Platform Oversight| EO
+    OS -->|Assigns Guest Access| EO
+    OS -->|Creates & Assigns| GD
     BY -->|Purchases & Redeems| GD
 ```
 
 ### 2.1 Platform Admin
-* **Description:** System-wide administrator who oversees platform operations.
-* **Scope:** Platform-wide oversight.
+* **Description:** System superuser who holds **full, unrestricted rights and privileges** across the entire platform.
+* **Scope:** Platform-wide unrestricted authority.
 * **Authentication:** Google OAuth only (verified email).
-* **Appointment:** Appointed strictly by an existing Platform Admin or via secure server CLI command (`php artisan admin:grant {email}`). No user can register or self-promote to Admin.
+* **Appointment:** Appointed strictly by an existing Platform Admin or via secure server CLI command (`php artisan admin:grant {email}`).
 * **Key Capabilities:**
-  * Review, approve, reject, or suspend organizer accounts.
-  * Oversee platform-wide financial settlement and aggregate reports.
-  * Audit sensitive operational actions across tenants.
-  * Intervene in disputes, emergency event suspensions, or compliance inquiries.
-* **Safeguards:** When a platform admin views or modifies an organizer's data, an immutable record is logged in `audit_logs` specifying the admin ID, target tenant, timestamp, and justification.
+  * Full administrative control over all organizers, events, ticket offerings, pricing, and delegations.
+  * Direct ability to view, filter, and export all customer orders and attendee data platform-wide.
+  * Direct ability to execute or approve customer refunds, cancellations, and ticket revocations.
+  * Full oversight and approval of organizer payouts and platform fee configurations.
+  * Full access to platform audit logs and security telemetry.
+  * Support override access to gate scanning operations and real-time gate diagnostics.
 
-### 2.2 Organizer Owner
-* **Description:** Tenant root owner with full operational and financial control over their organization.
-* **Scope:** Scoped strictly to their own Organizer account and all child entities (events, offerings, sales, staff, guards).
+### 2.2 Organizer Staff
+* **Description:** Organization manager holding **full operational and administrative authority** over their organizer account.
+* **Scope:** Scoped strictly to their own Organizer account and all associated child entities (events, offerings, sales, delegations, guards, settlement reports).
 * **Authentication:** Google OAuth only.
 * **Rules:**
-  * Every organizer account must always have at least **one active owner**.
-  * Owners can invite and appoint additional owners or staff members.
-  * Owners configure payment settlement payout details, legal profile, and branding.
+  * Every organizer account must have at least **one active organizer staff member**.
+  * Organizer staff can invite and manage other organizer staff members and assign event owners.
+  * Full control over organizer profile, legal details, branding, and payout banking information.
+  * Create, edit, publish, close, cancel, and archive events.
+  * Configure ticket types, categories, prices, seating layouts, and delegations.
+  * Issue complimentary, sponsor, or media tickets directly.
+  * Create and manage guard password accounts and gate assignments.
+  * Access comprehensive financial reports, ticket sales summaries, and settlement calculations.
 
-### 2.3 Organizer Staff
-* **Description:** Team members invited to assist with event planning, ticket configuration, or gate supervision.
-* **Scope:** Scoped to their employer’s organizer account, limited by an explicit list of granted capabilities.
-* **Authentication:** Google OAuth only (invited via single-use email invitation).
-* **Strict Constraints ([audit ticket business rules.md §1](../audit%20ticket%20business%20rules.md)):**
-  * Staff **cannot** invite team members, assign roles, or modify permissions.
-  * Staff **cannot** edit the organizer’s legal profile or banking/payout details.
-  * Staff **cannot** delete an organizer account.
-  * Staff capabilities are stored in `organizer_members.permissions` as an allowlist of permission slugs.
+### 2.3 Event Owner
+* **Description:** An event-level role assigned to external event hosts, clients, or promoters who need visibility into who is attending their specific event.
+* **Scope:** Scoped strictly to the specific event(s) assigned to them.
+* **Authentication:** Google OAuth only (invited by Organizer Staff or Platform Admin).
+* **Sole Privileges:**
+  1. **View Guest Data:** View the roster of attendees and order details for their assigned event(s).
+  2. **Filter Guest Data:** Filter attendees by ticket category, delegation, purchase date, or check-in status.
+  3. **Export Guest Data:** Download guest lists and attendee details as a CSV spreadsheet.
+* **Strict Restrictions:**
+  * Event Owners **cannot** edit event details, dates, venue, or descriptions.
+  * Event Owners **cannot** modify ticket offerings, change prices, or alter inventory allocations.
+  * Event Owners **cannot** invite team members, create guard accounts, or assign staff.
+  * Event Owners **cannot** initiate refunds, revoke tickets, or access organizer banking and settlement reports.
 
 ### 2.4 Guard
-* **Description:** Field staff stationed at venue gates to scan QR codes or enter short codes for ticket verification.
+* **Description:** Field operational personnel stationed at venue gates to scan QR codes or type 6-character short codes for entry verification.
 * **Scope:** Scoped strictly to assigned events and designated gates.
 * **Authentication:** Supports two secure paths:
   1. **Google OAuth Invitation:** Guard accepts email invitation with a verified Google account.
-  2. **Temporary Guard Password Account:** Created by an Organizer Owner or authorized Staff member.
+  2. **Temporary Guard Password Account:** Created by Organizer Staff or Platform Admin.
 * **Strict Rules for Guard Password Accounts ([audit ticket business rules.md §2](../audit%20ticket%20business%20rules.md)):**
   * Password accounts belong strictly to the creating organizer (`managed_by_organizer_id`).
-  * Account can **never** become an Organizer, Staff, or Platform Admin.
+  * Account can **never** become an Organizer Staff, Event Owner, or Platform Admin.
   * Credentials work for **one event only**.
-  * System generates a temporary password shown only once on screen (never emailed or shared in group chats).
-  * Mandatory password change on first sign-in before any scan endpoints can be invoked.
-  * **Automatic Deletion:** As soon as the event closes (or is cancelled/archived), the guard credential password hash is wiped, active sessions are terminated, and the guard is logged out immediately. Past scan records retain the guard's name for historical auditing.
-  * Session lifetime capped at 12 hours max.
-  * Lockout after 5 consecutive failed password attempts.
-  * Lockout of short-code typing after 5 consecutive invalid codes (QR scanning remains active).
+  * Temporary password shown once on screen; must be changed on first sign-in before scanning endpoints are unlocked.
+  * **Automatic Deletion:** When the event closes (or is cancelled/archived), the guard credential password hash is wiped, active sessions are terminated, and the guard is signed out immediately.
+  * Max session lifetime of 12 hours. Lockout after 5 consecutive failed passwords; code-entry lockout after 5 invalid short codes.
 
 ### 2.5 Buyer / Attendee
 * **Description:** Public consumer purchasing or claiming tickets.
 * **Scope:** Access restricted to their own purchased orders and tickets.
-* **Authentication:** **No account or password required** (Guest Checkout).
-* **Credential Access:** Orders and tickets are accessed exclusively via cryptographically secure, tokenized retrieval links (`/t/{access_token}`) delivered to the buyer’s email. An order is never accessible by numeric ID alone ([hurdles.md §H11](../hurdles.md)).
+* **Authentication:** **Guest checkout** (no account or password required).
+* **Credential Access:** Orders and tickets are accessed exclusively via cryptographically secure, tokenized retrieval links (`/t/{access_token}`) delivered to the buyer’s email.
 
 ---
 
 ## 3. Comprehensive Permissions Matrix
 
 **Legend:**
-* **Full:** Unrestricted authority within the user's tenant or platform scope.
+* **Full:** Unrestricted authority within the role's scope.
 * **Scoped:** Permitted, but strictly scoped to assigned events/gates.
-* **If Granted:** Permitted only if the specific permission slug is present in `organizer_members.permissions`.
-* **No:** Prohibited. Attempts return `403 Forbidden` and trigger a security audit entry.
+* **Limited:** Restricted strictly to viewing, filtering, or exporting guest data.
+* **No:** Prohibited (`403 Forbidden`).
 
-| Functional Area | Capability | Platform Admin | Organizer Owner | Organizer Staff | Guard | Buyer / Guest |
+| Functional Area | Capability | Platform Admin | Organizer Staff | Event Owner | Guard | Buyer / Guest |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Platform Ops** | View system audit logs | Full | No | No | No | No |
-| | Create/appoint Platform Admins | Full (CLI/Admin) | No | No | No | No |
+| | Create/appoint Platform Admins | Full | No | No | No | No |
 | | Approve/Suspend Organizers | Full | No | No | No | No |
 | | View platform-wide financial aggregates | Full | No | No | No | No |
-| **Tenant Admin** | Edit Organizer profile & payout bank details | Oversight / Audit | Full (Own org) | No | No | No |
-| | Invite, promote, or remove Owners & Staff | Oversight / Audit | Full (Own org) | No | No | No |
-| | Grant/revoke Staff granular permissions | No | Full (Own org) | No | No | No |
-| **Event Ops** | Create, edit, and publish events | Oversight / Audit | Full (Own org) | If Granted (`events:write`) | No | No |
-| | Cancel or archive events | Oversight / Audit | Full (Own org) | If Granted (`events:delete`) | No | No |
-| | Configure ticket offerings, prices, and capacity | Oversight / Audit | Full (Own org) | If Granted (`tickets:manage`) | No | No |
-| | Configure reserved seating sections & seats | Oversight / Audit | Full (Own org) | If Granted (`seating:manage`) | No | No |
-| | Create & manage delegations (sponsors/groups) | Oversight / Audit | Full (Own org) | If Granted (`delegations:manage`) | No | No |
-| | Issue sponsor/media tickets directly | Oversight / Audit | Full (Own org) | If Granted (`tickets:issue`) | No | No |
-| **Orders & Sales** | View orders and customer information | Platform-wide | Full (Own events) | If Granted (`orders:read`) | No | Own Order Only |
-| | Export attendee lists (CSV) | Platform-wide | Full (Own events) | If Granted (`attendees:export`) | No | No |
-| | Revoke or cancel individual tickets | Oversight / Audit | Full (Own events) | If Granted (`tickets:revoke`) | No | No |
-| | Request/approve customer refunds | Approval / Policy | Request (Own events) | If Granted (`refunds:request`) | No | Request via policy |
-| **Gate & Scanning** | Create guard password accounts & issue credentials | Oversight / Audit | Full (Own org) | If Granted (`guards:manage`) | No | No |
-| | Assign guards to specific events and gates | Oversight / Audit | Full (Own events) | If Granted (`guards:manage`) | No | No |
-| | Scan QR codes and redeem tickets | Support Override | Optional | Optional | Scoped (Assigned gates) | No |
-| | Enter short code for manual entry fallback | Support Override | Optional | Optional | Scoped (Assigned gates) | No |
-| | View real-time gate attendance counts | Full (Platform) | Full (Own events) | If Granted (`reports:attendance`) | Scoped (Assigned gate) | No |
-| **Financials** | View settlement reports & payout calculations | Full (Platform) | Full (Own events) | If Granted (`reports:financial`) | No | View own receipt |
+| **Tenant Admin** | Edit Organizer profile & payout bank details | Full | Full (Own org) | No | No | No |
+| | Invite & manage Organizer Staff | Full | Full (Own org) | No | No | No |
+| | Assign Event Owners to events | Full | Full (Own org) | No | No | No |
+| **Event Ops** | Create, edit, and publish events | Full | Full (Own org) | No | No | No |
+| | Cancel or archive events | Full | Full (Own org) | No | No | No |
+| | Configure ticket offerings, prices, and capacity | Full | Full (Own org) | No | No | No |
+| | Configure reserved seating sections & seats | Full | Full (Own org) | No | No | No |
+| | Create & manage delegations (sponsors/groups) | Full | Full (Own org) | No | No | No |
+| | Issue sponsor/media tickets directly | Full | Full (Own org) | No | No | No |
+| **Guest Data** | **View attendee & order lists** | **Full** | **Full (Own events)** | **Limited (Assigned event)** | **No** | **Own Order Only** |
+| | **Filter attendee lists (category/status)** | **Full** | **Full (Own events)** | **Limited (Assigned event)** | **No** | **No** |
+| | **Export guest lists (CSV)** | **Full** | **Full (Own events)** | **Limited (Assigned event)** | **No** | **No** |
+| **Orders & Sales** | Revoke or cancel individual tickets | Full | Full (Own events) | No | No | No |
+| | Request/approve customer refunds | Full | Request (Own events) | No | No | Request via policy |
+| **Gate & Scanning** | Create guard password accounts & issue credentials | Full | Full (Own org) | No | No | No |
+| | Assign guards to specific events and gates | Full | Full (Own events) | No | No | No |
+| | Scan QR codes and redeem tickets | Full (Override) | Optional | No | Scoped (Assigned gates) | No |
+| | Enter short code for manual entry fallback | Full (Override) | Optional | No | Scoped (Assigned gates) | No |
+| | View real-time gate attendance counts | Full | Full (Own events) | No | Scoped (Assigned gate) | No |
+| **Financials** | View settlement reports & payout calculations | Full | Full (Own events) | No | No | View own receipt |
 
 ---
 
-## 4. Granular Staff Permissions Registry (`permissions` JSONB)
+## 4. Technical Implementation & Enforcement
 
-When an Organizer Owner invites a staff member, they grant specific permission keys stored in `organizer_members.permissions`:
-
-```json
-[
-  "events:read",
-  "events:write",
-  "tickets:manage",
-  "delegations:manage",
-  "orders:read",
-  "attendees:export",
-  "guards:manage",
-  "reports:attendance"
-]
-```
-
-### Complete Capability Registry
-
-| Permission Slug | Description | Allowed Actions |
-| :--- | :--- | :--- |
-| `events:read` | View event configuration | Browse drafts, published events, gate schedules, and offerings. |
-| `events:write` | Modify event configuration | Edit event metadata, dates, venue, and attendee questions. Cannot publish without `events:publish`. |
-| `events:publish` | Publish or close events | Transition event from `draft` $\rightarrow$ `published`, or manually trigger closure. |
-| `events:delete` | Cancel or archive events | Cancel scheduled events or move past events to archive. |
-| `tickets:manage` | Manage ticket tiers & prices | Add/edit ticket types, categories, prices, and offering quotas. |
-| `tickets:issue` | Direct manual ticket issuance | Manually issue complimentary, sponsor, or media passes. |
-| `tickets:revoke` | Invalidate tickets | Revoke tickets with an audit reason, barring admission at gates. |
-| `seating:manage` | Configure seating layouts | Setup seating sections, rows, and seat inventory. |
-| `delegations:manage` | Manage sponsor allocations | Create delegations, generate claim links, and track sponsor quotas. |
-| `orders:read` | View attendee & order lists | View customer names, emails, and ticket assignment details. |
-| `attendees:export` | Download attendee rosters | Export attendee and order lists as CSV spreadsheets. |
-| `guards:manage` | Manage gate personnel | Create guard password accounts, issue temporary credentials, assign to gates. |
-| `reports:attendance` | View gate analytics | Monitor real-time gate scan volumes, check-in percentages, and gate logs. |
-| `reports:financial` | View financial summaries | View ticket gross sales, promotion discounts, and net ticket totals. |
-| `refunds:request` | Initiate customer refunds | Submit refund requests to Platform Admins for Pesapal reversal. |
-
----
-
-## 5. Technical Implementation & Enforcement
-
-### 5.1 Enforcement Pipeline Flow
+### 4.1 Enforcement Pipeline Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as User / Guard / Buyer
+    actor Client as User (Staff / Event Owner / Admin)
     participant HTTP as Routing & Middleware Layer
     participant Sanctum as Auth Middleware (Sanctum)
     participant Policy as Laravel Policy Layer
     participant DB as Supabase PostgreSQL
 
-    Client->>HTTP: Request (e.g. PATCH /api/v1/organizers/1/events/99)
+    Client->>HTTP: Request (e.g. GET /api/v1/events/123/attendees/export)
     HTTP->>Sanctum: Authenticate session cookie / token
     alt Unauthenticated
         Sanctum-->>Client: 401 Unauthorized
     end
 
     Sanctum->>HTTP: User identity verified (User model)
-    HTTP->>Policy: Authorize action (EventPolicy::update)
+    HTTP->>Policy: Authorize action (AttendeePolicy::export)
 
-    critical Tenant & Scope Validation
-        Policy->>DB: Check membership in organizer_members
-        alt Not a member of target organizer
-            Policy-->>Client: 403 Forbidden (Tenant Isolation)
-        end
-        alt Role == 'staff' and lacking permission
-            Policy-->>Client: 403 Forbidden (Insufficient Capability)
-        end
-        alt Account or Organizer Suspended
-            Policy-->>Client: 403 Forbidden (Suspended)
+    critical Role & Scope Validation
+        alt Platform Admin
+            Policy-->>HTTP: Approved (Full Rights)
+        else Organizer Staff
+            Policy->>DB: Check user is staff for event's organizer
+            alt Is Active Staff
+                Policy-->>HTTP: Approved (Full Tenant Scope)
+            else Not Staff
+                Policy-->>Client: 403 Forbidden
+            end
+        else Event Owner
+            Policy->>DB: Check event_staff for event_id + role == 'event_owner'
+            alt Is Assigned Event Owner
+                Policy-->>HTTP: Approved (Scoped to Assigned Event only)
+            else Not Assigned to Event
+                Policy-->>Client: 403 Forbidden
+            end
+        else Any Other Role
+            Policy-->>Client: 403 Forbidden
         end
     end
 
-    Policy->>HTTP: Authorization Approved
-    HTTP->>DB: Execute requested query (Scoped to organizer_id)
-    HTTP->>DB: Write to audit_logs (Actor, Action, Target, Metadata)
-    HTTP-->>Client: 200 OK (Response Data)
+    HTTP->>DB: Execute query filtered by event_id
+    HTTP-->>Client: 200 OK (Stream CSV or Return JSON)
 ```
 
-### 5.2 Laravel Policy Implementation Pattern
+### 4.2 Laravel Policy Implementation Pattern
 
-All operations on organizer resources use Laravel Policies. A role check alone is never sufficient; the policy explicitly verifies multi-tenant relationship and permission claims.
-
+#### Event Management Policy (`EventPolicy.php`)
 ```php
 namespace App\Policies;
 
@@ -228,93 +203,97 @@ class EventPolicy
     use HandlesAuthorization;
 
     /**
-     * Intercept all checks for platform administrators.
+     * Platform Admin has full rights over all resources.
      */
     public function before(User $user, $ability)
     {
         if ($user->isPlatformAdmin()) {
-            // Platform admin access is permitted but recorded in audit log
             return true;
         }
     }
 
     /**
-     * Determine whether the user can update the event.
+     * Only Organizer Staff can update event configuration.
+     * Event Owners CANNOT update events.
      */
     public function update(User $user, Event $event): bool
     {
-        // 1. Verify user belongs to the event's owning organizer
-        $membership = $user->organizerMemberships()
+        return $user->organizerMemberships()
             ->where('organizer_id', $event->organizer_id)
+            ->where('role', 'staff')
             ->where('status', 'active')
-            ->first();
+            ->exists();
+    }
 
-        if (!$membership) {
-            return false; // Multi-tenant boundary violation
-        }
-
-        // 2. Owners have unrestricted access within their organizer
-        if ($membership->role === 'owner') {
-            return true;
-        }
-
-        // 3. Staff must have the specific granular capability
-        if ($membership->role === 'staff') {
-            return in_array('events:write', $membership->permissions ?? [], true);
-        }
-
-        return false;
+    /**
+     * Delete/archive events - Organizer Staff only.
+     */
+    public function delete(User $user, Event $event): bool
+    {
+        return $this->update($user, $event);
     }
 }
 ```
 
-### 5.3 Guard Account Enforcement Policy
-
-Guards operate under strict runtime constraints:
-
+#### Attendee & Guest Data Policy (`AttendeePolicy.php`)
 ```php
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\EventGate;
+use App\Models\Event;
+use Illuminate\Auth\Access\HandlesAuthorization;
 
-class GateScanPolicy
+class AttendeePolicy
 {
-    public function scan(User $user, EventGate $gate): bool
+    use HandlesAuthorization;
+
+    public function before(User $user, $ability)
     {
-        // 1. Must hold guard credentials
-        if ($user->sign_in_method === 'password') {
-            $credential = $user->activeGuardCredential;
-            if (!$credential || $credential->revoked_at !== null) {
-                return false;
-            }
-            if ($credential->password_change_required) {
-                return false; // Must complete password change first
-            }
+        if ($user->isPlatformAdmin()) {
+            return true;
         }
+    }
 
-        // 2. Event must be open
-        $event = $gate->event;
-        if ($event->status !== 'published' || now()->isAfter($gate->closes_at)) {
-            return false;
-        }
-
-        // 3. Verify guard is explicitly assigned to this event (and gate if set)
-        return $user->guardAssignments()
-            ->where('event_id', $event->id)
-            ->where(function ($query) use ($gate) {
-                $query->whereNull('gate_id')
-                      ->orWhere('gate_id', $gate->id);
-            })
+    /**
+     * Determine whether the user can view, filter, or export guest data.
+     * Allowed for:
+     * 1. Organizer Staff belonging to the event's organizer.
+     * 2. Event Owners explicitly assigned to this specific event.
+     */
+    public function viewGuestData(User $user, Event $event): bool
+    {
+        // 1. Check if user is Organizer Staff for this event
+        $isStaff = $user->organizerMemberships()
+            ->where('organizer_id', $event->organizer_id)
+            ->where('role', 'staff')
             ->where('status', 'active')
             ->exists();
+
+        if ($isStaff) {
+            return true;
+        }
+
+        // 2. Check if user is an assigned Event Owner for this specific event
+        return $user->eventStaffAssignments()
+            ->where('event_id', $event->id)
+            ->where('role', 'event_owner')
+            ->where('status', 'active')
+            ->exists();
+    }
+
+    /**
+     * Export guest data as CSV.
+     */
+    public function exportGuestData(User $user, Event $event): bool
+    {
+        return $this->viewGuestData($user, $event);
     }
 }
 ```
 
 ---
 
-## 6. Database Schema Supporting RBAC
+## 5. Database Schema Supporting Updated RBAC
 
 ```sql
 -- Users Table
@@ -343,17 +322,28 @@ CREATE TABLE organizers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Organizer Memberships (Tenant Staff & Owners)
+-- Organizer Memberships (Tenant Staff with full operational rights)
 CREATE TABLE organizer_members (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organizer_id UUID NOT NULL REFERENCES organizers(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role VARCHAR(20) NOT NULL, -- 'owner', 'staff'
-    permissions JSONB NOT NULL DEFAULT '[]', -- Array of granted permission strings
+    role VARCHAR(20) NOT NULL DEFAULT 'staff', -- 'staff'
     status VARCHAR(20) NOT NULL DEFAULT 'active', -- 'active', 'suspended'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT uq_organizer_user UNIQUE (organizer_id, user_id)
+);
+
+-- Event Staff & Assignments (Guards and Event Owners)
+CREATE TABLE event_staff (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    gate_id UUID REFERENCES event_gates(id) ON DELETE SET NULL, -- Nullable for Event Owners
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL, -- 'guard', 'event_owner'
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_event_user_role UNIQUE (event_id, user_id, role)
 );
 
 -- Guard Credentials (Single-Event Passwords)
@@ -366,18 +356,6 @@ CREATE TABLE guard_credentials (
     issued_by UUID NOT NULL REFERENCES users(id),
     issued_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     revoked_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
-);
-
--- Event Staff Assignments (Event & Gate Scoping)
-CREATE TABLE event_staff (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    gate_id UUID REFERENCES event_gates(id) ON DELETE SET NULL,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    role VARCHAR(20) NOT NULL DEFAULT 'guard',
-    status VARCHAR(20) NOT NULL DEFAULT 'active',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CONSTRAINT uq_event_gate_user UNIQUE (event_id, gate_id, user_id)
 );
 
 -- System Audit Logs
@@ -398,14 +376,13 @@ CREATE TABLE audit_logs (
 
 ---
 
-## 7. Security & Isolation Safeguards
+## 6. Security & Isolation Safeguards
 
-1. **Automated Route Authorization Coverage Test:**
-   * A PHPUnit test suite crawls every registered route in the `/api/v1` namespace. If any endpoint lacks a registered policy check or authentication middleware, the build fails automatically.
+1. **Strict Event Owner Enclosure:**
+   * API endpoints for event configuration (`PATCH /api/v1/events/{id}`), ticket offerings, pricing, seat maps, delegations, and refunds will immediately reject any user authenticated as an `Event Owner`.
+   * Event Owners can only query `/api/v1/events/{id}/attendees` and `/api/v1/events/{id}/attendees/export` for the exact `event_id` where an active `event_staff` record with `role = 'event_owner'` exists.
 2. **Suspension Cascading:**
-   * Suspending an organizer account instantly terminates all active user sessions for its owners and staff, revokes guard passwords, blocks checkout on its events, and logs the administrative intervention.
+   * Suspending an organizer account instantly terminates sessions for all its Organizer Staff and assigned Event Owners/Guards, prevents ticket sales, and revokes active guard passwords.
 3. **No Role Escalation:**
-   * Organizer staff members cannot edit memberships or alter `organizer_members.permissions`.
-   * Guard password accounts have database check constraints preventing assignment into `organizer_members` or assignment of `platform_role`.
-4. **Single-Use Invitations:**
-   * Invitations for staff or guards are issued with cryptographic hashes expiring after 48 hours. When accepted via Google OAuth, the system verifies that the authenticated Google email strictly matches the invitation email.
+   * Event Owners have zero access to invite users, change roles, or grant permissions.
+   * Guard password accounts are constrained by database checks preventing assignment to `organizer_members` or `event_staff` as an `event_owner`.

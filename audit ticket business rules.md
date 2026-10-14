@@ -12,31 +12,31 @@ This document sets out how the platform will behave: the business rules it follo
 
 | Role | What they do |
 | :---- | :---- |
-| **Platform admin** | Runs the platform: approves and suspends organizers, oversees all events, sees platform-wide reports |
-| **Organizer owner** | Full control of their organizer account: events, prices, team members, guards and reports |
-| **Organizer staff** | Only the tasks an owner allows them, such as managing events or viewing reports |
+| **Platform admin** | Full rights and privileges across the entire platform: approves and suspends organizers, oversees all events, manages settings, reports, and overrides |
+| **Organizer staff** | Full control of their organizer account: events, prices, ticket offerings, team members, delegations, guards and reports |
+| **Event owner** | Assigned to specific events with access restricted to only viewing, filtering, and exporting guest and attendee data |
 | **Guard** | Scans tickets at the gate, only for the events and gates assigned to them |
 | **Buyer** | Buys tickets as a guest and receives them by email; no account needed |
 
-* Organizer staff can never manage team members, change roles or edit the organizer's profile, and can't give permissions to anyone else.  
-* Every organizer must always have at least one owner.  
+* Every organizer must always have at least one active staff member.  
+* Event owners have read-only access to attendee details for their assigned event(s) and can filter and export guest data to CSV, but cannot modify event configurations, tickets, pricing, guards, or financials.  
 * New organizers sign in, apply for an organizer account, and wait for a platform admin to approve them before they can create events.  
-* Platform admins are appointed by an existing platform admin. No one can make themselves an admin.  
-* When a platform admin looks at an organizer's data, the access is recorded.  
+* Platform admins are appointed by an existing platform admin or via system command. No one can make themselves an admin.  
+* Platform admins have full operational authority across the platform.  
 * Suspending an organizer stops new sales for their events and blocks their team from signing in. Their published events stay visible but can't be bought.
 
 ## **2\. Signing in**
 
-* Platform admins, organizer owners and organizer staff sign in with their **Google account**. They have no separate password for the platform.  
+* Platform admins, organizer staff and event owners sign in with their **Google account**. They have no separate password for the platform.  
 * Only Google accounts with a verified email address are accepted.  
-* Staff are invited by email and must accept by signing in with a Google account that uses that same email address. Invitations expire and can be used only once.  
+* Staff and event owners are invited by email and must accept by signing in with a Google account that uses that same email address. Invitations expire and can be used only once.  
 * A suspended user can't sign in, even with a valid Google account.  
 * Buyers never sign in. They buy as guests and reach their tickets through an emailed link.
 
 **Guards** can sign in in either of two ways:
 
 * With Google, after accepting an email invitation, the same way as staff.  
-* With an email and password account created for them by an organizer owner, an authorized staff member or a platform admin.
+* With an email and password account created for them by an organizer staff member or a platform admin.
 
 Rules for guard password accounts:
 

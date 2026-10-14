@@ -196,11 +196,11 @@ Implement guard password sign-in as described in techstack.md §3 ("Guard passwo
 ```text
 Implement tenancy and authorization as described in implementation-plan.md Phase 1 steps 10, 11 and 13.
 
-- Organizers, and organizer members with the roles owner and staff (v1.md §3 and §4.1). Staff get only the capabilities an owner grants, stored in organizer_members.permissions; they can never manage members, roles or the organizer profile. Every organizer keeps at least one owner. Platform admin is users.platform_role, separate from organizer roles.
-- A policy for every organizer-owned model. It checks that the resource's organizer (directly, or through its event) is one the user belongs to, with a role that permits the action. Platform admins pass only where v1.md §3 allows it, and their cross-organizer actions are audited.
+- Organizers, and organizer members with the role staff (v1.md §3 and §4.1). Staff have full control of their organizer account (profile, events, tickets, delegations, guards and reports). Organizers can also assign event owners to specific events (event_staff with role event_owner), whose role and privileges are strictly restricted to viewing, filtering, and exporting guest/attendee data. Platform admin is users.platform_role with full system-wide rights and privileges across all operations.
+- A policy for every model. Platform admins pass with full rights across all resources. Organizer staff pass for their own organizer's resources. Event owners pass only to view/filter/export attendee data for their assigned events.
 - A safeguard so no route can skip authorization, for example a test that fails if any /api/v1 route has no policy check.
 - An AuditLogger service recording the actor, organizer, event, action, resource type and ID, metadata and time.
-- Endpoints: apply to create an organizer (it stays pending until a platform admin approves it), list my organizers, invite a member, change a member's role and permissions, remove a member, and approve or reject organizer applications (platform admin only).
+- Endpoints: apply to create an organizer (it stays pending until a platform admin approves it), list my organizers, invite a staff member or event owner, remove a member, and approve or reject organizer applications (platform admin only).
 - Invitations, used for organizer members now and for guards in P2.4: the invitations table from v1.md §4.1, with the token stored hashed, an expiry date and single use. POST /api/v1/invitations/{token}/accept succeeds only when the signed-in user's verified Google email matches the invited email.
 - A reusable tenant-isolation test helper: for a given endpoint, it asserts that a user from a different organizer is refused on read, update and delete. Apply it to every endpoint built so far.
 ```
