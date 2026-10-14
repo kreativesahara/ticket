@@ -54,20 +54,22 @@ The system shall provide secure authentication and role-based access control for
 
 Functional requirements include:
 
-- Sign-in with Google accounts (Google OAuth) for platform administrators, organizers and organizer staff.
+- Sign-in with Google accounts (Google OAuth) for platform administrators, organizer staff and event owners.
 - Guard sign-in with Google or with an individual email and password account created by the guard's organizer or a platform administrator. The guard shall set their own password at first sign-in, and passwords shall be stored only as secure hashes. Each guard password shall be valid only for the event it was issued for, and shall be revoked and deleted as soon as that event closes (when its last gate closes, or when it is cancelled or archived).
 - User profile management.
 - Account activation and suspension.
 - Organizer account applications, approval and management.
-- Organizer membership, with owner and staff roles.
-- Staff and guard invitations by email, accepted by signing in with a Google account that uses the invited email address, and guard password accounts created directly by the organizer.
-- Event-specific and gate-specific staff permissions.
+- Organizer membership through the organizer staff role, with full control of the organizer account.
+- Event owners assigned to specific events, with access limited to viewing, filtering and exporting that event's guest data.
+- Staff, event owner and guard invitations by email, accepted by signing in with a Google account that uses the invited email address, and guard password accounts created directly by the organizer.
+- Event-specific and gate-specific guard assignments, and event-specific event owner assignments.
 - Enforcement of access restrictions through the backend API.
 
 The platform shall support the following primary roles:
 
-- Platform Administrator
-- Event Organizer (owner, or staff with permissions granted by the owner)
+- Platform Administrator (full rights across the platform)
+- Organizer Staff (full control of their organizer account)
+- Event Owner (view, filter and export guest data for assigned events only)
 - Guard / Gate Officer
 - Attendee / Ticket Purchaser
 
@@ -261,6 +263,8 @@ Organizers shall be able to access:
 - Payment status and reconciliation information for their events.
 - Promotion management.
 - Guard and gate assignments.
+- Event owner assignments.
+- Guest lists with filters and CSV export, which event owners can also access for their assigned events.
 - Attendance reports.
 - Ticket revocation controls.
 - Event-specific operational summaries.
@@ -434,7 +438,7 @@ This SOW is based on the following assumptions:
 - Gate validation will require internet connectivity in the initial release.
 - Reserved seating will be an optional event configuration.
 - Attendee data requirements will be configurable per event.
-- Platform administrators, organizers and organizer staff have, or can create, a Google account to sign in. Guards without one use a guard password account.
+- Platform administrators, organizer staff and event owners have, or can create, a Google account to sign in. Guards without one use a guard password account.
 - The Client will supply or approve the required branding, content and policies.
 - Hosting, domains, third-party service subscriptions and transaction fees will be identified separately in the commercial agreement.
 - The initial release will be developed in one agreed language and currency configuration unless additional requirements are approved.

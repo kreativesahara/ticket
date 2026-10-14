@@ -1,6 +1,7 @@
 flowchart LR
     A[Attendees] --> W[Next.js Website]
     O[Organizers] --> D[React Dashboard]
+    EO[Event Owners] --> D
     G[Platform Admins and Guards] --> D
 
     W -- HTTPS REST API --> API[Laravel API on cPanel]

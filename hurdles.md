@@ -199,7 +199,7 @@ These aren't in the specification. Each should be confirmed as in or out of the 
 | Item                          | Question                                                         | Suggested answer                               |
 | ----------------------------- | ---------------------------------------------------------------- | ---------------------------------------------- |
 | Ticket transfer               | Can a buyer pass a ticket to someone else, or change its name?   | Out for the first release                      |
-| Attendee exports              | Can organizers download attendee and sales lists (CSV)?          | In: simple to build and often requested        |
+| Attendee exports              | Can organizers download attendee and sales lists (CSV)?          | **Decided (14 October 2026):** guest list CSV export is in, for organizer staff and for event owners on their assigned events (doc/roleandprivileage.md). Sales list exports: in, still to confirm |
 | Event categories              | Can buyers browse events by type (music, sport and so on)?       | Decide; it was dropped when the documents were aligned |
 | Swahili                       | Is a Swahili version of the public site needed?                  | Out; the SOW assumes one language              |
 
@@ -215,7 +215,7 @@ These come from decisions already made. They're accepted for the first release, 
 | -------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | Online-only scanning                         | Gates need an internet connection. If it drops, the scanner shows "Unable to verify — do not admit". | If venues have poor connectivity; offline scanning is out of scope (SOW §9) |
 | Short-code fallback needs the ticket         | If a QR code won't scan, the attendee must show their downloaded or printed ticket so the guard can type its short code. With a dead phone and no printout, there's no way in. | If this happens often; a lookup by attendee name could be added |
-| Google sign-in for admins, organizers and staff | Anyone without a Google account must create one (it's free, and can use an existing email address). | If organizers push back                                |
+| Google sign-in for admins, staff and event owners | Anyone without a Google account must create one (it's free, and can use an existing email address). | If organizers or event owners push back                |
 | Guard passwords last one event               | A password guard works one event at a time, gets a new password for each event, and sets their own password at each first sign-in. | If the extra step slows gate setup (decision log #15)  |
 | One payment gateway                          | If Pesapal is down, no one can buy tickets.                                                     | If outages occur; another gateway can be added later   |
 | Manual organizer payouts                     | Organizers are paid by hand, outside the platform.                                              | When payout volume grows (needs a change request)      |

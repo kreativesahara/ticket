@@ -31,7 +31,7 @@ SOURCE DOCUMENTS (they are the specification — read the relevant parts before 
 - limitation.md — the client-facing business rules (Part A), accepted limitations (Part B) and client decisions (Part C). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
 
 STACK:
-- /api — Laravel (latest stable release), PostgreSQL on Supabase. Admins, organizers and staff sign in with Google OAuth through Laravel Socialite. Guards can also use an email and password that is valid only for their assigned event. Sanctum SPA cookie sessions after sign-in.
+- /api — Laravel (latest stable release), PostgreSQL on Supabase. Admins, organizer staff and event owners sign in with Google OAuth through Laravel Socialite. Guards can also use an email and password that is valid only for their assigned event. Sanctum SPA cookie sessions after sign-in.
 - /web — Next.js + TypeScript: public event site, checkout, ticket retrieval.
 - /manage — React + Vite + TypeScript: organizer dashboard, platform admin, guard scanner.
 - /packages/ui — shared shadcn/ui components and theme, Tailwind CSS.
@@ -39,7 +39,7 @@ STACK:
 - API hosted on cPanel: scheduler and queue run from cron.
 
 NON-NEGOTIABLE RULES:
-1. Tenant isolation: every organizer-owned resource is authorized through a Laravel policy that checks the authenticated user's organizer membership. Never trust role, organizer_id, event_id or gate_id from the request without checking it.
+1. Tenant isolation: every organizer-owned resource is authorized through a Laravel policy that checks the authenticated user's organizer membership, or, for event owners and guards, their event assignment. Event owners may only view, filter and export the guest list of their assigned events. Never trust role, organizer_id, event_id or gate_id from the request without checking it.
 2. Money is stored as integer minor units plus a currency code. Never floats.
 3. Inventory holds, payment confirmation, ticket issuance and ticket redemption use database transactions and atomic conditional updates. Never read-then-write checks.
 4. Tests run against PostgreSQL, never SQLite.
@@ -164,7 +164,7 @@ Implement sign-in with Google as described in implementation-plan.md Phase 1 ste
 
 - Web routes, not under /api/v1, because they need the session for Google's state check: GET /auth/google/redirect and GET /auth/google/callback. Request only the openid, email and profile scopes. Don't store Google's access or refresh tokens.
 - On callback: reject Google accounts with unverified emails. Find the user by users.google_id. If the email belongs to a guard password account, refuse the sign-in with a clear message and never link the two. Otherwise create the user with their Google ID, name and email, with no memberships yet. Reject suspended users. Log the user in, regenerate the session, and redirect to the manage app, accepting only an allowlisted return path (no open redirects).
-- API endpoints: POST /api/v1/auth/logout (invalidates the session) and GET /api/v1/auth/me (the user, platform role, organizer memberships with roles and permissions, and guard assignments).
+- API endpoints: POST /api/v1/auth/logout (invalidates the session) and GET /api/v1/auth/me (the user, platform role, organizer memberships with roles, and event assignments as guard or event owner).
 - Suspending a user ends their existing sessions.
 - An artisan command to grant or remove platform admin (users.platform_role) by email, because no one can become an admin through sign-in.
 - Configure stateful domains, the session cookie domain, CORS (with credentials) and CSRF for the www, manage and api subdomains through environment variables. The Google client ID, secret and callback URL also come from environment variables. Document the values for local development, including the localhost callback URL to register in the Google OAuth client.
@@ -182,11 +182,11 @@ Implement guard password sign-in as described in techstack.md §3 ("Guard passwo
 - Passwords live in guard_credentials (v1.md §4.1): one row per issued password, tied to one event, with the hash, password_change_required, who issued it, and revoked_at.
 - POST /api/v1/auth/guard/login (email and password) using Sanctum's SPA flow: the client fetches /sanctum/csrf-cookie first. Only users with sign_in_method = password can use it, and only with an unrevoked credential whose event is still open. An event is closed when its last gate closing time has passed or it has been cancelled or archived. On success, log in and regenerate the session.
 - Every request from a password guard checks again that their credential is unrevoked and its event still open. If not, end the session and return a clear "your access for this event has ended" error.
-- A password account can only ever hold the guard role. Enforce this in the models and policies, so it can never become an organizer member or platform admin.
+- A password account can only ever hold the guard role. Enforce this in the models and policies, so it can never become an organizer member, event owner or platform admin.
 - Hash passwords with Laravel's default hasher. Rate-limit sign-in by email and IP, lock temporarily after repeated failures, and return the same error for an unknown email and a wrong password.
 - First sign-in: while password_change_required is true, every endpoint except POST /api/v1/auth/guard/password and logout returns a "password change required" error. The new password must meet Laravel's password rules (minimum length, not a commonly breached password) and differ from the temporary one.
 - Use the database session driver, so the platform can end a specific user's sessions. Guard sessions also expire after a configurable time (default 12 hours).
-- Feature tests: successful sign-in; wrong password and unknown email give the same error; lockout; forced password change; suspended account; a closed event refuses sign-in and ends an existing session; adding a password account as an organizer member is rejected; session expiry.
+- Feature tests: successful sign-in; wrong password and unknown email give the same error; lockout; forced password change; suspended account; a closed event refuses sign-in and ends an existing session; adding a password account as an organizer member or event owner is rejected; session expiry.
 ```
 
 **Done when:** all tests pass, and a factory-made guard can sign in from the manage app, is forced to change their password, and is signed out once their event closes.
@@ -201,8 +201,8 @@ Implement tenancy and authorization as described in implementation-plan.md Phase
 - A safeguard so no route can skip authorization, for example a test that fails if any /api/v1 route has no policy check.
 - An AuditLogger service recording the actor, organizer, event, action, resource type and ID, metadata and time.
 - Endpoints: apply to create an organizer (it stays pending until a platform admin approves it), list my organizers, invite a staff member or event owner, remove a member, and approve or reject organizer applications (platform admin only).
-- Invitations, used for organizer members now and for guards in P2.4: the invitations table from v1.md §4.1, with the token stored hashed, an expiry date and single use. POST /api/v1/invitations/{token}/accept succeeds only when the signed-in user's verified Google email matches the invited email.
-- A reusable tenant-isolation test helper: for a given endpoint, it asserts that a user from a different organizer is refused on read, update and delete. Apply it to every endpoint built so far.
+- Invitations, used for organizer staff and event owners now and for guards in P2.4: the invitations table from v1.md §4.1, with the token stored hashed, an expiry date and single use. POST /api/v1/invitations/{token}/accept succeeds only when the signed-in user's verified Google email matches the invited email.
+- A reusable tenant-isolation test helper: for a given endpoint, it asserts that a user from a different organizer is refused on read, update and delete, and that an event owner is refused on every endpoint except the guest list of their assigned events. Apply it to every endpoint built so far.
 ```
 
 **Done when:** the tenant-isolation tests pass for every endpoint, and the route-coverage safeguard passes.
@@ -232,7 +232,7 @@ Build the frontend foundation described in implementation-plan.md Phase 1 steps 
 - In /packages/ui, add the shadcn/ui components we'll need first: button, input, label, form, card, dialog, table, toast, dropdown menu, badge, select and tabs.
 - A typed API client generated from openapi.yaml. It sends cookies, calls /sanctum/csrf-cookie before any state-changing request, and turns the standard error format into typed errors.
 - A mock mode driven by the OpenAPI spec (for example with MSW), so screens can be built before their endpoints exist.
-- /manage: a "Sign in with Google" page; a "Guard sign-in" form (email and password) linked from it, with the first-sign-in password change screen; an invitation page (/invite/{token}) that sends the user through Google sign-in and then accepts the invitation; an "apply for an organizer account" form and a "waiting for approval" screen for users with no role yet; and logout. Route users by role to /organizer, /admin and /guard areas, inside an app shell with a sidebar, a header and an organizer switcher for users who belong to more than one organizer.
+- /manage: a "Sign in with Google" page; a "Guard sign-in" form (email and password) linked from it, with the first-sign-in password change screen; an invitation page (/invite/{token}) that sends the user through Google sign-in and then accepts the invitation; an "apply for an organizer account" form and a "waiting for approval" screen for users with no role yet; and logout. Route users by role to /organizer, /event-owner, /admin and /guard areas (the event owner area shows only the guest list of their assigned events), inside an app shell with a sidebar, a header and an organizer switcher for users who belong to more than one organizer.
 - /web: the site layout, header, footer and a placeholder home page.
 - Component tests for both sign-in pages, the password change screen, and the invitation and application pages.
 ```
@@ -317,8 +317,9 @@ Implement gates and staff as described in implementation-plan.md Phase 2 step 8.
 - Guard password accounts (techstack.md §3): POST /api/v1/organizer/guards creates the account (name and email) with managed_by_organizer_id set to the creating organizer. A password account is assigned to one event at a time. POST /api/v1/organizer/guards/{id}/password issues a temporary password for the guard's current assignment: it creates a guard_credentials row, returns the password once in the response and never again, and revokes any earlier credential and its sessions. PATCH /api/v1/organizer/guards/{id} disables or re-enables the account. Only the owning organizer or a platform admin can assign, issue passwords for or disable a password guard.
 - Revocation when the event closes: a scheduled job runs every minute. For every event that has closed (last gate closing time passed, or cancelled or archived), it deletes the password hash of each of its guard credentials, sets revoked_at, deletes the guards' sessions, ends their assignments and writes an audit log entry. Cancelling or archiving an event triggers the same revocation immediately. Keep the guard's user record, so scan records still name them. Whether the same job also ends the assignments of Google-signed-in guards follows hurdles.md H8 (recommended: yes); ask me if it's still Open.
 - Assignments link a guard to an event and, optionally, a gate. Organizers can remove assignments. Assignment changes are audited.
+- Event owner assignments: accepting an event_owner invitation creates an event_staff row with role event_owner and no gate. Organizers can list and remove an event's event owners; removal ends their access to that event immediately and is audited.
 - An endpoint for a guard to list only their current assignments.
-- Tests: a guard sees only their own assignments and can't reach any organizer endpoint; an expired or reused invitation fails; signing in with a different Google email doesn't accept the invitation; another organizer can't assign or issue a password for a password guard; a temporary password can't be retrieved after it's issued; a password account can't be assigned to a second open event; once the last gate closes, the password hash is gone, the guard can't sign in and their session has ended; cancelling an event revokes its guard passwords immediately; and the guard's past scans still show their name.
+- Tests: a guard sees only their own assignments and can't reach any organizer endpoint; an event owner sees only their assigned events and is refused on every organizer endpoint except the guest list; an expired or reused invitation fails; signing in with a different Google email doesn't accept the invitation; another organizer can't assign or issue a password for a password guard; a temporary password can't be retrieved after it's issued; a password account can't be assigned to a second open event; once the last gate closes, the password hash is gone, the guard can't sign in and their session has ended; cancelling an event revokes its guard passwords immediately; and the guard's past scans still show their name.
 ```
 
 **Done when:** the invitation-to-assignment flow works end to end, and guards are confined to their assignments.
@@ -330,7 +331,7 @@ Implement publishing rules and admin controls as described in implementation-pla
 
 - An event can be published only when it has at least one active offering, valid and consistent time windows, and capacity that covers all allocations. If not, return every failing rule at once.
 - After publishing: audit every change, and block or require explicit confirmation for changes that affect existing orders (lowering capacity below sold, changing the price of an offering that has sales, moving the event's dates).
-- Admin endpoints: list organizers, suspend and reactivate organizers (suspension unpublishes nothing but blocks new sales and its members' sign-ins), and view any event, with the access audited.
+- Admin endpoints: list organizers, suspend and reactivate organizers (suspension unpublishes nothing but blocks new sales and the sign-ins of its staff, event owners and guards), and view any event, with the access audited.
 - Tests for each rule.
 ```
 
@@ -344,7 +345,7 @@ Build the organizer and admin screens in /manage for Phase 2, using shadcn/ui co
 Organizer:
 - Event list with status badges and filters.
 - A step-by-step event editor: details → times → tickets (an offerings grid of type × category) → attendee fields → gates and staff → review and publish. The publish step shows the API's failing rules if there are any.
-- Delegation management; staff invitations; guard invitations and guard password accounts (create, assign, "Issue password" with a one-time copy dialog, disable); and guard assignments, showing when each password guard's access ends.
+- Delegation management; staff and event owner invitations, and each event's event owners with a remove action; guard invitations and guard password accounts (create, assign, "Issue password" with a one-time copy dialog, disable); and guard assignments, showing when each password guard's access ends.
 
 Admin:
 - Organizer list with suspend and reactivate actions behind a confirmation dialog.
@@ -652,14 +653,15 @@ Reserved seating comes last in this phase because it is the first item to defer 
 ### P7.1 — Remaining promotion rules and reports (backend)
 
 ```text
-Implement implementation-plan.md Phase 7 steps 1–3.
+Implement implementation-plan.md Phase 7 steps 1–4.
 - Complete any promotion rules from SOW §2.8 that P3.4 didn't cover, plus redemption tracking.
 - Organizer report endpoints (own events only): sales by offering, payment status, remaining capacity, promotion performance, attendance, and gate activity by time and gate.
 - Admin report endpoints: platform-wide summaries, transaction oversight, and an audit log search filtered by actor, organizer, action and date.
 - If hurdles.md H1 has been decided: a settlement report per organizer and event (sales, refunds, fees and amount owed) and a log for recording each manual payout.
-- Build the scope items in hurdles.md §4 (for example CSV exports of attendee and sales lists) only if they have been confirmed as in scope.
+- Guest list endpoints (v1.md §5): GET /api/v1/organizer/events/{id}/attendees with filters for ticket category, delegation, purchase date and check-in status, and GET /api/v1/organizer/events/{id}/attendees/export, which streams the same filtered list as CSV. Organizer staff can use them for their own events and event owners for their assigned events only (doc/roleandprivileage.md). Event owners get no other report endpoint.
+- Build the other scope items in hurdles.md §4 (for example CSV exports of sales lists) only if they have been confirmed as in scope.
 - Reports must match the order and payment records exactly. Write tests that compare report totals with direct sums.
-- Tenant-isolation tests for every report endpoint.
+- Tenant-isolation tests for every report endpoint, including that an event owner can export only their assigned events' guest lists.
 ```
 
 **Done when:** report figures match the records, and organizers only ever see their own events.
@@ -667,18 +669,19 @@ Implement implementation-plan.md Phase 7 steps 1–3.
 ### P7.2 — Report screens
 
 ```text
-Build report screens in /manage for organizers and admins, using the P7.1 endpoints:
+Build report screens in /manage for organizers, event owners and admins, using the P7.1 endpoints:
 - Summary cards, tables with filters, and simple charts where they help: sales over time and attendance by gate.
 - An audit log viewer for admins.
+- A guest list screen with the P7.1 filters and an "Export CSV" button, in the organizer area for each event and as the only screen in the event owner area.
 - Every number is labeled with its unit and time range.
 ```
 
-**Done when:** organizers and admins can answer "how many sold, how much paid, how many admitted" from the screens.
+**Done when:** organizers and admins can answer "how many sold, how much paid, how many admitted" from the screens, and an event owner can filter and export the guest list of their assigned event.
 
 ### P7.3 — Reserved seating (backend)
 
 ```text
-Implement reserved seating as described in implementation-plan.md Phase 7 steps 4–8.
+Implement reserved seating as described in implementation-plan.md Phase 7 steps 5–9.
 - Organizers manage sections, rows and seat numbers, including bulk creation (for example, row A, seats 1–30). No visual seat-map editor: it's out of scope (SOW §9).
 - Seat states: available, held, sold and released. Seat holds are inventory_reservations rows with seat_id set, so they reuse the hold mechanism from P3.1 and the expiry job from P3.3.
 - During checkout for a seated event, the buyer picks specific seats, and the hold covers both the offering capacity and the seats, in one transaction.

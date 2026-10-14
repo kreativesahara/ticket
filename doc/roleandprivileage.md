@@ -153,7 +153,7 @@ sequenceDiagram
     participant Policy as Laravel Policy Layer
     participant DB as Supabase PostgreSQL
 
-    Client->>HTTP: Request (e.g. GET /api/v1/events/123/attendees/export)
+    Client->>HTTP: Request (e.g. GET /api/v1/organizer/events/123/attendees/export)
     HTTP->>Sanctum: Authenticate session cookie / token
     alt Unauthenticated
         Sanctum-->>Client: 401 Unauthorized
@@ -379,8 +379,8 @@ CREATE TABLE audit_logs (
 ## 6. Security & Isolation Safeguards
 
 1. **Strict Event Owner Enclosure:**
-   * API endpoints for event configuration (`PATCH /api/v1/events/{id}`), ticket offerings, pricing, seat maps, delegations, and refunds will immediately reject any user authenticated as an `Event Owner`.
-   * Event Owners can only query `/api/v1/events/{id}/attendees` and `/api/v1/events/{id}/attendees/export` for the exact `event_id` where an active `event_staff` record with `role = 'event_owner'` exists.
+   * API endpoints for event configuration (`PATCH /api/v1/organizer/events/{id}`), ticket offerings, pricing, seat maps, delegations, and refunds will immediately reject any user authenticated as an `Event Owner`.
+   * Event Owners can only query `GET /api/v1/organizer/events/{id}/attendees` and `GET /api/v1/organizer/events/{id}/attendees/export` (v1.md §5) for the exact `event_id` where an active `event_staff` record with `role = 'event_owner'` exists.
 2. **Suspension Cascading:**
    * Suspending an organizer account instantly terminates sessions for all its Organizer Staff and assigned Event Owners/Guards, prevents ticket sales, and revokes active guard passwords.
 3. **No Role Escalation:**

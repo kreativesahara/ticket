@@ -11,10 +11,10 @@ We're locking in **Laravel + Sanctum + Supabase PostgreSQL**, with Laravel initi
 | Layer                   | Technology                 | Responsibilities                                                                                                    |
 | ----------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | **Public frontend**     | Next.js + TypeScript       | Event discovery, event pages, guest checkout and ticket retrieval                                                   |
-| **Management frontend** | React + Vite + TypeScript  | Organizer dashboard, platform admin and guard interface                                                             |
+| **Management frontend** | React + Vite + TypeScript  | Organizer dashboard (including the event owner guest list), platform admin and guard interface                      |
 | **UI and styling**      | shadcn/ui + Tailwind CSS   | Shared component library and design system for both frontends                                                       |
 | **Backend**             | Laravel REST API           | Sanctum, policies, event management, orders, payments, tickets, QR validation and reporting                         |
-| **Authentication**      | Google OAuth (Laravel Socialite) + Sanctum | Google sign-in for admins, organizers and staff; guards use Google or an email and password created by their organizer; Sanctum cookie sessions keep everyone signed in |
+| **Authentication**      | Google OAuth (Laravel Socialite) + Sanctum | Google sign-in for admins, organizer staff and event owners; guards use Google or an email and password created by their organizer; Sanctum cookie sessions keep everyone signed in |
 | **Database**            | Supabase PostgreSQL        | Persistent records, relationships, transactions, constraints and inventory                                          |
 | **Payment gateway**     | Pesapal (API 3.0)          | M-Pesa and card payments through Pesapal's hosted checkout, with IPN notifications and transaction status checks    |
 | **Initial deployment**  | cPanel                     | Laravel API, provided the hosting supports the required PHP version, extensions, HTTPS, database connectivity and background tasks |
@@ -37,6 +37,7 @@ Both frontends use **shadcn/ui** for components, styled with **Tailwind CSS**. s
 flowchart LR
     A[Attendees] --> W[Next.js Website]
     O[Organizers] --> D[React Dashboard]
+    EO[Event Owners] --> D
     G[Platform Admins and Guards] --> D
 
     W -- HTTPS REST API --> API[Laravel API on cPanel]
@@ -134,7 +135,7 @@ Create a Google OAuth client for each environment (local, staging and production
 
 The full permissions matrix is in v1.md §3. Use Laravel **Policies** and **Gates** to authorize operations. A role alone should never grant access to every record of that type.
 
-> **Example:** An organizer requesting `GET /api/v1/organizer/events/123` must not see event 123 simply because they are logged in. Laravel must verify that the event belongs to an organizer they are a member of, and that their role allows the action.
+> **Example:** An organizer requesting `GET /api/v1/organizer/events/123` must not see event 123 simply because they are logged in. Laravel must verify that the event belongs to an organizer they are a member of, and that their role allows the action. An event owner passes only for the guest list of an event they are assigned to.
 
 ---
 
@@ -261,6 +262,7 @@ All endpoints are versioned under `/api/v1` and follow v1.md §5, which has the 
 | **Payments**         | `POST /api/v1/orders/{id}/payments`, `POST /api/v1/webhooks/payments/{provider}`                           |
 | **Ticket retrieval** | `GET /api/v1/ticket-access/{token}`, `POST /api/v1/ticket-access/resend`                                   |
 | **Gate scanning**    | `POST /api/v1/events/{id}/scans/validate`                                                                  |
+| **Attendees**        | `GET /api/v1/organizer/events/{id}/attendees`, `GET /api/v1/organizer/events/{id}/attendees/export` (staff and assigned event owners) |
 | **Reports**          | `GET /api/v1/organizer/events/{id}/reports/sales`                                                          |
 
 Public event discovery and guest checkout are accessible without signing in. Ticket retrieval must use secure, expiring links or authenticated access, and must not expose sequential IDs as the sole authorization mechanism.

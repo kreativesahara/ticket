@@ -137,7 +137,7 @@ These items can delay launch no matter how fast development goes:
 
 7. **Fix the baseline schedule and risk register.** Confirm the team, the dates and the milestone review windows.
 
-8. **Prepare Google sign-in.** The client creates, or gives access to, a Google Cloud project for the platform. Set up the OAuth consent screen with the app name, support email, privacy policy link and the platform's domains, requesting only the `openid`, `email` and `profile` scopes. Create OAuth clients for local development and staging now; the production client follows in Phase 8. Also confirm that every organizer and staff member has, or can create, a Google account. Guards without one will use guard password accounts.
+8. **Prepare Google sign-in.** The client creates, or gives access to, a Google Cloud project for the platform. Set up the OAuth consent screen with the app name, support email, privacy policy link and the platform's domains, requesting only the `openid`, `email` and `profile` scopes. Create OAuth clients for local development and staging now; the production client follows in Phase 8. Also confirm that every organizer staff member and event owner has, or can create, a Google account. Guards without one will use guard password accounts.
 
 ### Deliverables
 
@@ -187,15 +187,15 @@ These items can delay launch no matter how fast development goes:
 7. **Continuous integration.** On every push, run linting, static analysis and the test suite against PostgreSQL.
 8. **Laravel foundation.** Install Laravel, connect to Supabase over SSL, and add migrations for the identity and tenancy tables. Use UUIDs for any record referenced from outside the system.
 9. **Google sign-in.** Sign users in through Google OAuth with Laravel Socialite, following the rules in techstack.md §3: verified Google emails only, users matched by Google account ID, and a Sanctum cookie session started after sign-in. Add logout, the `me` endpoint, account suspension, invitation acceptance, organizer applications that a platform admin approves, and a command for granting platform admin. Passwords exist only for guard password accounts (techstack.md §3): add guard sign-in with email and password, the forced password change at first sign-in, rate limiting with temporary lockout, and shorter guard sessions. Use the database session driver, so a specific guard's sessions can be ended. There is no self-registration, email verification or email-based password reset. Configure stateful domains, the session cookie domain, CORS and CSRF for the `www`, `manage` and `api` subdomains.
-10. **Tenancy and authorization.** Build organizers, members and roles, with a Laravel policy for every resource. Keep platform admin permissions separate from organizer permissions.
+10. **Tenancy and authorization.** Build organizers, staff membership and event owner assignments, with a Laravel policy for every resource. Keep platform admin permissions separate from organizer permissions. Event owners pass only the guest-list policy (view, filter and export) for their assigned events.
 11. **Audit log.** A single service call records who acted, the organizer, the event, the action, the affected resource and details.
 12. **API conventions.** The `/api/v1` prefix, the standard error format, rate limits on the sign-in routes, and a correlation ID on every request.
-13. **Tenant-isolation test suite.** For every resource, a test checks that a user from organizer B is refused access to organizer A's records. The suite grows with every phase.
+13. **Tenant-isolation test suite.** For every resource, a test checks that a user from organizer B is refused access to organizer A's records, and that an event owner is refused everything except the guest list of their assigned events. The suite grows with every phase.
 
 ### Frontend track
 
 14. Create `/web` (Next.js and TypeScript) and `/manage` (Vite, React and TypeScript), both using Tailwind CSS and shadcn/ui with the shared theme.
-15. Build the "Sign in with Google" page, the guard email-and-password sign-in form with its first-sign-in password change, the invitation acceptance page and the organizer application form in `/manage`, with routing to the organizer, admin and guard areas by role.
+15. Build the "Sign in with Google" page, the guard email-and-password sign-in form with its first-sign-in password change, the invitation acceptance page and the organizer application form in `/manage`, with routing to the organizer, event owner, admin and guard areas by role.
 16. Generate a typed API client from the OpenAPI specification, plus a mock server so screens can be built before the backend is ready.
 
 ### Deployment track
@@ -212,6 +212,7 @@ These items can delay launch no matter how fast development goes:
 ### Exit criteria
 
 - [ ] Organizers cannot read or change another organizer's resources, and the automated tests prove it.
+- [ ] Event owners can't change anything, and can reach guest data only for their assigned events.
 - [ ] Every protected endpoint refuses requests that aren't logged in or aren't authorized.
 - [ ] Google sign-in works on staging, and the session holds across `www`, `manage` and `api`.
 - [ ] Unverified Google accounts, suspended users and users without an invitation or approved organizer can't reach the organizer, guard or admin areas.
@@ -235,13 +236,13 @@ These items can delay launch no matter how fast development goes:
 5. **Offerings.** Each allowed type × category combination, with a price in minor units of KES, capacity, sales window, and minimum and maximum per order. Include group quantity rules, and an approval or manual-issue flag for Media tickets.
 6. **Delegations.** Each with its allocation, allowed categories and price rules.
 7. **Attendee details setup.** The collection mode (purchaser only, or details for every ticket) and the field definitions, including event-specific questions.
-8. **Gates and staff.** Create gates, add guards either by email invitation (the guard accepts by signing in with a Google account that uses that address) or by creating a guard password account and giving the guard its temporary password, assign each guard to an event and optionally a gate, and remove assignments. A guard password account works for one event at a time. When that event closes (its last gate closes, or it is cancelled or archived), the password is deleted, the guard's sessions end and the assignment ends. A job runs this every minute, and every request from a password guard also checks the event is still open (techstack.md §3).
+8. **Gates and staff.** Create gates, add guards either by email invitation (the guard accepts by signing in with a Google account that uses that address) or by creating a guard password account and giving the guard its temporary password, assign each guard to an event and optionally a gate, and remove assignments. A guard password account works for one event at a time. When that event closes (its last gate closes, or it is cancelled or archived), the password is deleted, the guard's sessions end and the assignment ends. A job runs this every minute, and every request from a password guard also checks the event is still open (techstack.md §3). Assign event owners to an event by email invitation (role `event_owner`, with the event attached), and remove them; removal ends their access to that event immediately.
 9. **Publishing rules.** An event can be published only if it has at least one active offering, valid time windows, and capacity that covers its allocations. Changes after publishing are audited. Changes that would affect existing orders, such as lowering capacity below tickets already sold, are blocked or need explicit confirmation.
 10. **Admin.** List organizers, suspend or reactivate them, and oversee events.
 
 ### Frontend
 
-11. **Organizer dashboard:** an event list and a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), an offerings grid, delegation management and staff invitations.
+11. **Organizer dashboard:** an event list and a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), an offerings grid, delegation management, and staff and event owner invitations.
 12. **Admin dashboard:** organizers, users, and suspension controls.
 13. **Public website:** event listing and event detail pages that show published events only.
 
@@ -250,6 +251,7 @@ These items can delay launch no matter how fast development goes:
 - [ ] An organizer can publish an event with valid offerings and capacity limits.
 - [ ] Unpublished events never appear on public endpoints.
 - [ ] Guard invitation and assignment work, and guards see only the events assigned to them.
+- [ ] Event owner invitation and assignment work, and event owners see only the events assigned to them.
 - [ ] When an event closes, its guard passwords are deleted and those guards are signed out immediately; their past scans still show their names.
 - [ ] Tenant-isolation tests cover every new resource.
 
@@ -462,18 +464,20 @@ Each part of this phase is built and tested on its own, and the core flow doesn'
 
 2. **Organizer reports**, for their own events only: sales by offering, payment status, remaining capacity, promotion performance, attendance and gate activity.
 3. **Admin reports:** platform-wide summaries, transaction oversight and an audit log viewer.
+4. **Guest list:** view the attendees of an event, filter them by ticket category, delegation, purchase date and check-in status, and export them as CSV. Available to organizer staff for their own events and to event owners for their assigned events only (doc/roleandprivileage.md). Event owners see no sales, payment or settlement figures.
 
 ### Reserved seating
 
-4. Organizers set up sections, rows and seat numbers through simple forms and bulk entry. The SOW (§9) excludes advanced visual seat-map editors.
-5. Seats can be available, held, sold or released. Seat holds reuse the Phase 3 hold mechanism and its expiry, through `inventory_reservations.seat_id`.
-6. A database constraint allows only one active ticket per seat per event.
-7. Buyers choose seats during checkout, and the assigned seat appears on the ticket and at the gate.
-8. Test that two buyers choosing the same seat at the same moment results in exactly one getting it.
+5. Organizers set up sections, rows and seat numbers through simple forms and bulk entry. The SOW (§9) excludes advanced visual seat-map editors.
+6. Seats can be available, held, sold or released. Seat holds reuse the Phase 3 hold mechanism and its expiry, through `inventory_reservations.seat_id`.
+7. A database constraint allows only one active ticket per seat per event.
+8. Buyers choose seats during checkout, and the assigned seat appears on the ticket and at the gate.
+9. Test that two buyers choosing the same seat at the same moment results in exactly one getting it.
 
 ### Exit criteria
 
 - [ ] Reports show only the organizer's own events, and their figures match the order and payment records.
+- [ ] Event owners can view, filter and export the guest list of their assigned events only, and a CSV export matches the on-screen filters.
 - [ ] A seat can't be sold twice, expired holds release seats, and general-admission events need no seat setup. If seating has been deferred by change control, this criterion moves with it.
 
 ---
@@ -536,7 +540,7 @@ These decisions affect the database, the integrations or the schedule. Each need
 | 10 | Hold duration                         | 5–20 minutes                                                | 10–15 minutes, configurable                                                          | Phase 3   |
 | 11 | Payment that arrives after the hold expired | Honor it if tickets remain; always refund; handle manually | Honor it if tickets remain, otherwise flag it for a refund                     | Phase 4   |
 | 12 | Refund policy and who can approve     | Organizer only; admin only; organizer requests and admin approves | Per-event policy: the organizer requests, the platform admin approves         | Phase 4   |
-| 13 | Sign-in method                        | —                                                           | **Decided: Google OAuth** for admins, organizers and staff; guards use Google or a guard password account. Buyers still check out as guests | Decided   |
+| 13 | Sign-in method                        | —                                                           | **Decided: Google OAuth** for admins, organizer staff and event owners; guards use Google or a guard password account. Buyers still check out as guests | Decided   |
 | 14 | Guard sign-in without Google          | —                                                           | **Decided:** individual email-and-password guard accounts, created by the guard's organizer or a platform admin. Each password is valid for one event and deleted as soon as that event closes | Decided   |
 | 15 | Guards change the temporary password at first sign-in | Required; optional                          | Required, so only the guard knows their password and their scans are truly theirs. The organizer can still reset it at any time | Phase 1   |
 | 16 | Entry when a QR code won't scan       | —                                                           | **Decided:** the attendee shows their downloaded or printed ticket, and the guard types its 6-character short code | Decided   |
@@ -571,7 +575,7 @@ These decisions affect the database, the integrations or the schedule. Each need
 | Payment notifications are duplicated or late              | Duplicate checks, reconciliation job, late-payment policy                                 | Provider |
 | Poor connectivity at gates                                | Scanner fails closed; field rehearsal; check venue connectivity before each event         | Both     |
 | Ticket emails go to spam or fail                          | SPF, DKIM and DMARC records; retries; buyers can request a new link                       | Both     |
-| Some staff can't sign in with Google                      | Confirm in Phase 0; help them create a Google account with their existing email           | Client   |
+| Some staff or event owners can't sign in with Google      | Confirm in Phase 0; help them create a Google account with their existing email           | Client   |
 | Guard passwords get shared or written down                | One account per guard; forced change at first sign-in; guard-only scope; password deleted when the event closes; organizer can issue a new password or disable the account at any time; guard sign-in rehearsed before each event | Both     |
 | Scope grows during the build                              | Change control as set out in SOW §12                                                      | Both     |
 

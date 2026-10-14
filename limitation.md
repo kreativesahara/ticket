@@ -35,7 +35,7 @@ This document sets out how the platform will behave: the business rules it follo
 - **1.5** New organizers sign in, apply for an organizer account, and wait for a platform admin to approve them before they can create events.
 - **1.6** Platform admins are appointed by an existing platform admin or system command. No one can make themselves an admin.
 - **1.7** Platform admins have full operational authority across the platform.
-- **1.8** Suspending an organizer stops new sales for their events and blocks their team from signing in. Their published events stay visible but can't be bought.
+- **1.8** Suspending an organizer stops new sales for their events and blocks their staff, event owners and guards from signing in. Their published events stay visible but can't be bought.
 
 ### 2. Signing in
 
@@ -55,7 +55,7 @@ Rules for guard password accounts:
 - **2.8** Every guard gets their own account. One account is never shared between guards, because every ticket check is recorded against the guard who did it.
 - **2.9** The platform creates a temporary password and shows it only once. The organizer passes it to the guard in person or by direct message, never in a group chat.
 - **2.10** The guard must choose their own password the first time they sign in, so only they know it.
-- **2.11** A guard password account can only ever be used for guard duties. It can never become an organizer, staff member or admin.
+- **2.11** A guard password account can only ever be used for guard duties. It can never become an organizer staff member, event owner or admin.
 - **2.12** A guard password account belongs to the organizer who created it. No other organizer can use that guard.
 - **2.13** Each password works for **one event only**. The guard is assigned to one event at a time.
 - **2.14** The password is **deleted as soon as the event closes**, and the guard is signed out immediately. An event closes when its last gate closes, or when the organizer cancels or archives it, whichever happens first.
@@ -162,11 +162,12 @@ Rules for guard password accounts:
 - **11.2** Platform admins see platform-wide summaries, all transactions and the activity log.
 - **11.3** Report figures always match the underlying orders and payments.
 - **11.4** Sensitive actions are recorded with who did them and when: role changes, event cancellations, ticket cancellations, refunds, payment adjustments, and guard accounts and passwords.
+- **11.5** Event owners see only the guest list of the events they are assigned to. They can filter it and download it as a spreadsheet (CSV), but see no sales, payment or settlement figures.
 
 ### 12. Personal data
 
 - **12.1** The platform collects only the attendee details each event needs.
-- **12.2** Organizers see attendee details only for their own events. Guards see only what they need to check entry.
+- **12.2** Organizers see attendee details only for their own events, and event owners only for the events they are assigned to. Guards see only what they need to check entry.
 - **12.3** When someone asks for their personal data to be deleted, their name, email and phone number are removed, but the financial records needed by law are kept without them. (Retention periods: see decision C10.)
 
 ---
@@ -178,7 +179,7 @@ Please confirm that each of these is acceptable for launch.
 | #     | Limitation                                       | What it means in practice                                                                                   | Accepted? |
 | ----- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | --------- |
 | B1    | Internet needed at the gate                      | Without a connection, guards can't check tickets. There is no offline mode.                                 | ☐         |
-| B2    | Google accounts for admins, organizers and staff | Anyone without a Google account must create one (free, and it can use an existing email address).           | ☐         |
+| B2    | Google accounts for admins, staff and event owners | Anyone without a Google account must create one (free, and it can use an existing email address).           | ☐         |
 | B3    | Guard passwords last one event                   | A password guard works one event at a time, gets a new password for each event, and sets their own password at each first sign-in. | ☐ |
 | B4    | Short code needs the ticket                      | If an attendee's phone is dead and they have no printout, the guard can't find their ticket.                | ☐         |
 | B5    | Pesapal is the only payment option               | If Pesapal is down, no one can buy tickets until it's back.                                                 | ☐         |
