@@ -4,7 +4,7 @@
 **Based on:** [v1.md FR-06 to FR-09](../../../v1.md#fr-06--purchasing-and-orders), [limitation.md §5–§8](../../../limitation.md#5-buying-tickets), [doc/state-machines.md](../../state-machines.md)  
 **Files:** [SVG](01-buyer-journey-overview.svg) · [PNG](01-buyer-journey-overview.png) · [Mermaid source](01-buyer-journey-overview.mmd)
 
-How a buyer gets a ticket, from finding the event to showing the ticket at the gate. Buyers find events on the landing page, which lists every on-sale event and its public tickets, or through the event's own link or gate QR code. Each double-edged box is drawn in detail in its own diagram.
+How a buyer gets a ticket, from finding the event to showing the ticket at the gate. Buyers find a ticket option on the landing page, which lists every public ticket option with search and filters, or through the event's own link or gate QR code. Each double-edged box is drawn in detail in its own diagram.
 
 ```mermaid
 %%{init: {"flowchart": {"wrappingWidth": 320}}}%%
@@ -19,10 +19,10 @@ flowchart TD
     classDef stop fill:#fef2f2,stroke:#dc2626,color:#7f1d1d
 
     start(("Start")):::startNode
-    a1["Find an event on the landing page, or open<br/>the event link or scan its gate QR code"]:::buyer
+    a1["Find a ticket option on the landing page (search,<br/>filter by category or date), or open the<br/>event link or scan its gate QR code"]:::buyer
     d1{"Arrived with a delegation<br/>claim link or code?"}:::decision
     a2["Open the event page"]:::buyer
-    s1["Show the published event and its public<br/>offerings in their sales window;<br/>delegation tickets are never listed"]:::system
+    s1["Show the event's public ticket options: each<br/>category's current wave, upcoming waves greyed<br/>out, sold-out options marked; delegation<br/>tickets never listed"]:::system
     d2{"On sale with<br/>tickets left?"}:::decision
     x1["Not on sale or sold out"]:::stop
     a3[["Choose tickets, seats and details<br/>see 02"]]:::buyer
@@ -83,7 +83,7 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 | Purple box | Organizer staff or platform admin action |
 | Red box | The journey stops here |
 
-## The buyer journey
+## Activity diagrams
 
 1. [Buyer journey overview](01-buyer-journey-overview.md)
 2. [Choose tickets and place a hold](02-choose-tickets-and-hold.md)
@@ -92,3 +92,4 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 5. [Hold expiry and late payment](05-hold-expiry-and-late-payment.md)
 6. [Delegation claim](06-delegation-claim.md)
 7. [Ticket retrieval and transfer](07-ticket-retrieval-and-transfer.md)
+8. [Organizer: set up ticket waves](08-set-up-ticket-waves.md)

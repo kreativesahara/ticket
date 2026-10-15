@@ -1,7 +1,7 @@
 # Buyer journey: delegation claim
 
 **Type:** Activity diagram (Mermaid flowchart)  
-**Based on:** [doc/sponsored.md](../../sponsored.md), [v1.md FR-05](../../../v1.md#fr-05--delegations-and-inventory), [hurdles.md H3](../../../hurdles.md#h3-no-path-for-free-tickets-or-delegation-claims--decided)  
+**Based on:** [doc/sponsored.md](../../sponsored.md), [v1.md FR-05](../../../v1.md#fr-05--delegations-and-inventory), [hurdles.md H3, H14](../../../hurdles.md#h14-sponsor-tickets-werent-set-aside-from-public-sale--decided)  
 **Files:** [SVG](06-delegation-claim.svg) · [PNG](06-delegation-claim.png) · [Mermaid source](06-delegation-claim.mmd)
 
 A sponsor's guest claims tickets through the delegation's private link or access code.
@@ -22,17 +22,17 @@ flowchart TD
     s1["Look up the delegation by<br/>the hashed token or code"]:::system
     d1{"Delegation active and<br/>event on sale?"}:::decision
     x1["Show 'link or code not valid'"]:::stop
-    s2["Show the allowed categories<br/>and remaining quota"]:::system
-    a2["Choose an allowed category<br/>and quantity"]:::buyer
+    s2["Show the delegation's set-aside tickets:<br/>category, type, price and how many are left"]:::system
+    a2["Choose from the set-aside tickets<br/>and a quantity"]:::buyer
     a3["Enter the attendee details<br/>the event asks for"]:::buyer
     d2{"CAPTCHA required?"}:::decision
     a4["Complete the CAPTCHA"]:::buyer
     m1{" "}:::decision
     a5["Submit the claim"]:::buyer
-    s3["In one transaction, hold the offering's capacity<br/>and the delegation's quota with atomic<br/>conditional updates"]:::system
-    d3{"Both holds<br/>succeed?"}:::decision
+    s3["Hold the chosen set-aside offering<br/>with an atomic conditional update"]:::system
+    d3{"Enough set-aside<br/>tickets left?"}:::decision
     x2["Show 'allocation exhausted'"]:::stop
-    s4["Create the pending order and checkout token;<br/>price from the delegation's price rule"]:::system
+    s4["Create the pending order and checkout token;<br/>price from the set-aside offering"]:::system
     d4{"Total is zero?"}:::decision
     s5["Order paid and completed with no payment;<br/>tickets issued with the delegation"]:::system
     s6["Show the ticket link at once;<br/>email it through the outbox"]:::system
@@ -71,10 +71,10 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 
 ## Notes
 
-- A delegation ticket uses its offering's capacity and the delegation's quota, both held in one transaction, so it's never counted twice.
+- A delegation's tickets are its own set-aside offerings, never sold publicly and outside the waves, so members can claim them whichever wave is on sale. A claim is an ordinary offering hold, and no ticket is counted twice.
 - A free claim skips Pesapal entirely and issues tickets straight away. A claim with a price goes through the normal payment flow.
 
-## The buyer journey
+## Activity diagrams
 
 1. [Buyer journey overview](01-buyer-journey-overview.md)
 2. [Choose tickets and place a hold](02-choose-tickets-and-hold.md)
@@ -83,3 +83,4 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 5. [Hold expiry and late payment](05-hold-expiry-and-late-payment.md)
 6. [Delegation claim](06-delegation-claim.md)
 7. [Ticket retrieval and transfer](07-ticket-retrieval-and-transfer.md)
+8. [Organizer: set up ticket waves](08-set-up-ticket-waves.md)

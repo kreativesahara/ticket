@@ -17,18 +17,30 @@ erDiagram
         string name
         string category_code "VVIP, VIP, Media or organizer-defined"
         json access_rules
+        boolean sells_in_waves "chosen at event setup"
+    }
+    ticket_waves {
+        key id PK
+        key event_id FK
+        key category_id FK
+        string name "Wave 1, Wave 2 and so on"
+        int position
+        timestamp starts_at "a category's waves never overlap"
+        timestamp ends_at
     }
     event_ticket_offerings {
         key id PK
         key event_id FK
         key ticket_type_id FK
         key category_id FK
+        key wave_id FK "optional: a ticket option in a wave"
+        key delegation_id FK "optional: set aside for a delegation"
         money price "bigint minor units"
         char(3) currency "KES"
         int capacity
         int sold_count
         int reserved_count "active holds"
-        timestamp sale_starts_at
+        timestamp sale_starts_at "the wave's dates when wave_id is set"
         timestamp sale_ends_at
         int min_per_order
         int max_per_order
@@ -40,19 +52,11 @@ erDiagram
         key id PK
         key event_id FK
         string name
-        int capacity "sub-quota of its offerings"
-        int sold_count
-        int reserved_count
-        json price_rule
         string claim_token_hash UK
         text claim_token_encrypted
         string access_code_hash
         text access_code_encrypted
-        string status
-    }
-    delegation_categories {
-        key delegation_id PK, FK
-        key category_id PK, FK
+        string status "active or paused"
     }
     seating_sections {
         key id PK
@@ -72,7 +76,6 @@ erDiagram
         key id PK
         key order_id FK
         key offering_id FK
-        key delegation_id FK "optional: holds delegation quota"
         key seat_id FK "optional: holds one seat"
         int quantity
         timestamp expires_at "now + 15 minutes"
@@ -81,16 +84,17 @@ erDiagram
 
     events ||--o{ ticket_types : "defines"
     events ||--o{ ticket_categories : "defines"
+    events ||--o{ ticket_waves : "schedules"
+    ticket_categories ||--o{ ticket_waves : "sold in"
     events ||--o{ event_ticket_offerings : "sells"
     ticket_types ||--o{ event_ticket_offerings : "sold as"
     ticket_categories ||--o{ event_ticket_offerings : "sold as"
+    ticket_waves |o--o{ event_ticket_offerings : "offers"
     events ||--o{ delegations : "allocates"
-    delegations ||--o{ delegation_categories : "may claim"
-    ticket_categories ||--o{ delegation_categories : "claimable through"
+    delegations |o--o{ event_ticket_offerings : "sets aside"
     events ||--o{ seating_sections : "lays out"
     seating_sections ||--o{ seats : "contains"
     events ||--o{ seats : "contains"
     orders ||--o{ inventory_reservations : "holds"
     event_ticket_offerings ||--o{ inventory_reservations : "capacity held"
-    delegations |o--o{ inventory_reservations : "quota held"
     seats |o--o{ inventory_reservations : "seat held"

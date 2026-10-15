@@ -20,6 +20,7 @@ flowchart LR
             A2(["Manage platform users and suspensions"]):::usecase
             A3(["Designate platform admins"]):::usecase
             A4(["Manage event categories"]):::usecase
+            A18(["Delete a person's data on request"]):::usecase
         end
         subgraph P2["Organizers"]
             A5(["Approve organizer applications"]):::usecase
@@ -49,6 +50,7 @@ flowchart LR
     Admin --- A2
     Admin --- A3
     Admin --- A4
+    Admin --- A18
     Admin --- A5
     Admin --- A6
     Admin --- A7
@@ -89,3 +91,4 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 - Admins can do everything organizer staff can, for any organizer ([02 organizer staff](02-organizer-staff.md)), but they don't scan tickets.
 - Only admins start refunds, ticket by ticket. The automatic refunds of late or mismatched payments are system actions ([06 automated processes](06-automated-processes.md)).
 - Platform admins are designated by an existing admin or a system command, never through sign-in.
+- Only platform admins delete a person's data on request: names, emails, phone numbers and ID digits are removed across every organizer, and amounts, references and scan records are kept ([v1.md FR-15](../../../v1.md#fr-15--personal-data-deletion)).

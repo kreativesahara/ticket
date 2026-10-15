@@ -124,7 +124,7 @@ Create a Google OAuth client for each environment (local, staging and production
 | Role                | Access                                                                                                        |
 | ------------------- | ------------------------------------------------------------------------------------------------------------- |
 | **Platform admin**  | Full rights and privileges across the platform: manage platform users, organizer accounts, event oversight, dispute intervention, global configuration, and platform-wide reports |
-| **Organizer staff** | Full control of their organizer account: profile, members, events, pricing, offerings, delegations, guards, and settlement reports |
+| **Organizer staff** | Full control of their organizer account: profile, members, events, pricing, offerings, ticket waves, delegations, guards, and settlement reports |
 | **Event owner**     | View, filter and export the names, ticket categories, delegations and check-in status of the ticket holders at their assigned events |
 | **Guard**           | Scan and redeem tickets only for assigned events and gates, signed in with a guard password account           |
 | **Attendee**        | Buy tickets as a guest and view their own orders and tickets through a secure retrieval link; accounts are not required for the initial release |
@@ -147,7 +147,7 @@ Table names follow v1.md §4, which lists every column.
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **Identity and tenancy**               | `users`, `organizers`, `organizer_members`, `invitations`, `guard_credentials`                                   |
 | **Events and access**                  | `events`, `event_categories`, `event_gates`, `event_staff`                                                       |
-| **Ticket configuration and inventory** | `ticket_types`, `ticket_categories`, `event_ticket_offerings`, `delegations`, `delegation_categories`, `inventory_reservations`, `seating_sections` and `seats` (optional) |
+| **Ticket configuration and inventory** | `ticket_types`, `ticket_categories`, `ticket_waves`, `event_ticket_offerings`, `delegations`, `inventory_reservations`, `seating_sections` and `seats` (optional) |
 | **Orders and tickets**                 | `orders`, `order_items`, `attendees`, `ticket_field_definitions`, `attendee_field_values`, `tickets`, `ticket_transfers`, `ticket_access_tokens`, `ticket_scans` |
 | **Payments and promotions**            | `payments`, `payment_webhook_events`, `refunds`, `refund_tickets`, `organizer_payouts`, `promotions`, `promotion_offerings`, `promotion_redemptions` |
 | **Audit and outbox**                   | `audit_logs`, `outbox_messages`                                                                                  |
@@ -252,8 +252,11 @@ All endpoints are versioned under `/api/v1` and follow v1.md §5, which has the 
 | **Invitations**      | `POST /api/v1/organizer/invitations`, `POST /api/v1/invitations/{token}/accept`                            |
 | **Guard accounts**   | `POST /api/v1/organizer/guards`, `POST /api/v1/organizer/guards/{id}/password`                             |
 | **Organizers**       | `POST /api/v1/organizers`, `GET /api/v1/organizers/me`                                                     |
-| **Events**           | `GET /api/v1/events`, `POST /api/v1/organizer/events`, `PATCH /api/v1/organizer/events/{id}`               |
-| **Ticket offerings** | `GET /api/v1/events/{id}/tickets`, `POST /api/v1/organizer/events/{id}/offerings`                          |
+| **Events**           | `GET /api/v1/events`, `GET /api/v1/events/{slug}`, `POST /api/v1/organizer/events`, `PATCH /api/v1/organizer/events/{id}` |
+| **Landing page**     | `GET /api/v1/tickets` (every public ticket option, with search and filters)                                |
+| **Ticket offerings** | `GET /api/v1/events/{id}/tickets`, `POST /api/v1/organizer/events/{id}/offerings`, `POST /api/v1/organizer/offerings/{id}/move-unsold` |
+| **Ticket waves**     | `POST /api/v1/organizer/events/{id}/waves`, `PATCH /api/v1/organizer/waves/{id}`                           |
+| **Event sharing**    | `GET /api/v1/organizer/events/{id}/qr-code`, `GET /api/v1/organizer/events/{id}/poster`                    |
 | **Orders**           | `POST /api/v1/orders`, `GET /api/v1/orders/{id}` (with the checkout token), `GET /api/v1/organizer/orders/{id}` |
 | **Payments**         | `POST /api/v1/orders/{id}/payments`, `POST /api/v1/webhooks/payments/{provider}`                           |
 | **Ticket retrieval** | `GET /api/v1/ticket-access/{token}`, `POST /api/v1/ticket-access/resend`                                   |

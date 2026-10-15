@@ -13,17 +13,17 @@ flowchart TD
     s1["Look up the delegation by<br/>the hashed token or code"]:::system
     d1{"Delegation active and<br/>event on sale?"}:::decision
     x1["Show 'link or code not valid'"]:::stop
-    s2["Show the allowed categories<br/>and remaining quota"]:::system
-    a2["Choose an allowed category<br/>and quantity"]:::buyer
+    s2["Show the delegation's set-aside tickets:<br/>category, type, price and how many are left"]:::system
+    a2["Choose from the set-aside tickets<br/>and a quantity"]:::buyer
     a3["Enter the attendee details<br/>the event asks for"]:::buyer
     d2{"CAPTCHA required?"}:::decision
     a4["Complete the CAPTCHA"]:::buyer
     m1{" "}:::decision
     a5["Submit the claim"]:::buyer
-    s3["In one transaction, hold the offering's capacity<br/>and the delegation's quota with atomic<br/>conditional updates"]:::system
-    d3{"Both holds<br/>succeed?"}:::decision
+    s3["Hold the chosen set-aside offering<br/>with an atomic conditional update"]:::system
+    d3{"Enough set-aside<br/>tickets left?"}:::decision
     x2["Show 'allocation exhausted'"]:::stop
-    s4["Create the pending order and checkout token;<br/>price from the delegation's price rule"]:::system
+    s4["Create the pending order and checkout token;<br/>price from the set-aside offering"]:::system
     d4{"Total is zero?"}:::decision
     s5["Order paid and completed with no payment;<br/>tickets issued with the delegation"]:::system
     s6["Show the ticket link at once;<br/>email it through the outbox"]:::system

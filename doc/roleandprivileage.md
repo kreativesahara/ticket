@@ -1,7 +1,7 @@
 # Roles, Privileges & Authorization Architecture
 
-**Multi-Organizer Event Ticketing Platform · Version 1.2 · 15 October 2026**  
-**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2).
+**Multi-Organizer Event Ticketing Platform · Version 1.3 · 15 October 2026**  
+**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2).
 
 ---
 
@@ -118,14 +118,17 @@ graph TD
 | | Create/appoint Platform Admins | Full | No | No | No | No |
 | | Approve/Suspend Organizers | Full | No | No | No | No |
 | | View platform-wide financial aggregates | Full | No | No | No | No |
+| | Delete a person's data on request | Full | No | No | No | No |
 | **Tenant Admin** | Edit Organizer profile & payout bank details | Full | Full (Own org) | No | No | No |
 | | Invite & manage Organizer Staff | Full | Full (Own org) | No | No | No |
 | | Assign Event Owners to events | Full | Full (Own org) | No | No | No |
 | **Event Ops** | Create, edit, and publish events | Full | Full (Own org) | No | No | No |
 | | Cancel or archive events | Full | Full (Own org) | No | No | No |
 | | Configure ticket offerings, prices, and capacity | Full | Full (Own org) | No | No | No |
+| | Set up ticket waves and move unsold tickets | Full | Full (Own org) | No | No | No |
 | | Configure reserved seating sections & seats | Full | Full (Own org) | No | No | No |
-| | Create & manage delegations (sponsors/groups) | Full | Full (Own org) | No | No | No |
+| | Create & manage delegations and their set-aside tickets | Full | Full (Own org) | No | No | No |
+| | Share event link, QR code & poster | Full | Full (Own org) | No | No | No |
 | | Issue sponsor/media tickets directly | Full | Full (Own org) | No | No | No |
 | **Guest Data** | **View attendee & order lists** | **Full** | **Full (Own events)** | **Limited (Names & status, assigned event)** | **No** | **Own Order Only** |
 | | **Filter attendee lists (category/status)** | **Full** | **Full (Own events)** | **Limited (Names & status, assigned event)** | **No** | **No** |
@@ -383,7 +386,7 @@ CREATE TABLE audit_logs (
 ## 6. Security & Isolation Safeguards
 
 1. **Strict Event Owner Enclosure:**
-   * API endpoints for event configuration (`PATCH /api/v1/organizer/events/{id}`), ticket offerings, pricing, seat maps, delegations, and refunds will immediately reject any user authenticated as an `Event Owner`.
+   * API endpoints for event configuration (`PATCH /api/v1/organizer/events/{id}`), ticket offerings, ticket waves, pricing, seat maps, delegations, event sharing (link, QR code and poster), and refunds will immediately reject any user authenticated as an `Event Owner`.
    * Event Owners can only query `GET /api/v1/organizer/events/{id}/attendees` and `GET /api/v1/organizer/events/{id}/attendees/export` (v1.md §5) for the exact `event_id` where an active `event_staff` record with `role = 'event_owner'` exists.
 2. **Suspension Cascading:**
    * Suspending an organizer account instantly terminates sessions for all its Organizer Staff and assigned Event Owners/Guards, prevents ticket sales, and revokes active guard passwords.

@@ -11,23 +11,24 @@ sequenceDiagram
 
     Note over Organizer, DB: 1. Setup & Configuration
     Organizer->>API: POST /api/v1/organizer/events/{id}/delegations
-    API->>DB: Create delegation record with capacity & claim token
+    API->>DB: Create delegation with claim token & access code
+    Organizer->>API: POST /api/v1/organizer/events/{id}/offerings (with delegation_id)
+    API->>DB: Create the set-aside allocation (type, category, quantity, price)
 
     Note over SponsorUser, DB: 2. Claim & Order Submission
     SponsorUser->>Web: Navigate to /claim/{token} or input Access Code
     Web->>API: GET /api/v1/delegation-claims/{token}
-    API-->>Web: Return delegation metadata (allowed categories, remaining quota)
-    SponsorUser->>Web: Select category, enter attendee details & submit
+    API-->>Web: Return the allocation (category, type, price, tickets left)
+    SponsorUser->>Web: Choose from the allocation, enter attendee details & submit
     Web->>API: POST /api/v1/orders (with delegation context)
 
-    Note over API, DB: 3. Inventory Reservation & Zero-Cost Pipeline
+    Note over API, DB: 3. Allocation Hold & Zero-Cost Pipeline
     critical Atomic Database Transaction
-        API->>DB: Check & hold inventory (UPDATE event_ticket_offerings reserved_count)
-        API->>DB: Check & hold delegation quota (UPDATE delegations reserved_count)
+        API->>DB: Check & hold the allocation (UPDATE event_ticket_offerings reserved_count)
         API->>API: Calculate order total -> KES 0
         Note over API: BYPASS PESAPAL (Hurdle H3)
         API->>DB: Order pending -> paid -> completed (no payment row)
-        API->>DB: Convert reserved offering and delegation holds to sold_count
+        API->>DB: Convert the allocation hold to sold_count
         API->>DB: Insert tickets (linked to delegation_id, QR hash, short code)
         API->>DB: Insert outbox delivery event (`ticket.issued`)
     end

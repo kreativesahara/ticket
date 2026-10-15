@@ -21,7 +21,7 @@ flowchart LR
 
     subgraph SYS["Event ticketing platform"]
         subgraph PUB["Public website"]
-            A(["Browse events and buy tickets"]):::usecase
+            A(["Browse ticket options and buy tickets"]):::usecase
             B(["Claim delegation tickets"]):::usecase
             C(["Retrieve, download and transfer tickets"]):::usecase
         end
@@ -32,12 +32,12 @@ flowchart LR
         subgraph ORG["Organizer area"]
             D(["Sign in with Google"]):::usecase
             F(["Manage organizer, team and guard accounts"]):::usecase
-            G(["Manage events, tickets, seats and promotions"]):::usecase
+            G(["Manage events, tickets, waves, seats and promotions"]):::usecase
             H(["View, filter and export the guest list"]):::usecase
             J(["View sales, attendance and settlement reports"]):::usecase
         end
         subgraph ADM["Admin area"]
-            K(["Administer organizers, users and categories"]):::usecase
+            K(["Administer organizers, users, categories and personal data"]):::usecase
             L(["Refund tickets"]):::usecase
         end
         subgraph BG["Background processing"]
@@ -98,7 +98,7 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 ## Notes
 
 - Platform admins can act on any organizer, but they don't scan tickets: only guard accounts scan.
-- Deleting a person's data on request ([hurdles.md H12](../../../hurdles.md#h12-no-rules-for-keeping-or-deleting-personal-data--decided)) isn't shown. The specification doesn't say who carries it out.
+- Platform admins also carry out personal data deletion requests ([v1.md FR-15](../../../v1.md#fr-15--personal-data-deletion)).
 
 ## Use case diagrams
 

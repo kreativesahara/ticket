@@ -1,7 +1,7 @@
 # STATEMENT OF WORK (SOW)
 ## Event Ticketing, Management and Access Control Platform
 
-**Document Version:** 1.5  
+**Document Version:** 1.6  
 **Date:** 15 October 2026  
 **Project Name:** Multi-Organizer Event Ticketing Platform  
 **Client:** [Client / Organization Name]  
@@ -33,7 +33,7 @@ The purpose of this engagement is to design, develop, test and deploy a function
 The project aims to:
 
 1. Provide a centralized marketplace for events managed by multiple organizers.
-2. Enable organizers to create events and configure ticket types, categories, prices, capacity and sales periods.
+2. Enable organizers to create events and configure ticket types, categories, prices, capacity, sales periods and ticket waves.
 3. Facilitate secure ticket purchases through M-Pesa and card payments.
 4. Automate ticket generation, email delivery and ticket retrieval.
 5. Implement QR-code scanning and single-use ticket redemption at event gates.
@@ -89,7 +89,9 @@ Each event shall support:
 - Overall event capacity.
 - Ticket inventory and allocation management.
 - Ticket types and categories.
+- Optional ticket waves for each ticket category.
 - Delegation management.
+- A public link and QR code for each event, downloadable as an image or as a printable PDF poster, for sharing and for selling at the gate.
 - Optional seating configuration.
 - Guard and gate assignments.
 - Event publication, cancellation and archiving.
@@ -119,17 +121,19 @@ Organizers shall be able to configure additional ticket types and categories acc
 
 Ticket offerings shall support configurable prices, availability periods, allocations, quantity limits and eligibility rules.
 
-Delegations shall enable organizers to allocate tickets to groups, sponsors, departments, invited guests or other designated groups, as a sub-quota of the event's ticket offerings, claimed through a private link or access code. Orders that total zero shall skip payment and issue tickets directly.
+Organizers shall be able to sell any ticket category in waves. Each wave shall have its own start and end dates, and for each wave the organizer shall choose the ticket type, the number of tickets and the price. A category's waves shall not overlap. Each wave shall open on its start date only, and unsold tickets shall move to a later wave only when organizer staff move them.
+
+Delegations shall enable organizers to set aside tickets for groups, sponsors, departments, invited guests or other designated groups, as the delegation's own allocation, which is not sold to the public, does not follow the ticket waves, and is claimed through a private link or access code. Organizer staff shall be able to return unclaimed tickets to public sale. Orders that total zero shall skip payment and issue tickets directly.
 
 The system shall enforce ticket inventory limits and prevent overselling through transaction-safe inventory management.
 
 ### 2.4 Module Four: Ticket Purchasing and Order Management
 
-The public website shall allow attendees to browse available events and purchase tickets.
+The public website shall allow attendees to browse available events and purchase tickets. Its landing page shall list every public ticket option across published events, with search by event name or venue and filters by event category and date. Sold-out options shall stay listed and be marked as sold out, and upcoming waves shall be shown with their start dates and prices. Delegation tickets shall not be listed.
 
 The purchasing process shall include:
 
-1. Event selection.
+1. Event or ticket option selection, from the landing page or the event page.
 2. Ticket type and category selection.
 3. Ticket quantity selection.
 4. Seat selection where applicable.
@@ -255,6 +259,7 @@ The administrator interface shall provide authorized platform-wide management ca
 - Audit log access.
 - Organizer verification and the event category list.
 - Refunds, settlement reports and the manual payout log.
+- Deletion of a person's personal data on request.
 - Operational and summary reports.
 
 **Organizer Dashboard**
@@ -262,7 +267,8 @@ The administrator interface shall provide authorized platform-wide management ca
 Organizers shall be able to access:
 
 - Event creation and management.
-- Ticket pricing and inventory.
+- Ticket pricing and inventory, including ticket waves and delegations' set-aside tickets.
+- Each event's link, QR code and printable poster.
 - Order and sales reports.
 - Payment status and reconciliation information for their events.
 - Promotion management.
@@ -280,7 +286,7 @@ The guard interface shall be limited to assigned events, gates, scanning operati
 
 **Attendee Interface**
 
-Attendees shall be able to browse events, purchase tickets, retrieve digital tickets and access their own purchase information through the supported ticket retrieval mechanism.
+Attendees shall be able to browse ticket options on the landing page and event pages, purchase tickets, retrieve digital tickets and access their own purchase information through the supported ticket retrieval mechanism.
 
 ---
 
@@ -332,6 +338,8 @@ The estimated delivery window is **12 weeks** from project start, subject to fin
 
 If the schedule comes under pressure, the parties may agree through change control (Section 12) to move Module Nine (optional reserved seating) to a release after launch. The core purchase-to-entry workflow does not depend on it. The seating acceptance criterion in Section 5.2 would move with the module.
 
+The features added on 15 October 2026 (ticket waves, the landing page's ticket listing with search and filters, event links with QR codes and printable posters, set-aside delegation tickets, and data deletion by platform administrators) add work to phases 3, 4 and 7. Their effect on the 12-week estimate shall be confirmed when the schedule is baselined.
+
 The schedule shall be baselined after requirements approval, taking account of public holidays within the delivery window. Any delays arising from external approvals, late delivery of required assets or significant scope changes may affect the target completion date.
 
 ### 4.2 Milestone Approval
@@ -359,11 +367,15 @@ The project shall be considered functionally complete when the following criteri
 
 - Organizers can create and publish events.
 - Ticket types, categories, prices, deadlines and allocations are configurable.
+- Ticket waves open and close on their dates, and a category's waves never overlap.
+- Delegation tickets can't be bought through public checkout.
+- Each event's link and QR code open its event page.
 - Inventory constraints are enforced.
 - Optional seating works without allowing duplicate seat assignments.
 
 ### 5.3 Checkout and Payments
 
+- The landing page lists every public ticket option, with working search and filters.
 - Buyers can complete the purchase workflow.
 - M-Pesa and card payment integrations pass agreed test scenarios.
 - Tickets are not issued solely because of a client-side payment success message.
@@ -391,6 +403,7 @@ The project shall be considered functionally complete when the following criteri
 
 - Organizers can view reports limited to their own events.
 - Administrative actions are auditable.
+- A platform administrator can delete a person's personal data on request, keeping the financial and entry records.
 - Agreed documentation and source code are delivered.
 - No unresolved critical or high-severity defects attributable to the agreed requirements remain at final acceptance, subject to the agreed defect classification and resolution procedure.
 
@@ -494,7 +507,7 @@ These shall include:
 - Secure QR credentials and ticket retrieval tokens.
 - Audit logs for sensitive operations.
 - Database backups and an agreed recovery procedure.
-- Data minimization and appropriate access restrictions for attendee information, with personal data deleted on request.
+- Data minimization and appropriate access restrictions for attendee information, with personal data deleted on request by a platform administrator.
 
 The Client shall approve the applicable privacy notices, retention policies, refund policies and other operational rules.
 

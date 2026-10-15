@@ -16,8 +16,8 @@ flowchart TD
     classDef decision fill:#fff7ed,stroke:#ea580c,color:#7c2d12
 
     start(("Start")):::startNode
-    a1["Open the event page from the landing page,<br/>the event link or its gate QR code"]:::buyer
-    s1["Show public offerings in their sales window,<br/>with remaining availability; delegation<br/>tickets are never listed"]:::system
+    a1["Press Buy on a ticket option on the landing page,<br/>or open the event page from its link or gate QR code"]:::buyer
+    s1["Show the public ticket options: each category's<br/>current wave, upcoming waves greyed out,<br/>sold-out options marked; delegation tickets<br/>are never listed"]:::system
     a2["Choose offerings and quantities"]:::buyer
     d1{"Within min and max<br/>per order and group size?"}:::decision
     d2{"Reserved seating?"}:::decision
@@ -90,12 +90,13 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 
 ## Notes
 
+- A category sold in waves offers only its current wave's ticket options; its upcoming waves are shown greyed out with their dates and prices ([v1.md FR-04](../../../v1.md#fr-04--ticket-types-and-categories)).
 - Seats are chosen on the page but held only when the order is created, in the same transaction as the offering hold.
 - When the event has an identity field (phone or ID number), details are collected for every ticket. Only the last 4 digits of an ID number are kept.
 - The backend refuses any submission that contains a field the event didn't ask for.
 - Holds use atomic conditional updates: a hold succeeds only if `capacity - sold_count - reserved_count` covers the quantity.
 
-## The buyer journey
+## Activity diagrams
 
 1. [Buyer journey overview](01-buyer-journey-overview.md)
 2. [Choose tickets and place a hold](02-choose-tickets-and-hold.md)
@@ -104,3 +105,4 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 5. [Hold expiry and late payment](05-hold-expiry-and-late-payment.md)
 6. [Delegation claim](06-delegation-claim.md)
 7. [Ticket retrieval and transfer](07-ticket-retrieval-and-transfer.md)
+8. [Organizer: set up ticket waves](08-set-up-ticket-waves.md)

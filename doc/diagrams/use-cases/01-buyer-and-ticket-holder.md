@@ -17,10 +17,11 @@ flowchart LR
     Holder["«actor»<br/><b>Ticket holder</b><br/>has retrieval link"]:::actor
 
     subgraph SYS["Ticketing platform: public website"]
-        UC1(["Browse on-sale events and their public tickets on the landing page"]):::usecase
-        UC1F(["Filter events by category"]):::usecase
+        UC1(["Browse every ticket option on the landing page"]):::usecase
+        UC1S(["Search by event name or venue"]):::usecase
+        UC1F(["Filter by event category or date"]):::usecase
         UC16(["Open an event from its link or gate QR code"]):::usecase
-        UC2(["View an event page and its public tickets"]):::usecase
+        UC2(["View an event page with its waves and ticket options"]):::usecase
         UC3(["Buy tickets"]):::usecase
         UC4(["Choose offering and quantity"]):::usecase
         UC5(["Choose seats"]):::usecase
@@ -49,6 +50,7 @@ flowchart LR
     Holder --- UC12
     Holder --- UC14
 
+    UC1S -.->|"«extend»"| UC1
     UC1F -.->|"«extend»"| UC1
     UC16 -.->|"«include»"| UC2
     UC3 -.->|"«include»"| UC4
@@ -64,6 +66,7 @@ flowchart LR
     UC14 -.->|"«include»"| UC11
 
     %% layout only: keep actors in the leftmost column
+    Buyer ~~~ UC1S
     Buyer ~~~ UC1F
     Buyer ~~~ UC5
     Buyer ~~~ UC7
@@ -94,7 +97,8 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 
 ## Notes
 
-- The landing page lists every published event that is on sale, with its public tickets. Delegation (sponsored) tickets are never listed: they are reached only through the delegation's private claim link or access code ([doc/sponsored.md](../../sponsored.md)).
+- The landing page lists every public ticket option across published events, with search by event name or venue and filters by event category and date. Sold-out options stay listed and marked; upcoming waves are greyed out with their dates and prices ([v1.md FR-14](../../../v1.md#fr-14--landing-page-and-event-links)).
+- Delegation (sponsored) tickets are never listed: they are set aside and reached only through the delegation's private claim link or access code ([doc/sponsored.md](../../sponsored.md)).
 - Each event has its own link, and a gate QR code that opens it, so buyers can buy At the Gate tickets on their own phones ([hurdles.md H4](../../../hurdles.md#h4-at-the-gate-tickets-have-no-way-to-be-sold--decided)). There are no cash sales.
 - Buyers reach an order only through its checkout token, and their tickets only through the retrieval link ([hurdles.md H11](../../../hurdles.md#h11-guest-buyers-have-no-defined-way-to-view-their-order--decided)).
 - A ticket can be transferred until the event starts, except at events that ask for ID numbers.

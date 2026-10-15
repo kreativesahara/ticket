@@ -27,7 +27,7 @@ SOURCE DOCUMENTS (they are the specification — read the relevant parts before 
 - doc/state-machines.md — complete state machines for events, orders, payments, tickets, seats and reservations (created in P0.1).
 - techstack.md — architecture and stack.
 - sow.md — contractual scope. Never build anything listed in §9 "Out of scope".
-- hurdles.md — known gaps (H1–H13), each marked Open or Decided. An open hurdle is an undecided requirement: don't guess, ask me.
+- hurdles.md — known gaps (H1–H14), each marked Open or Decided. An open hurdle is an undecided requirement: don't guess, ask me.
 - limitation.md — the client-facing business rules (Part A), accepted limitations (Part B) and client decisions (Part C). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
 
 STACK:
@@ -135,21 +135,22 @@ Any failure must fail the build.
 ```text
 Using v1.md §4 (every table and column) and doc/state-machines.md, write Laravel migrations for the full MVP schema, including seating, so that later phases need no structural rework.
 
-Include the tables and columns the decided hurdles add: H1 (settlement report and payout log), H3 (zero-total orders, delegation sub-quotas and claim codes), H5 (cancellation and postponement), H11 (checkout tokens) and H12 (deleting a person's data on request while keeping financial and scan records), plus the identity field, ticket transfers and event categories. How the platform fee is calculated (decision #2) is still open: store platform_fee_amount on order items, and ask me before adding any fee settings.
+Include the tables and columns the decided hurdles add: H1 (settlement report and payout log), H3 (zero-total orders and delegation claim codes), H5 (cancellation and postponement), H11 (checkout tokens), H12 (deleting a person's data on request while keeping financial and scan records) and H14 (each delegation's set-aside offerings: event_ticket_offerings.delegation_id), plus the identity field, ticket transfers, event categories and ticket waves (ticket_waves, ticket_categories.sells_in_waves and event_ticket_offerings.wave_id; decision #23). How the platform fee is calculated (decision #2) is still open: store platform_fee_amount on order items, and ask me before adding any fee settings.
 
 Requirements:
 - UUID primary keys for records referenced from outside the system.
 - A foreign key for every ownership relationship. Choose delete behavior deliberately: never cascade-delete orders, payments, tickets or audit logs.
-- Unique constraints: user email; event slug per organizer; ticket_number; qr_token_hash; (event_id, short_code_hash); (provider, provider_reference) on payments, where the reference is Pesapal's order tracking ID; idempotency_key; and one active ticket per seat per event (a partial unique index). Pesapal notifications carry no unique event ID, so don't add a unique key on webhook events; idempotency comes from the payment and order checks in P4.2.
+- Unique constraints: user email; event slug (across the platform: it forms the event's link, /events/{slug}); ticket_number; qr_token_hash; (event_id, short_code_hash); (provider, provider_reference) on payments, where the reference is Pesapal's order tracking ID; idempotency_key; one active ticket per seat per event (a partial unique index); and one offering per ticket type in each wave, per type and category among an event's ordinary public offerings, and per type and category in each delegation (partial unique indexes).
+- An exclusion constraint so a category's waves never overlap (EXCLUDE USING gist, with the btree_gist extension), and a CHECK so an offering has at most one of wave_id and delegation_id. Pesapal notifications carry no unique event ID, so don't add a unique key on webhook events; idempotency comes from the payment and order checks in P4.2.
 - CHECK constraints where they're cheap: non-negative counts and amounts, and capacity - sold_count - reserved_count >= 0.
 - Money as bigint minor units plus a char(3) currency column.
 - Status columns as strings backed by PHP enums, one enum per state machine in doc/state-machines.md.
 
-Also create Eloquent models with relationships and enum casts, a factory for every model, and a Mermaid ERD of the final schema at doc/diagrams/erd.mmd. It replaces the outdated diagram in v1.md §4.5; follow the tables in v1.md §4, not that diagram.
+Also create Eloquent models with relationships and enum casts, a factory for every model, and update the ERD in doc/diagrams/erd/ (each .mmd file, its .md file and the rendered images; see doc/README.md) so it matches the final schema.
 Run the migrations from scratch against local PostgreSQL and show the output.
 ```
 
-**Done when:** `migrate:fresh` succeeds, every model has a factory, and the ERD matches the tables in v1.md §4.
+**Done when:** `migrate:fresh` succeeds, every model has a factory, and the ERD in doc/diagrams/erd/ matches the migrations.
 
 ### P1.4a — Google sign-in
 
@@ -267,27 +268,29 @@ Implement events in /api as described in implementation-plan.md Phase 2 steps 1�
 - A scheduled job runs every minute and moves published events to closed once their last gate closing time has passed, or their end time if they have no gates. No user can set or undo closed. Closed events can't be bought or scanned, and drop out of the public list.
 - DELETE /api/v1/organizer/events/{id} deletes a draft that was never published, with an audit log entry. Any other event returns a conflict response: once published, an event can only be archived (from closed or cancelled), never deleted.
 - Cancelling (hurdles.md H5): revoke every valid and pending-issuance ticket, cancel pending orders, end guard access, and write outbox records to email every buyer (P5.2 sends them). Admins refund the orders afterwards (P4.4). Changing a published event's dates is a postponement: tickets stay valid, refund_requests_until is set from the event's refund policy, and buyers are emailed a refund-request link.
-- Name, slug (unique per organizer), description, venue, timezone (an IANA name), the identity field (none, phone or id_number; see P2.3), capacity, refund policy, a category from the admins' list, the captcha_required flag and images stored in Supabase Storage with validated type and size.
+- Name, slug (unique across the platform; it forms the event's link, /events/{slug}), description, venue, timezone (an IANA name), the identity field (none, phone or id_number; see P2.3), capacity, refund policy, a category from the admins' list, the captcha_required flag and images stored in Supabase Storage with validated type and size.
 - Separate time windows, each validated: sales start and end, gate opening and closing, event start and end. Store times in UTC and return them together with the event's timezone.
 - Policies, tenant-isolation tests and feature tests for every rule.
 ```
 
 **Done when:** the lifecycle and time-window rules are tested, events close automatically when their last gate closes (or at their end time without gates), and the public endpoints never return draft or closed events.
 
-### P2.2 — Ticket types, categories, offerings and delegations
+### P2.2 — Ticket types, categories, offerings, waves and delegations
 
 ```text
 Implement ticket configuration as described in implementation-plan.md Phase 2 steps 4–6.
 
-- Ticket types and categories for each event. Seed the defaults (Early Bird, Normal, At the Gate, Group, Promoted; VVIP, VIP, Media) and let organizers add, rename and disable their own.
+- Ticket types and categories for each event. Seed the defaults (Early Bird, Normal, At the Gate, Group, Promoted; VVIP, VIP, Media) and let organizers add, rename and disable their own. Each category has sells_in_waves, which can change only while nothing in that category has been sold or held.
 - Offerings: each allowed type × category combination, with a price in minor units, a currency, capacity, a sales window, a minimum and maximum per order, and a status. Group types define their required quantity. Media can be flagged "approval required".
-- Delegations (hurdles.md H3, doc/sponsored.md): name, allocation, allowed categories (delegation_categories), price rule and status. A delegation is a sub-quota of its offerings' capacity, with its own sold and reserved counters. Generate a private claim link and an access code for each, stored as a hash plus an encrypted copy so staff can show them again.
-- Validation: the total capacity of all offerings can't exceed the event's capacity, and an offering's capacity can't drop below what has been sold plus what is held.
+- Ticket waves (decision #23, v1.md FR-04): POST /api/v1/organizer/events/{id}/waves, PATCH and DELETE /api/v1/organizer/waves/{id}, for categories with sells_in_waves on. A wave has a name, a position and start and end dates; the exclusion constraint from P1.3 refuses overlapping waves in the same category. A wave holds one or more offerings (type, number of tickets, price), created with POST /api/v1/organizer/events/{id}/offerings and a wave_id. Their sales window is the wave's dates and changes with it in the same transaction. Every public offering of a wave category must belong to a wave. A wave can be deleted only while nothing in it has been sold or held. Waves open on their start dates only: no automatic advance and no rollover.
+- Moving unsold tickets: POST /api/v1/organizer/offerings/{id}/move-unsold, with the target offering and a number of tickets. Both offerings must be in the same event and category. In one transaction, lower the source's capacity with UPDATE event_ticket_offerings SET capacity = capacity - :n WHERE id = :from AND capacity - sold_count - reserved_count >= :n, refuse if no row changed, then raise the target's capacity. Audit every move.
+- Delegations (hurdles.md H3 and H14, doc/sponsored.md): name and status (active or paused), and a private claim link and access code for each, stored as a hash plus an encrypted copy so staff can show them again. A delegation's tickets are its set-aside allocation: offerings created with its delegation_id (type, category, number of tickets and price), never in a wave. Public endpoints never list them, and public checkout can't buy them. Staff return unclaimed tickets to public sale with the move action.
+- Validation: the total capacity of all offerings, public and set aside, can't exceed the event's capacity, and an offering's capacity can't drop below what has been sold plus what is held.
 - At the Gate tickets (hurdles.md H4) are ordinary offerings that buyers buy on their own phones through the public site. No box office and no cash sales.
-- Policies, tenant-isolation tests and feature tests.
+- Policies, tenant-isolation tests and feature tests, including: overlapping waves are refused; a wave's offerings can't be bought outside its dates; a move racing a hold never leaves an offering below what it has sold and holds; and a delegation's offerings never appear on public endpoints.
 ```
 
-**Done when:** offerings and delegations can be created and edited within their capacity rules, and every rule is tested.
+**Done when:** offerings, waves and delegations can be created and edited within their capacity rules, waves never overlap, and every rule is tested.
 
 ### P2.3 — Attendee information setup
 
@@ -343,8 +346,9 @@ Build the organizer and admin areas of the Next.js app for Phase 2, using shadcn
 
 Organizer:
 - Event list with status badges and filters.
-- A step-by-step event editor: details → times → tickets (an offerings grid of type × category) → attendee fields → gates and staff → review and publish. The publish step shows the API's failing rules if there are any.
-- Delegation management with claim links and access codes; staff and event owner invitations, and each event's event owners with a remove action; guard password accounts (create with the guard's email, assign, "Issue password" with a one-time copy dialog, disable); and guard assignments, showing when each password guard's access ends.
+- A step-by-step event editor: details → times → tickets (an offerings grid of type × category, a "sell in waves" switch for each category, and a wave editor: each wave's dates, then its rows of type, number of tickets and price, with upcoming, on-sale and ended waves labelled) → attendee fields → gates and staff → review and publish. The publish step shows the API's failing rules if there are any.
+- A "Move unsold tickets" dialog: choose the source, the target in the same category and the number to move.
+- Delegation management with claim links, access codes and set-aside allocations (type, category, number of tickets and price); staff and event owner invitations, and each event's event owners with a remove action; guard password accounts (create with the guard's email, assign, "Issue password" with a one-time copy dialog, disable); and guard assignments, showing when each password guard's access ends.
 
 Admin:
 - Organizer list with suspend and reactivate actions behind a confirmation dialog, the organizer verification queue, and the event category list.
@@ -354,18 +358,41 @@ Forms validate in the browser for convenience, but always show the API's validat
 
 **Done when:** an organizer can create and publish an event entirely through the user interface.
 
-### P2.7 — Public event pages
+### P2.7 — Landing page and event pages
 
 ```text
-Build the public event pages in the Next.js app:
-- An event listing page showing published events, with search by name, a category filter and a date filter.
-- An event detail page with the image, description, venue, date and time in the event's timezone, and the available offerings with prices and "sold out" or "sales not open yet" states.
+Build the public landing page and event pages (v1.md FR-14, decision #24).
+
+In /api:
+- GET /api/v1/tickets lists every public ticket option of published events, from every organizer: the event (name, slug, date, venue, timezone, image and event category), the ticket type, category, wave (name and dates) where there is one, the price and currency, and a state: on_sale, upcoming or sold_out. Options whose sales have ended are left out, and so are a delegation's set-aside offerings. Filters: q (event name or venue), event_category, date_from and date_to (the event's date). Sort by event date, then category, then wave. Paginated.
+- GET /api/v1/events/{slug} returns a published event with its public ticket options in the same shape.
+
+In the Next.js app:
+- The landing page: the ticket options as rows grouped by event, with search, an event category filter and a date filter. Sold-out options stay listed with a "Sold out" badge, and upcoming waves are greyed out with their start date and price. Each row's Buy button opens the event page with that option chosen.
+- The event page at /events/{slug}: the image, description, venue, date and time in the event's timezone, and the public ticket options grouped by category, showing each category's current wave and its upcoming waves greyed out, with "sold out" and "sales not open yet" states.
 - Server-side rendering with sensible caching, plus SEO metadata (title, description, Open Graph tags).
 - Accessible markup: keyboard navigation and correct heading order.
 No checkout yet; the "Buy" button can be a placeholder.
+Tests: draft and closed events never appear; delegation offerings never appear; each filter works; a wave shows as upcoming before its start date and on sale after it.
 ```
 
-**Done when:** published events appear with the correct times and states, and draft events don't appear.
+**Done when:** published events and their ticket options appear with the correct times, waves and states, and draft events and delegation tickets don't appear.
+
+### P2.8 — Event link, QR code and poster
+
+```text
+Implement each event's link, QR code and poster (v1.md FR-14, decision #25).
+
+- The link is https://{public site}/events/{slug}. Slugs are unique across the platform (P2.1).
+- GET /api/v1/organizer/events/{id}/share returns the link. GET /api/v1/organizer/events/{id}/qr-code?format=png|svg returns a QR code that encodes only the link. GET /api/v1/organizer/events/{id}/poster returns a printable A4 PDF with the event's name, date and venue in the event's timezone, the QR code, "Scan to buy tickets" and the link printed beneath it.
+- Only organizer staff of the event's organizer and platform admins can call them.
+- Generate the QR code and the PDF in /api with maintained libraries; tell me which ones you chose and why.
+- The platform's public name isn't decided (decision #28): read it from config, with a placeholder.
+- In the organizer area of the Next.js app, a Share panel on each event: copy the link, and download the QR code (PNG or SVG) and the poster (PDF).
+- Tests: the QR code decodes to the event's link; another organizer's staff, event owners and guards are refused; the poster renders for a draft event too, and its link shows the event once it's published.
+```
+
+**Done when:** organizer staff can download the QR code and the poster, and scanning the printed QR code opens the event page.
 
 **Then run the [phase exit check](#phase-exit-check) for Phase 2.**
 
@@ -378,13 +405,13 @@ No checkout yet; the "Buy" button can be a placeholder.
 ```text
 Implement order creation with inventory holds as described in implementation-plan.md Phase 3 steps 1–2.
 
-- POST /api/v1/orders (guest checkout allowed) validates the offering, the sales window, quantity limits, group rules, delegation eligibility (claim token or access code) and, when the event has captcha_required on, the CAPTCHA response.
+- POST /api/v1/orders (guest checkout allowed) validates the offering, the sales window (a wave's dates for a wave's offering), quantity limits, group rules, delegation eligibility (a delegation's offerings only with its claim token or access code; public checkout can't buy them) and, when the event has captcha_required on, the CAPTCHA response.
 - Hold the inventory inside one database transaction, using this atomic conditional update for each offering:
     UPDATE event_ticket_offerings
     SET reserved_count = reserved_count + :qty
     WHERE id = :id AND status = 'active'
       AND capacity - sold_count - reserved_count >= :qty;
-  If 0 rows are updated, roll back and return a "sold out" conflict response. For a delegation order, hold its quota the same way in the same transaction. On success, insert inventory_reservations rows with expires_at.
+  If 0 rows are updated, roll back and return a "sold out" conflict response. A delegation claim holds its set-aside offering the same way; there is no separate delegation counter (hurdles.md H14). On success, insert inventory_reservations rows with expires_at.
 - Build the hold mechanism generically (offering holds now, seat holds in Phase 7).
 - Create the order as pending, with the purchaser's details, and return a random checkout token once (stored hashed; P1.6).
 - The hold duration comes from config: 15 minutes by default (decision #10).
@@ -427,7 +454,7 @@ Implement the rest of order building, as described in implementation-plan.md Pha
 - Pricing service (backend only): unit price × quantity, group rules, then discounts. Order items keep a snapshot of the unit price, discount, fees and currency. The platform fee is deducted from the organizer, never added to the buyer's total (decision #2); snapshot it on each order item. How it's calculated is still open, so ask me before implementing the calculation.
 - Orders that total zero (complimentary, a free delegation claim or a 100% discount) skip payment (hurdles.md H3): the order goes pending → paid → completed in one transaction, with the same checks and audit trail, and no Pesapal payment.
 - Core promotions: percentage or fixed discount; eligible offerings; start and end dates; a total usage limit; a per-buyer limit (by email); a minimum quantity or order value. Count usage against the hold so concurrent orders can't exceed a limit, and release the usage when the hold expires.
-- POST /api/v1/orders/{id}/apply-promotion, which recalculates the totals.
+- POST /api/v1/orders/{id}/apply-promotion, which recalculates the totals. Codes apply only to a pending order whose hold is still active (decision #27).
 - Order states follow doc/state-machines.md.
 - Tests: every promotion rule, a concurrent test on the last use of a promotion, and a snapshot that stays unchanged after an organizer edits the price.
 ```
@@ -438,11 +465,11 @@ Implement the rest of order building, as described in implementation-plan.md Pha
 
 ```text
 Build checkout in the Next.js app.
-- From the event page: choose an offering and quantity → purchaser and attendee forms generated from the event's setup (per-ticket forms only in "every ticket" mode) → promo code → order summary from the API → a "Continue to payment" placeholder.
+- From the landing page's Buy button or the event page: choose an offering and quantity → purchaser and attendee forms generated from the event's setup (per-ticket forms only in "every ticket" mode) → the order is created and the tickets held → promo code → order summary from the API → a "Continue to payment" placeholder.
 - A visible countdown for the hold. When it expires, explain clearly and offer to start again.
 - Handle sold-out and sales-closed responses gracefully.
 - A CAPTCHA step when the event has captcha_required on (hurdles.md H13). Tell me which CAPTCHA provider you chose and why.
-- A delegation claim page (/claim/{token}, or an access code entry) that opens checkout for that delegation's allowed categories.
+- A delegation claim page (/claim/{token}, or an access code entry) that shows the delegation's set-aside tickets (category, type, price and how many are left) and opens checkout for them.
 - The forms are accessible, with labels, keyboard support and readable error messages.
 - Component tests for the dynamic attendee form, plus one Playwright test of the happy path up to the payment placeholder.
 ```
@@ -653,7 +680,7 @@ Reserved seating comes last in this phase because it is the first item to defer 
 ### P7.1 — Remaining promotion rules and reports (backend)
 
 ```text
-Implement implementation-plan.md Phase 7 steps 1–4.
+Implement implementation-plan.md Phase 7 steps 1–4a.
 - Complete any promotion rules from SOW §2.8 that P3.4 didn't cover, plus redemption tracking.
 - Organizer report endpoints (own events only): sales by offering, payment status, remaining capacity, promotion performance, attendance, and gate activity by time and gate.
 - Admin report endpoints: platform-wide summaries, transaction oversight, and an audit log search filtered by actor, organizer, action and date.
@@ -661,6 +688,7 @@ Implement implementation-plan.md Phase 7 steps 1–4.
 - A read-only audit list for organizer staff, for their own events (GET /api/v1/organizer/events/{id}/audit-logs).
 - Guest list endpoints (v1.md §5): GET /api/v1/organizer/events/{id}/attendees with filters for ticket category, delegation, purchase date and check-in status, and GET /api/v1/organizer/events/{id}/attendees/export, which streams the same filtered list as CSV. Organizer staff can use them for their own events and event owners for their assigned events only (doc/roleandprivileage.md). For event owners, every row and CSV export contains only the holder's name, ticket category, delegation and check-in status. Event owners get no other report endpoint.
 - A sales list CSV export for organizer staff (GET /api/v1/organizer/events/{id}/reports/sales/export).
+- Data deletion on request (implementation-plan.md Phase 7 step 4a, v1.md FR-15, hurdles.md H12): POST /api/v1/admin/data-deletions, for platform admins only. Given an email address or phone number, find the person across every organizer and remove their name, email, phone number and ID digits from orders, attendees, ticket transfers and promotion redemptions, keeping amounts, references, tickets and scan records. Audit it. Tests: the details are gone everywhere, report totals don't change, and organizer staff and event owners are refused.
 - Reports must match the order and payment records exactly. Write tests that compare report totals with direct sums.
 - Tenant-isolation tests for every report endpoint, including that an event owner can export only their assigned events' guest lists.
 ```
@@ -674,6 +702,7 @@ Build report screens in the Next.js app for organizers, event owners and admins,
 - Summary cards, tables with filters, and simple charts where they help: sales over time and attendance by gate.
 - An audit log viewer for admins, and a read-only audit list per event for organizer staff.
 - Settlement screens for admins and organizer staff, and a payout log form for admins.
+- A data deletion screen for admins: search by email address or phone number, review what will be removed, then confirm.
 - A guest list screen with the P7.1 filters and an "Export CSV" button, in the organizer area for each event and as the only screen in the event owner area.
 - Every number is labeled with its unit and time range.
 ```

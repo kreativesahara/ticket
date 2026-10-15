@@ -69,7 +69,7 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 - A late payment never creates a new hold. It is refunded automatically, and the buyer can order again.
 - The expiry job is safe to run twice: its conditional update changes a row only once.
 
-## The buyer journey
+## Activity diagrams
 
 1. [Buyer journey overview](01-buyer-journey-overview.md)
 2. [Choose tickets and place a hold](02-choose-tickets-and-hold.md)
@@ -78,3 +78,4 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 5. [Hold expiry and late payment](05-hold-expiry-and-late-payment.md)
 6. [Delegation claim](06-delegation-claim.md)
 7. [Ticket retrieval and transfer](07-ticket-retrieval-and-transfer.md)
+8. [Organizer: set up ticket waves](08-set-up-ticket-waves.md)

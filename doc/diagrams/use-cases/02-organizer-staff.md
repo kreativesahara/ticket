@@ -26,11 +26,13 @@ flowchart LR
         subgraph P2["Events and ticketing"]
             E1(["Create, edit or delete draft events"]):::usecase
             E2(["Publish, postpone, cancel or archive events"]):::usecase
-            E11(["Share the event link and download its gate QR code"]):::usecase
+            E11(["Share the event link, QR code and poster"]):::usecase
             E3(["Set identity field, collection mode and questions"]):::usecase
             E4(["Manage gates and entry times"]):::usecase
             E5(["Configure ticket types, categories and offerings"]):::usecase
-            E6(["Manage delegations and claim links"]):::usecase
+            E12(["Set up ticket waves for a category"]):::usecase
+            E13(["Move unsold tickets"]):::usecase
+            E6(["Manage delegations and their set-aside tickets"]):::usecase
             E7(["Manage seating sections and seats"]):::usecase
             E8(["Configure promotions"]):::usecase
             E9(["Approve or issue Media tickets"]):::usecase
@@ -66,6 +68,8 @@ flowchart LR
     Staff --- E3
     Staff --- E4
     Staff --- E5
+    Staff --- E12
+    Staff --- E13
     Staff --- E6
     Staff --- E7
     Staff --- E8
@@ -108,5 +112,7 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 
 - Staff can't start refunds or scan tickets (v1.md §3). A staff member who works a gate uses a guard account.
 - Every organizer must keep at least one active staff member.
-- **Event link and gate QR code:** hurdles.md H4 decided that At the Gate tickets are bought from "a QR code poster at the gate that links to the event page". v1.md doesn't yet say the platform generates that QR code or name an endpoint for it; v1.md FR-03 and §5 need that line added.
+- **Ticket waves:** for each category, staff choose whether it sells in waves. Each wave has its own dates and its own ticket options (type, number of tickets, price), and a category's waves never overlap. Staff move a wave's unsold tickets by hand ([v1.md FR-04](../../../v1.md#fr-04--ticket-types-and-categories), [activity 08](../activity/08-set-up-ticket-waves.md)).
+- **Event link, QR code and poster:** staff copy the event's link and download its QR code as PNG or SVG, or as a printable A4 poster for the gate ([v1.md FR-14](../../../v1.md#fr-14--landing-page-and-event-links)).
+- **Delegations:** each delegation's tickets are set aside as its own offerings; staff can return unclaimed ones to public sale with the same move action.
 - Platform admins can do all of this for any organizer ([05 platform admin](05-platform-admin.md)).

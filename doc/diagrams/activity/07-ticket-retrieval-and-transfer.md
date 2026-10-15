@@ -76,7 +76,7 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 - The QR code holds no personal information.
 - Transferring gives the ticket new credentials. Reinstating a revoked ticket keeps them.
 
-## The buyer journey
+## Activity diagrams
 
 1. [Buyer journey overview](01-buyer-journey-overview.md)
 2. [Choose tickets and place a hold](02-choose-tickets-and-hold.md)
@@ -85,3 +85,4 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 5. [Hold expiry and late payment](05-hold-expiry-and-late-payment.md)
 6. [Delegation claim](06-delegation-claim.md)
 7. [Ticket retrieval and transfer](07-ticket-retrieval-and-transfer.md)
+8. [Organizer: set up ticket waves](08-set-up-ticket-waves.md)

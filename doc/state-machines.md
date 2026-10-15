@@ -1,8 +1,8 @@
 # State Machines
 
-**Multi-Organizer Event Ticketing Platform · Version 1.1 · 15 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.2 · 15 October 2026**
 
-**Based on:** [v1.md](../v1.md) §4.6 (version 1.7), [implementation-plan.md](../implementation-plan.md), [limitation.md](../limitation.md), [hurdles.md](../hurdles.md) and [techstack.md](../techstack.md) §5.
+**Based on:** [v1.md](../v1.md) §4.6 (version 1.8), [implementation-plan.md](../implementation-plan.md), [limitation.md](../limitation.md), [hurdles.md](../hurdles.md) and [techstack.md](../techstack.md) §5.
 
 This document lists every state, every allowed transition, what triggers it and who may trigger it, for events, orders, payments (with refunds), tickets, seats and inventory reservations. It expands the short state models in v1.md §4.6. P1.3 turns each machine into a PHP enum and a single transition service.
 
@@ -101,7 +101,7 @@ stateDiagram-v2
 
 | From                         | To                   | Trigger                                   | Who     | Conditions                                                          | Effects |
 | ---------------------------- | -------------------- | ----------------------------------------- | ------- | ------------------------------------------------------------------- | ------- |
-| *(new)*                      | `pending`            | Create order                              | Buyer   | Event `published`; organizer active; offering active and in its sales window; quantity, group and delegation rules met; submitted details match the event's setup, including the identity field it set (each ticket holder's phone or ID number, or neither), and contain no field the event didn't ask for; CAPTCHA passed if the event requires it; holds placed atomically | Reservations `active`; promo use counted against the hold; checkout token issued to the buyer |
+| *(new)*                      | `pending`            | Create order                              | Buyer   | Event `published`; organizer active; offering active and in its sales window (a wave's dates for a wave's offering); quantity and group rules met; a delegation's offering only with its claim link or access code; submitted details match the event's setup, including the identity field it set (each ticket holder's phone or ID number, or neither), and contain no field the event didn't ask for; CAPTCHA passed if the event requires it; holds placed atomically | Reservations `active`; promo use counted against the hold; checkout token issued to the buyer |
 | `pending`                    | `paid`               | Payment confirmed                         | System (payment pipeline) | Order row locked; Pesapal's status check reports completed; amount and currency match | Reservations `converted`; tickets issued; outbox records for the emails and receipt |
 | `pending`                    | `paid`               | Order total is zero (complimentary, 100% discount, free delegation claim) | System (order service) | Same checks as a paid order; no Pesapal payment is created | As above, without a receipt |
 | `paid`                       | `completed`          | All tickets issued                        | System  | Every ticket `valid`. Approval-required offerings wait for approval | — |
@@ -295,7 +295,7 @@ stateDiagram-v2
 
 ## 6. Inventory reservation
 
-A reservation holds capacity on one offering, on one seat when `seat_id` is set, and on a delegation's quota when `delegation_id` is set.
+A reservation holds capacity on one offering, and on one seat when `seat_id` is set. A delegation's tickets are its own offerings, so claiming them is an ordinary offering hold.
 
 ```mermaid
 stateDiagram-v2
@@ -307,16 +307,17 @@ stateDiagram-v2
 
 | From     | To          | Trigger                    | Who                       | Conditions                                                         | Effects |
 | -------- | ----------- | -------------------------- | ------------------------- | ------------------------------------------------------------------ | ------- |
-| *(new)*  | `active`    | Order created              | Buyer (through the order service) | `capacity - sold_count - reserved_count >= qty` on the offering, and on the delegation if any, each checked and updated in one statement; `expires_at = now + 15 minutes` (configurable, decision #10) | `reserved_count += qty` |
+| *(new)*  | `active`    | Order created              | Buyer (through the order service) | `capacity - sold_count - reserved_count >= qty` on the offering, checked and updated in one statement; `expires_at = now + 15 minutes` (configurable, decision #10) | `reserved_count += qty` |
 | `active` | `converted` | Order becomes `paid`       | System (payment pipeline or zero-total order service) | Same transaction as the order change               | `reserved_count -= qty`, `sold_count += qty`; seat → `sold` |
 | `active` | `expired`   | `expires_at` passes        | System (hold-expiry job, every minute) | Conditional update `WHERE status = 'active'`, so it's released only once; safe to run twice | `reserved_count -= qty`; seat → `available`; promo use released |
 | `active` | `released`  | Order cancelled            | System                    | Same                                                               | Same as `expired` |
 
 **Rules:**
-- **Delegations are sub-quotas.** A delegation ticket uses its offering's capacity and also its delegation's quota. Both counters move in the same transaction, so a ticket is never counted twice.
+- **Delegations are set aside.** A delegation's tickets are its own offerings (`event_ticket_offerings.delegation_id`), which public checkout can't buy (hurdles.md H14). Every offering counts against the event's capacity once, so a ticket is never counted twice.
+- **Moving unsold tickets.** Staff can move unsold tickets between two offerings of the same category (v1.md FR-04). One transaction lowers the first offering's capacity with a conditional update, `WHERE capacity - sold_count - reserved_count >= :n`, and raises the second's, so no hold or sale is lost. Waves themselves have no stored state (§8, Q13).
 - **No re-holds.** A payment that arrives after its hold ended is refunded (decision #11); it never creates a new reservation.
 - **Invariants**, checked by a reconciliation test:
-  - `reserved_count` equals the sum of `quantity` over the offering's (or delegation's) `active` reservations.
+  - `reserved_count` equals the sum of `quantity` over the offering's `active` reservations.
   - `0 ≤ sold_count + reserved_count ≤ capacity`.
 
 ---
@@ -349,6 +350,7 @@ Settled on 15 October 2026 from the P0.1 specification check.
 | Q9  | Seat states? | `available`, `held`, `sold`; no blocked seats. |
 | Q10 | An event with no gates? | It closes at its end time; its guards scan between its start and end times. |
 | Q11 | Archiving and unpublishing? | Manual archive only (cancelled events once refunds are settled); no unpublish or reopen. |
-| Q12 | Delegation capacity? | A sub-quota of its offerings' capacity. |
+| Q12 | Delegation capacity? | Set aside as the delegation's own offerings, outside the waves, which public checkout can't buy. (Updated 15 October 2026; it was a sub-quota of its offerings' capacity.) |
+| Q13 | Do ticket waves have states? | No stored state. A wave is upcoming, on sale or ended by its dates, and sold out when all its offerings are; its offerings follow the reservation rules in §6. |
 
-Related decisions in implementation-plan.md §11: #10 (15-minute hold), #11 (late payments always refunded), #12 (only admins start refunds), #17 (ticket transfers) and #18 (identity field: none, phone or ID number).
+Related decisions in implementation-plan.md §11: #10 (15-minute hold), #11 (late payments always refunded), #12 (only admins start refunds), #17 (ticket transfers), #18 (identity field: none, phone or ID number), #23 (ticket waves) and #26 (delegations set aside).

@@ -83,11 +83,11 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 
 ## Notes
 
-- A promo code applies to the held order, and its use is counted against the hold ([limitation.md 6.4](../../../limitation.md#6-promotions-and-discount-codes), `POST /api/v1/orders/{id}/apply-promotion`). v1.md FR-06 lists the promo step before the hold; the API and state machines put it after.
+- A promo code applies to the held order, and its use is counted against the hold ([limitation.md 6.4](../../../limitation.md#6-promotions-and-discount-codes), `POST /api/v1/orders/{id}/apply-promotion`). v1.md FR-06 lists it after the hold too, since version 1.8.
 - Returning from Pesapal never changes the order. Only the confirmed status check does.
 - Calls about the order (promo, payment, status) need the order's checkout token.
 
-## The buyer journey
+## Activity diagrams
 
 1. [Buyer journey overview](01-buyer-journey-overview.md)
 2. [Choose tickets and place a hold](02-choose-tickets-and-hold.md)
@@ -96,3 +96,4 @@ Mermaid has no activity diagram type, so this is drawn as a flowchart that follo
 5. [Hold expiry and late payment](05-hold-expiry-and-late-payment.md)
 6. [Delegation claim](06-delegation-claim.md)
 7. [Ticket retrieval and transfer](07-ticket-retrieval-and-transfer.md)
+8. [Organizer: set up ticket waves](08-set-up-ticket-waves.md)

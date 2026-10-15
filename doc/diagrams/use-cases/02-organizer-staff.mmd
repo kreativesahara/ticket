@@ -17,11 +17,13 @@ flowchart LR
         subgraph P2["Events and ticketing"]
             E1(["Create, edit or delete draft events"]):::usecase
             E2(["Publish, postpone, cancel or archive events"]):::usecase
-            E11(["Share the event link and download its gate QR code"]):::usecase
+            E11(["Share the event link, QR code and poster"]):::usecase
             E3(["Set identity field, collection mode and questions"]):::usecase
             E4(["Manage gates and entry times"]):::usecase
             E5(["Configure ticket types, categories and offerings"]):::usecase
-            E6(["Manage delegations and claim links"]):::usecase
+            E12(["Set up ticket waves for a category"]):::usecase
+            E13(["Move unsold tickets"]):::usecase
+            E6(["Manage delegations and their set-aside tickets"]):::usecase
             E7(["Manage seating sections and seats"]):::usecase
             E8(["Configure promotions"]):::usecase
             E9(["Approve or issue Media tickets"]):::usecase
@@ -57,6 +59,8 @@ flowchart LR
     Staff --- E3
     Staff --- E4
     Staff --- E5
+    Staff --- E12
+    Staff --- E13
     Staff --- E6
     Staff --- E7
     Staff --- E8

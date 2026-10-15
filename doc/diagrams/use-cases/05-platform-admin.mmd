@@ -11,6 +11,7 @@ flowchart LR
             A2(["Manage platform users and suspensions"]):::usecase
             A3(["Designate platform admins"]):::usecase
             A4(["Manage event categories"]):::usecase
+            A18(["Delete a person's data on request"]):::usecase
         end
         subgraph P2["Organizers"]
             A5(["Approve organizer applications"]):::usecase
@@ -40,6 +41,7 @@ flowchart LR
     Admin --- A2
     Admin --- A3
     Admin --- A4
+    Admin --- A18
     Admin --- A5
     Admin --- A6
     Admin --- A7

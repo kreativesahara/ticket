@@ -1,6 +1,6 @@
 # Implementation Plan: Multi-Organizer Event Ticketing Platform
 
-**Version 1.5 · 15 October 2026 · System design and analysis**
+**Version 1.6 · 15 October 2026 · System design and analysis**
 
 **Based on:** [v1.md](v1.md) (requirements specification), [sow.md](sow.md) (statement of work), [techstack.md](techstack.md) (architecture blueprint) and [v2.md](v2.md) (requirements review).
 
@@ -69,6 +69,8 @@ The SOW sets a 12-week delivery window (§4.1, revised 13 October 2026). The agr
 
 The durations assume about three to four developers plus part-time design and QA. Recalibrate them in Phase 0 once the team is confirmed. If the project starts in November, the December holidays fall inside Phases 4–7, so add one to two weeks of buffer.
 
+The scope added on 15 October 2026 (decisions #23–#26 and the data deletion tool for decision #22) falls in Phases 2, 3 and 7. Include it when recalibrating the durations in Phase 0.
+
 ### 1.4 Critical path
 
 These items can delay launch no matter how fast development goes:
@@ -96,7 +98,7 @@ These items can delay launch no matter how fast development goes:
 
 **Goal:** Merge the source documents into one approved specification, settle the open decisions, and remove the external blockers that could stall later phases.
 
-**Needed from the client:** availability of the decision-maker, the Pesapal application started, access to hosting, domains and Google Cloud, and branding assets.
+**Needed from the client:** availability of the decision-maker, the Pesapal application started, access to hosting, domains and Google Cloud, branding assets, and the platform's public name (decision #28).
 
 ### Steps
 
@@ -229,31 +231,36 @@ These items can delay launch no matter how fast development goes:
 
 **Weeks 4–5 · SOW phase 3**
 
-**Goal:** An organizer can build, configure and publish an event with ticket offerings, gates and assigned guards.
+**Goal:** An organizer can build, configure and publish an event with ticket offerings, ticket waves, gates and assigned guards, and share its link and QR code.
 
 ### Backend
 
 1. **Event lifecycle.** Draft → published → closed (set automatically when the last gate closes, or at the event's end time if it has no gates) or cancelled → archived, as in v1.md §4.6, enforced by the backend. A scheduled job moves published events to closed. Unpublished drafts can be deleted; events that were ever published are only archived, never deleted. Store times in UTC alongside the event's own timezone.
 2. **Event details and media.** Name, description, venue, category (from the admins' list), capacity, refund policy, the optional checkout CAPTCHA and images, with images stored in Supabase Storage. Cancelling revokes every ticket, cancels pending orders, ends guard access and emails every buyer; changing a published event's dates (postponement) emails buyers a refund-request link (v1.md FR-03).
 3. **Time windows.** Store and validate each window separately: sales start and end, gate opening and closing, and event start and end.
-4. **Ticket types and categories.** Seed the defaults (Early Bird, Normal, At the Gate, Group and Promoted; VVIP, VIP and Media) and let organizers add their own.
+4. **Ticket types and categories.** Seed the defaults (Early Bird, Normal, At the Gate, Group and Promoted; VVIP, VIP and Media) and let organizers add their own. Each category can be set to sell in waves (decision #23).
 5. **Offerings.** Each allowed type × category combination, with a price in minor units of KES, capacity, sales window, and minimum and maximum per order. Include group quantity rules, and an approval or manual-issue flag for Media tickets.
-6. **Delegations.** Each with its allocation (a sub-quota of its offerings' capacity), allowed categories, price rules, and a private claim link and access code (doc/sponsored.md).
+5a. **Ticket waves** (v1.md FR-04). For a category sold in waves, staff add waves, each with a name and start and end dates. A PostgreSQL exclusion constraint stops a category's waves from overlapping. Each wave holds one or more offerings (type, number of tickets, price) whose sales window is the wave's dates. Waves open on their start dates only, with no automatic advance or rollover. A "move unsold tickets" action lowers one offering's capacity with a conditional update and raises another's in the same category, in one transaction, and is audited.
+6. **Delegations** (hurdles.md H14, doc/sponsored.md). Each with its set-aside allocation: one or more offerings (type, category, number of tickets and price) that public endpoints never list, public checkout can't buy, and that sit outside the waves. Each has a private claim link and access code. Staff can return unclaimed tickets to public sale with the move action.
 7. **Attendee details setup.** The collection mode (purchaser only, or details for every ticket) and the field definitions, including event-specific questions. Staff choose the event's identity field when they create it (none, phone number or ID number; v1.md FR-07) and can change it only while the event is a draft. With a phone or ID number, details are collected for every ticket and each holder gives that field; phone and ID number can't be added as questions, so no event asks for both.
 8. **Gates and staff.** Create gates (optional: an event without gates admits people between its start and end times). Add guards by creating a guard password account with the guard's own email and giving the guard its temporary password; assign each guard to an event and optionally a gate, and remove assignments. An event can have several guards. A guard password account works for one event at a time. When that event closes (entry ends, or it is cancelled or archived), the password is deleted, the guard's sessions end and the assignment ends. A job runs this every minute, and every request from a password guard also checks the event is still open (techstack.md §3). Assign event owners to an event by email invitation (role `event_owner`, with the event attached), and remove them; removal ends their access to that event immediately.
 9. **Publishing rules.** An event can be published only if it has at least one active offering, valid time windows, capacity that covers its allocations, and, if any offering is paid, a verified organizer. Changes after publishing are audited. Changes that would affect existing orders, such as lowering capacity below tickets already sold, are blocked or need explicit confirmation.
+9a. **Event link, QR code and poster** (v1.md FR-14). Each event's public link is `/events/{slug}`, so event slugs are unique across the platform. Organizer staff download its QR code as PNG or SVG, and as a printable A4 PDF poster with the event's name, date, venue, QR code and link.
 10. **Admin.** List organizers, verify them before their first paid event (business or ID details and payout account), suspend or reactivate them, manage the event category list, and oversee events.
 
 ### Frontend
 
-11. **Organizer dashboard:** an event list and a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), an offerings grid, delegation management with claim links, staff and event owner invitations, and guard accounts.
+11. **Organizer dashboard:** an event list and a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), an offerings grid with a wave editor for each category sold in waves, a "move unsold tickets" dialog, delegation management with claim links and set-aside allocations, a share panel with the event link, QR code downloads and the poster, staff and event owner invitations, and guard accounts.
 12. **Admin dashboard:** organizers, users, organizer verification, event categories and suspension controls.
-13. **Public website:** event listing (with a category filter) and event detail pages that show published events only.
+13. **Public website:** a landing page listing every public ticket option across published events (search by event name or venue, event category and date filters, sold-out options marked, upcoming waves greyed out, delegation tickets never listed), and event pages at `/events/{slug}` that show published events only (v1.md FR-14).
 
 ### Exit criteria
 
 - [ ] An organizer can publish an event with valid offerings and capacity limits.
 - [ ] Unpublished events never appear on public endpoints.
+- [ ] A category's waves can't overlap, each wave's offerings sell only between its dates, and moving unsold tickets keeps every offering at or above what it has sold and holds.
+- [ ] The landing page lists every public ticket option of published events, and never a delegation's set-aside tickets.
+- [ ] Each event's QR code opens its event page, and the poster downloads.
 - [ ] Guard account creation and assignment work, and guards see only the events assigned to them.
 - [ ] Event owner invitation and assignment work, and event owners see only the events assigned to them.
 - [ ] When an event closes, its guard passwords are deleted and those guards are signed out immediately; their past scans still show their names.
@@ -269,7 +276,7 @@ These items can delay launch no matter how fast development goes:
 
 ### Backend
 
-1. **Order creation.** Check the offering, the sales window, quantity limits, group rules, delegation eligibility (claim link or access code) and, when the event requires it, the CAPTCHA. Return a random checkout token, stored hashed, that the buyer's later calls must send.
+1. **Order creation.** Check the offering, the sales window (a wave's dates for a wave's offering), quantity limits, group rules, delegation eligibility (a delegation's offerings only with its claim link or access code; public checkout can't buy them) and, when the event requires it, the CAPTCHA. Return a random checkout token, stored hashed, that the buyer's later calls must send.
 2. **Inventory hold**, made in one transaction with an atomic conditional update:
 
    ```sql
@@ -286,13 +293,13 @@ These items can delay launch no matter how fast development goes:
 
 3. **Hold expiry.** Holds last 15 minutes by default, configurable (decision #10). A scheduled job runs every minute, releases expired holds and expires their orders. Build the hold mechanism generically so seat holds in Phase 7 can reuse it.
 4. **Attendee details.** Validate them against the event's field setup and collection mode, and store purchaser details separately from ticket-holder details.
-5. **Promotions (core).** Percentage or fixed discounts, eligible offerings, start and end dates, total and per-buyer limits, and minimum quantity or order value. Count each use against the hold so that orders placed at the same moment can't exceed a limit.
+5. **Promotions (core).** Percentage or fixed discounts, eligible offerings, start and end dates, total and per-buyer limits, and minimum quantity or order value. Count each use against the hold so that orders placed at the same moment can't exceed a limit. Codes apply only to a held order (decision #27).
 6. **Pricing.** Only the backend calculates totals. Orders that total zero skip payment and issue their tickets directly (hurdles.md H3). The platform fee is deducted from the organizer, so it never changes what the buyer pays. Each order item stores a snapshot of the unit price, discount, fees and currency, so later price edits don't change past orders.
 7. **Order states.** Pending → paid → completed, plus expired and cancelled (doc/state-machines.md §2).
 
 ### Frontend
 
-8. **Public checkout:** choose an offering and quantity, fill in attendee forms built from the event's setup, enter a promo code, pass the CAPTCHA when the event requires one, review the order summary, and see a countdown for the hold, with clear handling when it expires.
+8. **Public checkout:** choose an offering and quantity (from the landing page's Buy button or the event page), fill in attendee forms built from the event's setup, pass the CAPTCHA when the event requires one, enter a promo code on the held order, review the order summary, and see a countdown for the hold, with clear handling when it expires.
 9. **Organizer dashboard:** the order list for each event.
 
 ### Tests
@@ -471,6 +478,10 @@ Each part of this phase is built and tested on its own, and the core flow doesn'
 3. **Admin reports:** platform-wide summaries, transaction oversight, an audit log viewer, and a settlement report per organizer and event (sales, refunds, Pesapal fees, platform fee and amount owed) with a log for recording each manual payout (hurdles.md H1). Organizer staff see their own organizer's settlement report.
 4. **Guest list:** view the attendees of an event, filter them by ticket category, delegation, purchase date and check-in status, and export them as CSV. Available to organizer staff for their own events and to event owners for their assigned events only (doc/roleandprivileage.md). Event owners see only each holder's name, ticket category, delegation and check-in status.
 
+### Personal data
+
+4a. **Data deletion on request** (v1.md FR-15, hurdles.md H12). A platform admin finds a person by email address or phone number across every organizer. The platform removes their name, email, phone number and ID digits from orders, attendees, ticket transfers and promotion redemptions, and keeps amounts, references, tickets and scan records. Audited; organizer staff and event owners are refused.
+
 ### Reserved seating
 
 5. Organizers set up sections, rows and seat numbers through simple forms and bulk entry. The SOW (§9) excludes advanced visual seat-map editors.
@@ -483,6 +494,7 @@ Each part of this phase is built and tested on its own, and the core flow doesn'
 
 - [ ] Reports show only the organizer's own events, and their figures match the order and payment records.
 - [ ] Event owners can view, filter and export the guest list of their assigned events only, and a CSV export matches the on-screen filters.
+- [ ] A platform admin's data deletion removes the person's details everywhere, and the reports still match the records.
 - [ ] A seat can't be sold twice, expired holds release seats, and general-admission events need no seat setup. If seating has been deferred by change control, this criterion moves with it.
 
 ---
@@ -504,7 +516,7 @@ Each part of this phase is built and tested on its own, and the core flow doesn'
 5. **Backup and recovery.** Confirm what backups the Supabase plan includes, run a restore into staging, and document the procedure.
 6. **Monitoring.** Error tracking, uptime checks on the API and the Next.js app, and alerts for failed jobs, payments stuck in pending, and email failures.
 7. **Production setup.** A production Supabase project; configuration stored outside the web root; cron; the agreed way of running queued jobs; HTTPS on both subdomains; the Next.js app on Vercel; Sanctum configured for the production domains; production Pesapal keys, with the production IPN URL registered; and a production Google OAuth client, with its callback URL registered and the consent screen published.
-8. **Data protection.** Publish the privacy notice and the deletion-on-request procedure (personal data is kept until someone asks for it to be deleted; hurdles.md H12), and agree each party's role (controller or processor). Confirm any registration obligations with Kenya's Office of the Data Protection Commissioner.
+8. **Data protection.** Publish the privacy notice and the deletion-on-request procedure (personal data is kept until someone asks for it to be deleted, and platform admins carry out requests with the Phase 7 tool; hurdles.md H12), and agree each party's role (controller or processor). Confirm any registration obligations with Kenya's Office of the Data Protection Commissioner.
 9. **UAT.** The client tests on staging against the acceptance criteria in SOW §5. Defects are logged and classified, and critical and high defects are fixed before sign-off. The client has five business days to review.
 10. **Go-live.** Deploy, run smoke tests, then make one real low-value payment with each method and refund it.
 11. **Handover (D13, D14):** source code, migrations, environment documentation, API documentation, deployment guide, payment and email setup guide, admin and organizer guides, test results, known issues, and a secure transfer of credentials.
@@ -554,7 +566,13 @@ These decisions affect the database, the integrations or the schedule. Each need
 | 19 | CSV exports                           | —                                                           | **Decided:** guest list export (staff and assigned event owners) and sales list export (staff) | Decided |
 | 20 | Event categories                      | —                                                           | **Decided:** a platform list managed by admins; organizers pick one per event; the public site filters by it | Decided |
 | 21 | Bot protection                        | None; CAPTCHA per event; CAPTCHA always                     | **Decided:** staff or admins can require a CAPTCHA at checkout per event; load-test against the client's largest event (hurdles.md H13) | Decided |
-| 22 | Personal data retention               | Fixed period; delete on request                             | **Decided:** kept until someone asks for deletion; then names, emails, phone numbers and ID digits are removed and financial and scan records kept (hurdles.md H12) | Decided |
+| 22 | Personal data retention               | Fixed period; delete on request                             | **Decided:** kept until someone asks for deletion; then names, emails, phone numbers and ID digits are removed and financial and scan records kept; platform admins carry out each request (hurdles.md H12, v1.md FR-15) | Decided |
+| 23 | Ticket waves                          | None; event-wide waves; per-category waves                  | **Decided:** optional for each ticket category; each wave has its own dates and one or more offerings (type, number of tickets, price); a category's waves never overlap; each opens on its start date only, even if the previous one sells out; staff move unsold tickets by hand (v1.md FR-04) | Decided |
+| 24 | Landing page                          | Event cards; every ticket option                            | **Decided:** every public ticket option across published events, with search by event name or venue, event category and date filters, sold-out options kept and marked, and upcoming waves greyed out; delegation tickets never listed (v1.md FR-14) | Decided |
+| 25 | Event link and gate QR code           | Event page; separate gate page                              | **Decided:** one link per event (`/events/{slug}`, slugs unique across the platform) and a QR code that opens the event page; staff download it as PNG or SVG and as a printable PDF poster (hurdles.md H4) | Decided |
+| 26 | Sponsor (delegation) tickets          | Sub-quota of public offerings; set aside                    | **Decided:** set aside as each delegation's own offerings, never sold publicly and outside the waves; staff can return unclaimed tickets to public sale (hurdles.md H14) | Decided |
+| 27 | When a promo code applies             | Before the hold; after the hold                             | **Decided:** to the held order, at the review step (limitation.md 6.4) | Decided |
+| 28 | Platform public name                  | —                                                           | **Open:** the client chooses the name used on the landing page, in emails and on posters | Phase 1 (designs) |
 
 ---
 

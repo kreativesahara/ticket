@@ -18,18 +18,19 @@ erDiagram
     %% Ticket configuration and inventory (v1.md §4.2)
     events ||--o{ ticket_types : "defines"
     events ||--o{ ticket_categories : "defines"
+    events ||--o{ ticket_waves : "schedules"
+    ticket_categories ||--o{ ticket_waves : "sold in"
     events ||--o{ event_ticket_offerings : "sells"
     ticket_types ||--o{ event_ticket_offerings : "sold as"
     ticket_categories ||--o{ event_ticket_offerings : "sold as"
+    ticket_waves |o--o{ event_ticket_offerings : "offers"
     events ||--o{ delegations : "allocates"
-    delegations ||--o{ delegation_categories : "may claim"
-    ticket_categories ||--o{ delegation_categories : "claimable through"
+    delegations |o--o{ event_ticket_offerings : "sets aside"
     events ||--o{ seating_sections : "lays out"
     seating_sections ||--o{ seats : "contains"
     events ||--o{ seats : "contains"
     orders ||--o{ inventory_reservations : "holds"
     event_ticket_offerings ||--o{ inventory_reservations : "capacity held"
-    delegations |o--o{ inventory_reservations : "quota held"
     seats |o--o{ inventory_reservations : "seat held"
 
     %% Orders, attendees and tickets (v1.md §4.3)

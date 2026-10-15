@@ -1,6 +1,6 @@
 # Business Rules and Limitations
 
-**Multi-Organizer Event Ticketing Platform · Version 1.1 · 15 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.2 · 15 October 2026**
 
 **Status:** Draft for stakeholder confirmation
 
@@ -24,8 +24,8 @@ This document sets out how the platform will behave: the business rules it follo
 
   | Role                | What they do                                                                                   |
   | ------------------- | ---------------------------------------------------------------------------------------------- |
-  | **Platform admin**  | Full rights and privileges across the entire platform: approves/suspends organizers, oversees events, settings, reports and overrides |
-  | **Organizer staff** | Full control of their organizer account: events, prices, offerings, team members, delegations, guards and reports |
+  | **Platform admin**  | Full rights and privileges across the entire platform: approves/suspends organizers, oversees events, settings, reports and overrides, and deletes a person's data on request |
+  | **Organizer staff** | Full control of their organizer account: events, prices, offerings, ticket waves, team members, delegations, guards and reports |
   | **Event owner**     | Assigned to specific events with access restricted to only viewing, filtering, and exporting guest and attendee data |
   | **Guard**           | Scans tickets at the gate, only for the events and gates assigned to them                      |
   | **Buyer**           | Buys tickets as a guest and receives them by email; no account needed                          |
@@ -68,7 +68,7 @@ Rules for guard password accounts:
 ### 3. Events
 
 - **3.1** An event goes through these stages: **draft** → **published** → **closed** or **cancelled** → **archived**. A published event closes automatically when its last gate closes, or at its end time if it has no gates. Only published events can be seen and bought by the public. A draft that was never published can be deleted; an event that was ever published is never deleted, only archived, so its sales and entry records are kept.
-- **3.2** Each event has: name, description, images, an event category from the platform's list, venue, date and time (with its timezone), ticket sales start and end, gate opening and closing times, total capacity, the attendee details required, ticket options, optional seating, gates and guards, the identity number buyers must give (rule 5.7), whether checkout needs a CAPTCHA, and a cancellation and refund policy.
+- **3.2** Each event has: name, description, images, an event category from the platform's list, venue, date and time (with its timezone), ticket sales start and end, gate opening and closing times, total capacity, the attendee details required, ticket options, optional ticket waves for each category (rule 4.12), its own link and QR code (rule 5.12), optional seating, gates and guards, the identity number buyers must give (rule 5.7), whether checkout needs a CAPTCHA, and a cancellation and refund policy.
 - **3.3** Three sets of times are separate and independent:
   - **Ticket sales:** when buying starts and stops.
   - **Gates:** when entry starts and stops.
@@ -86,19 +86,22 @@ Rules for guard password accounts:
 - **4.2** What a buyer actually purchases is a combination of type and category, for example "Early Bird VIP". Each combination has its own price, number available, sales period and minimum and maximum per order. Only combinations the organizer turns on can be bought.
 - **4.3** Early Bird tickets stop selling when their sales period ends or when they sell out, whichever comes first.
 - **4.4** Group tickets require a set number of tickets and use the group price.
-- **4.5** At the Gate tickets come from the same capacity as advance tickets. Buyers buy them on their own phones through the public site, for example from a QR code poster at the gate. There are no cash sales.
+- **4.5** At the Gate tickets come from the same capacity as advance tickets. Buyers buy them on their own phones through the public site, by scanning the event's QR code poster at the gate (rule 5.12). There are no cash sales.
 - **4.6** Media tickets can be set to need the organizer's approval: the buyer pays first, and the tickets are issued only when the organizer approves them. A rejected request is refunded by a platform admin. Organizers can also issue Media tickets manually.
 - **4.7** Promoted tickets need clear rules about who can buy them and at what price.
-- **4.8** **Delegations** are allocations set aside for sponsors, departments or invited groups. Each has its own number of tickets (taken from the event's ticket options, never added on top), allowed categories and prices. Members claim their tickets through a private link or access code.
+- **4.8** **Delegations** are allocations set aside for sponsors, departments or invited groups. For each delegation, staff set aside a number of tickets in each category it may claim, with their price (often free). These tickets are never sold to the public, don't follow the ticket waves, and count towards the event's total capacity like any other ticket. Members claim them through a private link or access code. Staff can return unclaimed tickets to public sale (rule 4.14).
 - **4.9** Prices are in **Kenyan shillings** and are stored exactly, with no rounding errors.
 - **4.10** The price a buyer pays is fixed when they order. If the organizer changes prices later, existing orders don't change.
 - **4.11** The platform never sells more tickets than are available, even when many people try to buy the last tickets at the same moment.
+- **4.12** **Ticket waves (optional).** When setting up an event, organizer staff choose for each ticket category whether it sells in **waves**, such as Wave 1, Wave 2 and Wave 3. Each wave has its own dates, and in each wave staff choose the ticket type, the number of tickets and the price. Categories that don't use waves sell as in rule 4.2.
+- **4.13** A category's waves follow one another and never overlap. Each wave goes on sale on its start date and stops at its end date. If a wave sells out early, that category has nothing on sale until the next wave starts.
+- **4.14** When a wave ends, its unsold tickets stay unsold unless staff move them. Organizer staff can move unsold tickets from one ticket option to another in the same category: from an ended wave to a later wave, or from a delegation back to public sale. Every move is recorded.
 
 ### 5. Buying tickets
 
 - **5.1** Buyers check out as guests with their name and email, plus any other details the organizer asks for.
 - **5.2** For each event, the organizer chooses whether to collect details only from the **person buying**, or from **each ticket holder**.
-- **5.3** The steps are: choose tickets → choose seats (seated events only) → enter details → apply a promo code (optional) → review the order → pay.
+- **5.3** The steps are: choose tickets → choose seats (seated events only) → enter details → apply a promo code (optional) → review the order → pay. The tickets are held as soon as the details are entered (rule 5.4), so a promo code applies to the held order (rule 6.4).
 - **5.4** Tickets are held for the buyer for **15 minutes** while they pay. If time runs out, the tickets go back on sale and the order expires.
 - **5.5** One order can contain many tickets. Each ticket gets its own QR code and short code, and can be used by a different person.
 - **5.6** The platform calculates every price and total itself. It never relies on figures sent from the buyer's browser.
@@ -106,6 +109,8 @@ Rules for guard password accounts:
 - **5.8** Any extra questions an organizer adds are pick-lists, checkboxes or dates. There are no free-text questions.
 - **5.9** Orders that cost nothing (free tickets, free sponsor tickets or a 100% discount) skip payment, and the tickets are issued straight away.
 - **5.10** For high-demand events, the organizer can require a CAPTCHA at checkout to stop bots.
+- **5.11** The platform's **landing page** lists every ticket option on sale across all published events: the event, date and venue, ticket type, category, wave and price, each with a Buy button. Buyers can search by event name or venue, and filter by event category and date. Sold-out options stay listed, marked "Sold out", and upcoming waves are shown greyed out with their start date and price. Sponsor (delegation) tickets are never listed.
+- **5.12** Every event has its own **link** and **QR code**, which open its event page. Organizer staff can copy the link, and download the QR code as an image or as a printable poster to put up at the gate.
 
 ### 6. Promotions and discount codes
 
@@ -179,7 +184,7 @@ Rules for guard password accounts:
 
 - **12.1** The platform collects only the attendee details each event needs.
 - **12.2** Organizers see attendee details only for their own events, and event owners only for the events they are assigned to. Guards see only what they need to check entry.
-- **12.3** Personal data is kept until someone asks for it to be deleted. Then their name, email, phone number and ID digits are removed, but the financial and entry records needed by law are kept without them.
+- **12.3** Personal data is kept until someone asks for it to be deleted. Then their name, email, phone number and ID digits are removed, but the financial and entry records needed by law are kept without them. A platform admin carries out each request.
 
 ---
 
@@ -208,6 +213,8 @@ Please confirm that each of these is acceptable for launch.
 | B17   | No SMS                                           | Buyers get emails only.                                                                                     | ☐         |
 | B18   | No free-text questions                           | Extra questions are pick-lists, checkboxes or dates.                                                        | ☐         |
 | B19   | Guards need an email address                     | Every guard account uses the guard's own email address, and guards can't sign in with Google.              | ☐         |
+| B20   | Waves open on their dates                        | If a wave sells out early, its category has nothing on sale until the next wave's start date; the next wave doesn't open early. | ☐ |
+| B21   | Unsold wave tickets move by hand                 | Tickets a wave doesn't sell stay unsold until organizer staff move them to a later wave.                   | ☐         |
 
 **Not included in this project** (from the Statement of Work, §9). These can be added later through a change request:
 - Native Android and iOS apps.
@@ -234,13 +241,13 @@ These were settled on 15 October 2026. Please confirm each one, or answer it whe
 | C1  | How do we track what each organizer is owed?           | A settlement report per organizer and event (sales, refunds, fees, amount owed), plus a log of each manual payout | |
 | C2  | Does the platform charge a fee, and who pays it?       | Deducted from the organizer, and Pesapal's fees too. **Still open:** how the fee is calculated (a percentage, a fixed amount per ticket, or both) | |
 | C3  | How do we check organizers before they sell?           | A platform admin verifies business or ID details and the payout account before the organizer's first paid event. Pesapal must still confirm that one account can collect for many organizers | |
-| C4  | How are "At the Gate" tickets sold?                    | Buyers pay on their own phones through a QR code poster at the gate that links to the event page; no cash   | |
+| C4  | How are "At the Gate" tickets sold?                    | Buyers pay on their own phones through a QR code poster at the gate that links to the event page; the platform gives each event its link, QR code and a printable poster; no cash | |
 | C5  | What happens when an event is cancelled or postponed?  | **Cancelled:** all tickets cancelled, every buyer emailed, an admin refunds each order. **Postponed:** tickets stay valid, buyers emailed a refund-request link valid for a set period | |
 | C6  | Is re-entry allowed?                                   | No, for the first release                                                                                   | |
-| C7  | How do free and sponsor tickets work?                  | Orders that total zero skip payment and issue tickets directly; each delegation gets a private link or code to claim its tickets | |
+| C7  | How do free and sponsor tickets work?                  | Orders that total zero skip payment and issue tickets directly; each delegation gets a private link or code to claim its tickets, which are set aside from public sale | |
 | C8  | Which messages do buyers get, and is SMS included?     | Emails for order confirmation, ticket delivery, receipts, event changes and cancellations. No SMS            | |
 | C9  | Receipts and tax                                       | Email a receipt for every paid order. **Still open:** your accountant confirms whether VAT and KRA eTIMS invoicing apply | |
-| C10 | How long do we keep attendee data?                     | Until someone asks for it to be deleted                                                                     | |
+| C10 | How long do we keep attendee data?                     | Until someone asks for it to be deleted; a platform admin carries out each request                         | |
 | C11 | How long are tickets held while a buyer pays?          | 15 minutes                                                                                                  | |
 | C12 | What if a payment arrives after the hold expired?      | Refund it automatically; the buyer orders again                                                             | |
 | C13 | Who approves refunds?                                  | Only platform admins make refunds                                                                           | |
@@ -252,6 +259,11 @@ These were settled on 15 October 2026. Please confirm each one, or answer it whe
 | C19 | Can buyers browse events by type (music, sport and so on)? | Yes, from a category list the platform admins manage                                                    | |
 | C20 | Is a Swahili version of the public site needed?        | Not for the first release                                                                                   | |
 | C21 | Which email provider sends the tickets?                | **Still open:** your choice; it must support domain authentication (SPF, DKIM and DMARC)                    | |
+| C22 | Can organizers sell tickets in waves?                  | Yes, as an option for each ticket category: each wave has its own dates, ticket type, number of tickets and price; waves open on their start dates only; staff move unsold tickets by hand | |
+| C23 | What does the landing page show?                       | Every public ticket option across all events, with search by event name or venue, event category and date filters, sold-out options marked and upcoming waves shown | |
+| C24 | Are sponsor tickets set aside?                         | Yes: each delegation's tickets are its own allocation, never sold to the public and outside the waves       | |
+| C25 | When is a promo code applied?                          | On the order review, after the tickets are held                                                             | |
+| C26 | What is the platform's public name?                    | **Still open:** used on the landing page, in emails and on the QR code posters                              | |
 
 ---
 

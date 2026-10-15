@@ -1,8 +1,8 @@
 # Hurdles: Gaps, Risks and Limitations
 
-**Version 1.2 · 15 October 2026**
+**Version 1.3 · 15 October 2026**
 
-**Based on:** [v1.md](v1.md) (version 1.7), [sow.md](sow.md) (version 1.5), [techstack.md](techstack.md) and [implementation-plan.md](implementation-plan.md) (version 1.5).
+**Based on:** [v1.md](v1.md) (version 1.8), [sow.md](sow.md) (version 1.6), [techstack.md](techstack.md) and [implementation-plan.md](implementation-plan.md) (version 1.6).
 
 This document lists what the current specification doesn't yet cover, and the limitations that come with decisions already made. The specification handles the core flow well: publishing events, buying and paying, issuing tickets and scanning them at the gate. The gaps are mostly in what happens to the money after a sale, unusual situations at the gate, and messages to buyers.
 
@@ -29,6 +29,7 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 | H11 | Guest buyers have no defined way to view their order | Buyers       | Medium | Phase 1   | Provider | Decided |
 | H12 | No rules for keeping or deleting personal data  | Compliance        | Medium | Phase 1   | Both     | Decided |
 | H13 | Sale-day rush and ticket bots                   | Operations        | Medium | Phase 0   | Both     | Decided |
+| H14 | Sponsor tickets weren't set aside from public sale | Money          | Medium | Phase 1   | Client   | Decided |
 
 ---
 
@@ -76,6 +77,8 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 
 **Decision (15 October 2026):** as recommended. A delegation's allocation is a sub-quota of its offerings' capacity, so no ticket is counted twice (doc/sponsored.md).
 
+**Update (15 October 2026):** delegation tickets are now set aside as each delegation's own offerings, instead of a sub-quota of public offerings (H14).
+
 **Decide by:** Phase 1 (database design) · **Owner:** Both
 
 ### H4. "At the gate" tickets have no way to be sold — Decided
@@ -86,7 +89,7 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 
 **Recommendation:** The simplest option is for buyers to pay on their own phones through the public website, using a QR code poster at the gate that links to the event page. The alternative is a separate "box office" role with its own selling screen, which adds scope. Decide whether cash sales are supported at all.
 
-**Decision (15 October 2026):** buyers pay on their own phones through a QR code poster at the gate that links to the event page. No box office role and no cash sales.
+**Decision (15 October 2026):** buyers pay on their own phones through a QR code poster at the gate that links to the event page. No box office role and no cash sales. The platform gives each event its own link and QR code, which organizer staff download as an image or a printable PDF poster (v1.md FR-14).
 
 **Decide by:** Phase 1 · **Owner:** Client
 
@@ -103,6 +106,18 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 **Decision (15 October 2026):** as recommended, except that refunds are not automatic: only platform admins start refunds (decision #12). After a cancellation, an admin refunds each order. After a postponement, buyers request a refund through a link in the email, valid until a date set from the event's refund policy, and an admin approves each request.
 
 **Decide by:** Phase 1 · **Owner:** Client
+
+### H14. Sponsor tickets weren't set aside from public sale — Decided
+
+**Gap:** doc/sponsored.md describes delegations as tickets set aside for sponsors, but the capacity rule made each delegation's quota only a cap inside its offerings' capacity. If the public bought those offerings' tickets first, a sponsor could find nothing left to claim.
+
+**Why it matters:** Sponsors are promised a number of tickets. Running out because public sales used them up damages the organizer's sponsor relationships, and the landing page would offer the public tickets that were meant for sponsors.
+
+**Recommendation:** Give each delegation its own allocation, as offerings the public can't buy, counted against the event's capacity like any other offering.
+
+**Decision (15 October 2026):** as recommended. Staff set aside a number of tickets for each delegation, per category, with their price. The allocation sits outside the ticket waves, so members can claim it whichever wave is on sale, and staff can move unclaimed tickets back to public sale (v1.md FR-05).
+
+**Decide by:** Phase 1 (database design) · **Owner:** Client
 
 ---
 
@@ -198,7 +213,7 @@ Recorded in v1.md (FR-09, FR-10 and §4.3), sow.md (Modules Six and Seven, §5.5
 
 **Recommendation:** Design anonymization in Phase 1 (replace names, emails and phone numbers while keeping amounts and references). The client confirms the retention periods before launch.
 
-**Decision (15 October 2026):** personal data is kept until someone asks for it to be deleted; there is no automatic retention period. On request, names, emails, phone numbers and ID digits are removed, while amounts, references and scan records are kept. Collection is minimized too: one identity field per event, no free-text questions, only the last 4 digits of ID numbers, and never the paying account Pesapal reports.
+**Decision (15 October 2026):** personal data is kept until someone asks for it to be deleted; there is no automatic retention period. On request, names, emails, phone numbers and ID digits are removed, while amounts, references and scan records are kept. A platform admin carries out each request (v1.md FR-15). Collection is minimized too: one identity field per event, no free-text questions, only the last 4 digits of ID numbers, and never the paying account Pesapal reports.
 
 **Decide by:** Phase 1 (design), Phase 8 (policy) · **Owner:** Both
 
@@ -253,6 +268,8 @@ These come from decisions already made. They're accepted for the first release, 
 | Simple seat setup                            | Seats are set up through forms, with no visual seat-map editor (SOW §9).                        | If organizers run large seated venues                  |
 | Reserved seating may be deferred             | If the schedule slips, seating moves to a release after launch (SOW §4.1).                      | At the Phase 7 checkpoint                              |
 | 12-week timeline                             | Assumes three to four developers; holidays inside the window add one to two weeks.              | When the team and start date are confirmed in Phase 0  |
+| Waves open on their dates                    | If a wave sells out early, its category has nothing on sale until the next wave's start date.   | If organizers want the next wave to open on sell-out (a change request) |
+| Unsold wave tickets move by hand             | Tickets a wave doesn't sell stay unsold until organizer staff move them to a later wave.        | If organizers want automatic rollover (a change request) |
 
 ---
 
@@ -260,7 +277,7 @@ These come from decisions already made. They're accepted for the first release, 
 
 These are corrections to the documents themselves, not decisions.
 
-- **The database diagram in v1.md (§4.5) is out of date.** It doesn't show invitations, guard credentials, gates, delegations or inventory reservations. Phase 1 produces a new one from the final schema; until then, the tables in v1.md §4 are correct.
+- ~~**The database diagram in v1.md (§4.5) is out of date.**~~ **Done (15 October 2026):** the complete ERD is in doc/diagrams/erd/, and v1.md 1.8 §4.5 links to it. P1.3 updates it to match the final migrations.
 - ~~**The event lifecycle needs a "closed" state.**~~ **Done (13 October 2026):** v1.md 1.5 adds "closed" to the event state model (§4.6), entered automatically when the last gate closes.
 - ~~**v2.md is out of date.**~~ **Done (15 October 2026):** v2.md is marked as replaced by v1.md.
 - **The SOW still has commercial blanks:** the project fee, intellectual property ownership, and support and maintenance after the 30-day warranty.
@@ -272,3 +289,4 @@ These are corrections to the documents themselves, not decisions.
 1. The client confirms the recorded decisions in limitation.md Part C.
 2. Close the outside confirmations: Pesapal on collecting for many organizers (H2), the accountant on VAT and eTIMS (H10), and the largest expected event for load testing (H13).
 3. The client decides how the platform fee is calculated (decision #2) and chooses the email provider (decision #9).
+4. The client chooses the platform's public name (decision #28).

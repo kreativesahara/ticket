@@ -1,7 +1,9 @@
 # Sponsored Tickets & Delegations Distribution Specification
 
-**Multi-Organizer Event Ticketing Platform · Version 1.1 · 15 October 2026**  
-**References:** [limitation.md](../limitation.md), [hurdles.md](../hurdles.md) (H1, H3, H6, all decided), [doc/state-machines.md](state-machines.md), [v1.md](../v1.md) (§FR-05, §4.5, §6), [implementation-plan.md](../implementation-plan.md) (Phases 2–6).
+**Multi-Organizer Event Ticketing Platform · Version 1.2 · 15 October 2026**  
+**References:** [limitation.md](../limitation.md), [hurdles.md](../hurdles.md) (H1, H3, H6, H14, all decided), [doc/state-machines.md](state-machines.md), [v1.md](../v1.md) (§FR-04, §FR-05, §4.2, §6), [implementation-plan.md](../implementation-plan.md) (Phases 2–6).
+
+> **Version 1.2:** A delegation's tickets are now set aside as its own offerings, instead of a sub-quota of the public offerings (hurdles.md H14, decision #26). This removes the delegation's own counters, its price rule and the `delegation_categories` table.
 
 ---
 
@@ -11,9 +13,9 @@ In event operations, event organizers frequently allocate blocks of tickets to c
 
 ### The Challenge ([hurdles.md §H3](../hurdles.md))
 Under the core platform architecture:
-1. **Public Availability vs. Private Allocations:** Sponsor tickets must not be available to the general public browsing the event page.
+1. **Public Availability vs. Private Allocations:** Sponsor tickets must not be available to the general public browsing the landing page or the event page.
 2. **Payment Gateway Incompatibility:** The standard order pipeline requires payment settlement via Pesapal before tickets are issued. However, **Pesapal cannot process zero-shilling (KES 0) transactions**.
-3. **Capacity & Overselling Prevention:** Sponsored ticket allocations must be strictly accounted for against the event's total venue capacity and ticket offering pools without double-counting.
+3. **Capacity & Overselling Prevention:** Sponsored ticket allocations must be set aside from public sale and counted against the event's total capacity without double-counting.
 
 This specification defines how the platform models, claims, validates, issues, and redeems sponsored tickets through an automated pipeline.
 
@@ -23,18 +25,15 @@ This specification defines how the platform models, claims, validates, issues, a
 
 Sponsored tickets are managed through the **Delegations** subsystem ([v1.md §FR-05](../v1.md)).
 
-* **Definition:** A Delegation is an organizer-configured ticket allocation set aside for a specific group, sponsor, or department.
+* **Definition:** A Delegation is an organizer-configured group, sponsor or department with tickets set aside for it.
 * **Attributes:**
   * `id`: Unique identifier (UUID).
   * `event_id`: The event the delegation belongs to.
   * `name`: Identifier of the group/sponsor (e.g., *"Safaricom VIP Delegation"*, *"Platinum Sponsor Guest List"*).
-  * `capacity`: Total number of tickets allocated. This is a sub-quota of the offerings' capacity, never extra to it.
-  * `sold_count` and `reserved_count`: Tickets issued and tickets currently held.
-  * Allowed categories: the ticket categories this delegation can claim (the `delegation_categories` table).
-  * `price_rule`: Pricing configuration (typically `KES 0` / complimentary, or a fixed sponsor discount).
+  * **Allocation:** one or more offerings in `event_ticket_offerings` with `delegation_id` set. Each has a ticket type, a category, a number of tickets (`capacity`, with its own `sold_count` and `reserved_count`) and a price (often KES 0). They are set aside: never listed on the landing page or an event page, never sold through public checkout, and never part of a ticket wave ([hurdles.md §H14](../hurdles.md)).
   * Access code: a 6–8 character code for claiming, stored as `access_code_hash` plus `access_code_encrypted`.
   * Claim token: a high-entropy URL token for private claim links, stored as `claim_token_hash` plus `claim_token_encrypted`, so staff can show the link again.
-  * `status`: `active`, `paused`, or `exhausted`.
+  * `status`: `active` or `paused`. A delegation whose allocation is all claimed shows as fully claimed; that isn't a stored status.
 
 ---
 
@@ -46,7 +45,7 @@ The system supports two distribution pipelines for sponsored tickets:
 | :--- | :--- | :--- |
 | **Use Case** | Sponsor distributes a private link/code to their staff, clients, or executives to register themselves. | Sponsor provides a roster/CSV of names and emails directly to the organizer. |
 | **Data Collection** | Attendees input their own details, the event's identity field if it has one, and the event's pick-list questions during checkout. | Organizer imports attendee details in bulk via dashboard. |
-| **Capacity Check** | Real-time atomic inventory reservation during order placement. | Batch allocation verified before mass insertion. |
+| **Capacity Check** | Real-time atomic hold on the delegation's allocation offering during order placement. | The allocation's remaining tickets verified before mass insertion. |
 | **Recipient Experience** | Receives order confirmation and ticket retrieval email upon form completion. | Receives personalized ticket link email immediately upon organizer dispatch. |
 
 ---
@@ -67,23 +66,24 @@ sequenceDiagram
 
     Note over Organizer, DB: 1. Setup & Configuration
     Organizer->>API: POST /api/v1/organizer/events/{id}/delegations
-    API->>DB: Create delegation record with capacity & claim token
+    API->>DB: Create delegation with claim token & access code
+    Organizer->>API: POST /api/v1/organizer/events/{id}/offerings (with delegation_id)
+    API->>DB: Create the set-aside allocation (type, category, quantity, price)
 
     Note over SponsorUser, DB: 2. Claim & Order Submission
     SponsorUser->>Web: Navigate to /claim/{token} or input Access Code
     Web->>API: GET /api/v1/delegation-claims/{token}
-    API-->>Web: Return delegation metadata (allowed categories, remaining quota)
-    SponsorUser->>Web: Select category, enter attendee details & submit
+    API-->>Web: Return the allocation (category, type, price, tickets left)
+    SponsorUser->>Web: Choose from the allocation, enter attendee details & submit
     Web->>API: POST /api/v1/orders (with delegation context)
 
-    Note over API, DB: 3. Inventory Reservation & Zero-Cost Pipeline
+    Note over API, DB: 3. Allocation Hold & Zero-Cost Pipeline
     critical Atomic Database Transaction
-        API->>DB: Check & hold inventory (UPDATE event_ticket_offerings reserved_count)
-        API->>DB: Check & hold delegation quota (UPDATE delegations reserved_count)
+        API->>DB: Check & hold the allocation (UPDATE event_ticket_offerings reserved_count)
         API->>API: Calculate order total -> KES 0
         Note over API: BYPASS PESAPAL (Hurdle H3)
         API->>DB: Order pending -> paid -> completed (no payment row)
-        API->>DB: Convert reserved offering and delegation holds to sold_count
+        API->>DB: Convert the allocation hold to sold_count
         API->>DB: Insert tickets (linked to delegation_id, QR hash, short code)
         API->>DB: Insert outbox delivery event (`ticket.issued`)
     end
@@ -108,25 +108,29 @@ sequenceDiagram
 
 ### Stage 1: Delegation Setup & Authorization
 1. Organizer staff create a delegation in the event's Delegations screen in the organizer area.
-2. The platform generates:
+2. Staff set aside its allocation: one or more offerings, each with a ticket type, a category, a number of tickets and a price, created with the delegation's `delegation_id`. These offerings never appear on the landing page or an event page, can't be bought through public checkout, and don't belong to any wave, so members can claim them whichever wave is on sale.
+3. The platform generates:
    * A private claim URL: `https://www.yourdomain.com/claim/{claim_token}`
    * An optional short claim code (e.g., `ACME2026`).
-3. A delegation is a sub-quota of its offerings, so its tickets are never counted twice. Offering capacity alone counts against the event:
+4. Every offering, public or set aside, counts against the event's capacity:
    $$\sum \text{Offering Capacity} \le \text{Event Capacity}$$
-   A delegation ticket uses its offering's capacity and its delegation's quota in the same transaction.
+   A delegation ticket uses only its allocation offering's capacity, so it's never counted twice.
+5. Staff can return unclaimed tickets to public sale with the "move unsold tickets" action ([v1.md §FR-04](../v1.md)). It lowers the allocation offering's capacity and raises a public offering's in the same category, in one transaction.
 
 ### Stage 2: Eligibility & Reservation (Backend Pipeline)
 When `POST /api/v1/orders` is invoked with a `delegation_token` or `access_code`:
 1. **Delegation Guard Validation:**
-   * Delegation exists and belongs to the active event.
-   * Delegation status is `active`.
-   * Requested ticket count $\le$ (`capacity` - `sold_count` - `reserved_count`).
-   * Selected category $\in$ `allowed_categories`.
-2. **Atomic Quota Reservation:**
+   * Delegation exists, belongs to the active event, and its status is `active`.
+   * The chosen offering belongs to the delegation (its `delegation_id` matches).
+   * Requested ticket count $\le$ the offering's (`capacity` - `sold_count` - `reserved_count`).
+
+   A public order, with no claim token or access code, that names a delegation's offering is refused.
+2. **Atomic Allocation Hold:**
    ```sql
-   UPDATE delegations
+   UPDATE event_ticket_offerings
    SET reserved_count = reserved_count + :qty
-   WHERE id = :delegation_id
+   WHERE id = :offering_id
+     AND delegation_id = :delegation_id
      AND status = 'active'
      AND capacity - sold_count - reserved_count >= :qty;
    ```
@@ -134,9 +138,10 @@ When `POST /api/v1/orders` is invoked with a `delegation_token` or `access_code`
 
 ### Stage 3: Zero-Total Bypass & Issuance (Resolution to Hurdle H3)
 1. **Bypass Logic:**
-   * Backend checks `final_amount == 0`.
+   * Backend checks `final_amount == 0` (the allocation's price is zero, or a 100% discount applies).
    * Standard redirect to Pesapal hosted checkout is skipped.
    * No payment record is written, because there is nothing to pay; the order records a zero total.
+   * An allocation with a price above zero goes through the normal Pesapal payment flow instead.
 2. **Atomic Issuance Transaction:**
    * Order status transitions immediately: `pending` $\rightarrow$ `paid` $\rightarrow$ `completed` (doc/state-machines.md §2).
    * One record created in `tickets` for each unit:
@@ -201,41 +206,42 @@ CREATE TABLE delegations (
     event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    capacity INTEGER NOT NULL CHECK (capacity > 0),
-    sold_count INTEGER NOT NULL DEFAULT 0,
-    reserved_count INTEGER NOT NULL DEFAULT 0,
-    price_rule VARCHAR(50) NOT NULL DEFAULT 'complimentary', -- 'complimentary', 'discount_fixed', 'discount_percent'
     access_code_hash VARCHAR(255) UNIQUE,
     access_code_encrypted TEXT,
     claim_token_hash VARCHAR(255) UNIQUE NOT NULL,
     claim_token_encrypted TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'active', -- 'active', 'paused', 'exhausted'
+    status VARCHAR(20) NOT NULL DEFAULT 'active', -- 'active', 'paused'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    CHECK (sold_count >= 0 AND reserved_count >= 0 AND sold_count + reserved_count <= capacity)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Categories a delegation may claim
-CREATE TABLE delegation_categories (
-    delegation_id UUID NOT NULL REFERENCES delegations(id) ON DELETE CASCADE,
-    category_id UUID NOT NULL REFERENCES ticket_categories(id) ON DELETE CASCADE,
-    PRIMARY KEY (delegation_id, category_id)
-);
+-- A delegation's set-aside allocation: the offerings that belong to it.
+-- wave_id is defined with the offerings table (v1.md §4.2); an offering has at most one of the two.
+ALTER TABLE event_ticket_offerings
+ADD COLUMN delegation_id UUID REFERENCES delegations(id) ON DELETE RESTRICT,
+ADD CONSTRAINT chk_offering_wave_or_delegation CHECK (wave_id IS NULL OR delegation_id IS NULL);
 
--- Ticket Relationship
+-- One offering per ticket type and category in each delegation
+CREATE UNIQUE INDEX uq_delegation_offering
+ON event_ticket_offerings (delegation_id, ticket_type_id, category_id)
+WHERE delegation_id IS NOT NULL;
+
+-- Ticket Relationship (copied from the offering when the ticket is issued)
 ALTER TABLE tickets 
 ADD COLUMN delegation_id UUID REFERENCES delegations(id) ON DELETE SET NULL;
 
 CREATE INDEX idx_tickets_delegation_id ON tickets(delegation_id);
 CREATE INDEX idx_delegations_event ON delegations(event_id);
+CREATE INDEX idx_offerings_delegation_id ON event_ticket_offerings(delegation_id);
 ```
 
 ---
 
 ## 8. Summary Checklist for Implementation
 
-- [ ] **Phase 1 (Database):** Include `delegations` table and `delegation_id` in `tickets` migration.
-- [ ] **Phase 2 (Dashboard):** Implement Delegation CRUD in Organizer Dashboard with link & code generation.
-- [ ] **Phase 3 (Checkout):** Add zero-cost checkout bypass when `order.total == 0` via delegation claim.
+- [ ] **Phase 1 (Database):** Include the `delegations` table, `event_ticket_offerings.delegation_id` (with its CHECK against `wave_id`) and `tickets.delegation_id` in the migrations.
+- [ ] **Phase 2 (Dashboard):** Implement Delegation CRUD in the Organizer Dashboard with link & code generation, set-aside allocations, and the move action for unclaimed tickets.
+- [ ] **Phase 2 (Public site):** Public endpoints never list a delegation's offerings.
+- [ ] **Phase 3 (Checkout):** Hold the allocation offering on a claim, refuse delegation offerings in public checkout, and add the zero-cost bypass when `order.total == 0`.
 - [ ] **Phase 5 (Issuance):** Link issued tickets to `delegation_id` and include delegation details in outbox email payload.
 - [ ] **Phase 6 (Gate):** Return delegation name in gate scan verification response payload for guard display.
