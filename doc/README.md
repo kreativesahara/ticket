@@ -12,13 +12,13 @@ Every diagram has four files with the same name:
 There are two kinds of diagram:
 
 - **Copies** of the Mermaid blocks in the specification documents (v1.md, techstack.md, implementation-plan.md, doc/state-machines.md, doc/roleandprivileage.md and doc/sponsored.md). The document is the source; the `.md` and `.mmd` files must match it.
-- **Standalone diagrams** drawn from the specification: the complete database ERD, the use case diagrams and the buyer journey activity diagrams. Their `.mmd` and `.md` files are the source.
+- **Standalone diagrams** drawn from the specification: the complete database ERD, the use case diagrams and the activity diagrams. Their `.mmd` and `.md` files are the source.
 
 Mermaid has no use case or activity diagram type, so those are drawn as flowcharts that follow UML conventions. Each one explains its notation.
 
 ## Database ERD
 
-The complete logical schema from [v1.md §4](../v1.md#4-database-design): all 36 tables. It replaces the out-of-date diagram in v1.md §4.5 ([hurdles.md §6](../hurdles.md#6-document-upkeep)). P1.3 updates it to match the final migrations.
+The complete logical schema from [v1.md §4](../v1.md#4-database-design): all 36 tables. [v1.md §4.5](../v1.md#45-core-relationships) links here; it replaced the short diagram that section used to show ([hurdles.md §6](../hurdles.md#6-document-upkeep)). P1.3 updates it to match the final migrations.
 
 | # | Diagram | Based on | Files |
 |---|---|---|---|
@@ -42,9 +42,9 @@ What each role can do, from the permissions matrix in [v1.md §3](../v1.md#3-per
 | 5 | [Platform admin](diagrams/use-cases/05-platform-admin.md) | v1.md §3, FR-08, FR-13 | [md](diagrams/use-cases/05-platform-admin.md) · [mmd](diagrams/use-cases/05-platform-admin.mmd) · [svg](diagrams/use-cases/05-platform-admin.svg) · [png](diagrams/use-cases/05-platform-admin.png) |
 | 6 | [Automated processes](diagrams/use-cases/06-automated-processes.md) | doc/state-machines.md, v1.md §6 | [md](diagrams/use-cases/06-automated-processes.md) · [mmd](diagrams/use-cases/06-automated-processes.mmd) · [svg](diagrams/use-cases/06-automated-processes.svg) · [png](diagrams/use-cases/06-automated-processes.png) |
 
-## Buyer journey (activity diagrams)
+## Activity diagrams
 
-How a buyer gets a ticket, from the landing page to the gate.
+How a buyer gets a ticket, from the landing page to the gate (1–7), and how organizer staff set up ticket waves (8).
 
 | # | Diagram | Based on | Files |
 |---|---|---|---|
@@ -55,6 +55,7 @@ How a buyer gets a ticket, from the landing page to the gate.
 | 5 | [Hold expiry and late payment](diagrams/activity/05-hold-expiry-and-late-payment.md) | state machines §2, §3, §6 | [md](diagrams/activity/05-hold-expiry-and-late-payment.md) · [mmd](diagrams/activity/05-hold-expiry-and-late-payment.mmd) · [svg](diagrams/activity/05-hold-expiry-and-late-payment.svg) · [png](diagrams/activity/05-hold-expiry-and-late-payment.png) |
 | 6 | [Delegation claim](diagrams/activity/06-delegation-claim.md) | doc/sponsored.md | [md](diagrams/activity/06-delegation-claim.md) · [mmd](diagrams/activity/06-delegation-claim.mmd) · [svg](diagrams/activity/06-delegation-claim.svg) · [png](diagrams/activity/06-delegation-claim.png) |
 | 7 | [Ticket retrieval and transfer](diagrams/activity/07-ticket-retrieval-and-transfer.md) | v1.md FR-09 | [md](diagrams/activity/07-ticket-retrieval-and-transfer.md) · [mmd](diagrams/activity/07-ticket-retrieval-and-transfer.mmd) · [svg](diagrams/activity/07-ticket-retrieval-and-transfer.svg) · [png](diagrams/activity/07-ticket-retrieval-and-transfer.png) |
+| 8 | [Organizer: set up ticket waves](diagrams/activity/08-set-up-ticket-waves.md) | v1.md FR-04 | [md](diagrams/activity/08-set-up-ticket-waves.md) · [mmd](diagrams/activity/08-set-up-ticket-waves.mmd) · [svg](diagrams/activity/08-set-up-ticket-waves.svg) · [png](diagrams/activity/08-set-up-ticket-waves.png) |
 
 ## State machines ([doc/state-machines.md](state-machines.md))
 
@@ -75,7 +76,6 @@ The authoritative state machines. The state diagrams in v1.md §4.6 are short ve
 | # | Diagram | Source section | Status | Files |
 |---|---|---|---|---|
 | 1 | [High-level architecture](diagrams/v1/01-high-level-architecture.md) | §1 Product scope and architecture | Current | [md](diagrams/v1/01-high-level-architecture.md) · [mmd](diagrams/v1/01-high-level-architecture.mmd) · [svg](diagrams/v1/01-high-level-architecture.svg) · [png](diagrams/v1/01-high-level-architecture.png) |
-| 2 | [Core relationships (ERD)](diagrams/v1/02-core-relationships-erd.md) | §4.5 Core relationships | **Out of date:** use the [complete ERD](diagrams/erd/00-overview.md) | [md](diagrams/v1/02-core-relationships-erd.md) · [mmd](diagrams/v1/02-core-relationships-erd.mmd) · [svg](diagrams/v1/02-core-relationships-erd.svg) · [png](diagrams/v1/02-core-relationships-erd.png) |
 | 3 | [Payment states](diagrams/v1/03-payment-states.md) | §4.6 Important state models | Short version | [md](diagrams/v1/03-payment-states.md) · [mmd](diagrams/v1/03-payment-states.mmd) · [svg](diagrams/v1/03-payment-states.svg) · [png](diagrams/v1/03-payment-states.png) |
 | 4 | [Order states](diagrams/v1/04-order-states.md) | §4.6 Important state models | Short version | [md](diagrams/v1/04-order-states.md) · [mmd](diagrams/v1/04-order-states.mmd) · [svg](diagrams/v1/04-order-states.svg) · [png](diagrams/v1/04-order-states.png) |
 | 5 | [Ticket states](diagrams/v1/05-ticket-states.md) | §4.6 Important state models | Short version | [md](diagrams/v1/05-ticket-states.md) · [mmd](diagrams/v1/05-ticket-states.mmd) · [svg](diagrams/v1/05-ticket-states.svg) · [png](diagrams/v1/05-ticket-states.png) |
