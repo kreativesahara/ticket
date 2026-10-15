@@ -4,13 +4,35 @@ Ready-to-paste prompts for an AI coding assistant (such as Claude Code or Cursor
 
 ## How to use these prompts
 
-1. **Finish Phase 0's human tasks first.** Settle the decision log (implementation-plan.md §11), work through the open hurdles in [hurdles.md](hurdles.md) (H1–H5 first, because they change the database and payment design), get the business rules in [limitation.md](limitation.md) signed off, submit the Pesapal merchant application and run the hosting check. Several prompts depend on those answers, and each one names the hurdles it depends on.
+1. **Finish Phase 0's human tasks first.** Settle the decision log (implementation-plan.md §11), work through the open hurdles in [hurdles.md](hurdles.md) (H1–H5 first, because they change the database and payment design), get the business rules in [limitation.md](limitation.md) signed off, submit the Pesapal merchant application, and create the Supabase development and test projects and the local Google OAuth client (see [Environments](#environments)). Several prompts depend on those answers, and each one names the hurdles it depends on.
 2. **Give the assistant the project context.** Paste [the context block](#project-context) at the start of every new session. Alternatively, save it in your tool's project instructions file (`CLAUDE.md` for Claude Code) so it loads automatically. The backend repository already has it. Give the frontend repository a copy that points to this repository for the specification and to the published OpenAPI contract.
 3. **Run one prompt at a time, in order.** Review the changes and the test results. Don't move on until the prompt's **Done when** checks pass.
 4. **Commit after every prompt**, so any step can be undone on its own.
 5. **Run the [phase exit check](#phase-exit-check) at the end of every phase** before starting the next.
 
 Prompt IDs follow the plan: **P3.2** is Phase 3, prompt 2.
+
+---
+
+## Environments
+
+Development is local until Phase 8. Nothing is deployed before then: no staging, no cPanel and no Vercel. Where implementation-plan.md says "on staging" before Phase 8, read "locally"; staging is first deployed in P8.2.
+
+| What           | Phases 0–7                                                                                   | Phase 8                                          |
+| -------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| API (Laravel)  | `localhost:8000`, with the scheduler (`schedule:work`) and the queue worker running locally   | cPanel, with the scheduler and queue run from cron |
+| Next.js app    | `localhost:3000`                                                                             | Vercel                                           |
+| Database       | The Supabase **development** project (online)                                                | A new Supabase **staging** project, then production |
+| Tests          | The Supabase **test** project (online), never the development project. CI uses its own PostgreSQL service | Unchanged                              |
+| Public HTTPS   | From P1.8, a tunnel to the local apps (for phones and Pesapal's IPN)                         | Staging and production domains                   |
+| Pesapal        | Sandbox, its IPN reaching the local API through the tunnel                                    | Sandbox on staging, then production keys         |
+| Email          | A local mail catcher that runs without Docker, such as Mailpit                               | The client's provider (decision #9)              |
+| Google sign-in | The local OAuth client, with localhost and tunnel callback URLs                              | The staging client, then the production client   |
+
+- Connect to Supabase through its session pooler, with SSL required. The direct connection needs IPv6, and the transaction pooler doesn't support prepared statements.
+- The test suite wipes its database, so it refuses to run against anything but the test project (P1.1). If more than one developer runs tests, give each their own test project. Never point CI at a Supabase project: two runs on the same database wipe each other's data.
+- Supabase pauses free-plan projects after a period without activity. Restore them from the Supabase dashboard.
+- The tunnel (P1.8) uses two HTTPS hostnames on one domain: one for the API and one for the Next.js app. That way the session cookie works across them as it will across `www` and `api` in production. It's needed for the printed QR code (P2.8), Pesapal's IPN (P4.3) and phone cameras (P6.3).
 
 ---
 
@@ -33,15 +55,16 @@ SOURCE DOCUMENTS (they are the specification — read the relevant parts before 
 STACK:
 - Two repositories. The backend repository (this one) holds /api and the specification; the frontend repository holds the Next.js app.
 - /api — Laravel (latest stable release), PostgreSQL on Supabase. Admins, organizer staff and event owners sign in with Google OAuth through Laravel Socialite. Guards sign in only with an email and password account created by their organizer, valid only for their assigned event; only guard accounts scan. Sanctum SPA cookie sessions after sign-in.
-- Frontend — one Next.js + TypeScript app with server-side rendering, on Vercel, for every role: the public event site, checkout and ticket retrieval, plus the organizer, event owner, admin and guard areas. shadcn/ui components and Tailwind CSS.
+- Frontend — one Next.js + TypeScript app with server-side rendering, for every role: the public event site, checkout and ticket retrieval, plus the organizer, event owner, admin and guard areas. shadcn/ui components and Tailwind CSS.
 - Payments — Pesapal API 3.0: buyers pay by M-Pesa or card on Pesapal's hosted checkout; Pesapal sends IPN notifications; results are confirmed with Pesapal's transaction status endpoint.
-- API hosted on cPanel: scheduler and queue run from cron.
+- Environments — until Phase 8 everything runs locally: the API on localhost:8000 (with the scheduler and queue worker), the Next.js app on localhost:3000, and the database on an online Supabase development project. Tests use a separate Supabase test project. Nothing is deployed before Phase 8; where implementation-plan.md says "staging" before Phase 8, it means local.
+- Hosting, from Phase 8 — the API on cPanel (scheduler and queue run from cron), the Next.js app on Vercel.
 
 NON-NEGOTIABLE RULES:
 1. Tenant isolation: every organizer-owned resource is authorized through a Laravel policy that checks the authenticated user's organizer membership, or, for event owners and guards, their event assignment. Event owners may only view, filter and export the guest list of their assigned events. Never trust role, organizer_id, event_id or gate_id from the request without checking it.
 2. Money is stored as integer minor units plus a currency code. Never floats.
 3. Inventory holds, payment confirmation, ticket issuance and ticket redemption use database transactions and atomic conditional updates. Never read-then-write checks.
-4. Tests run against PostgreSQL, never SQLite.
+4. Tests run against PostgreSQL (the Supabase test project locally, a PostgreSQL service in CI), never SQLite, and never against the Supabase development project.
 5. Every new resource gets a tenant-isolation test.
 6. Sensitive actions write to the audit log.
 7. Never store raw card data, plaintext passwords (guard passwords are hashed, and deleted when their event closes), Google access tokens, plaintext QR tokens or plaintext retrieval tokens. Never commit secrets.
@@ -85,22 +108,7 @@ Read v1.md, techstack.md, sow.md, implementation-plan.md, hurdles.md and limitat
 
 **Done when:** no mismatches remain, the state machines are written down, and you've answered the open questions.
 
-### P0.2 — Hosting check script
-
-```text
-Write a single-file PHP script, tools/hosting-check.php, that I can upload to the cPanel host to check the requirements in implementation-plan.md Phase 0 step 4.
-
-It must check and report as a PASS/FAIL table:
-- PHP version against the minimum for the latest stable Laravel release (state which version you're checking against).
-- Extensions: pdo_pgsql, mbstring, openssl, bcmath, intl, fileinfo, gd.
-- Whether functions Laravel's scheduler and queue rely on (such as proc_open) are disabled.
-- Whether the storage and cache directories would be writable.
-- A PostgreSQL connection to Supabase with SSL required, trying both the direct host and the pooler host, reporting which works, the connection time, and whether the server has IPv6.
-
-Security: read credentials from environment variables or a POST form, never print them, require a secret token in the URL to run at all, and show a warning to delete the file after use.
-```
-
-**Done when:** the script runs on the host and the go/no-go result is recorded in implementation-plan.md's hosting check.
+The hosting check script is now P8.1: nothing is deployed before Phase 8.
 
 ---
 
@@ -109,21 +117,23 @@ Security: read credentials from environment variables or a POST form, never prin
 ### P1.1 — Repository scaffold
 
 ```text
-Set up the two repositories as described in implementation-plan.md Phase 1 step 6:
-- Backend repository (this one): /api, a new Laravel project (latest stable) configured for PostgreSQL, with Pest for tests; docker-compose.yml with PostgreSQL for local development and tests; Laravel Pint and Larastan.
+Set up the two repositories as described in implementation-plan.md Phase 1 step 6, for local development. Nothing is deployed before Phase 8 (see Environments in prompts.md).
+- Backend repository (this one): /api, a new Laravel project (latest stable) configured for PostgreSQL on Supabase, with Pest for tests; Laravel Pint and Larastan. No Docker.
+- Database connections: the app uses the Supabase development project and the tests use the separate Supabase test project, both through Supabase's session pooler with sslmode=require. Keep the test connection out of phpunit.xml: put it in .env.testing (git-ignored), with a committed .env.testing.example.
+- A safeguard that stops the test suite before it touches any database unless it is connected to the test project. For example, check that the project reference in the database username (Supabase pooler usernames are postgres.<project-ref>) matches SUPABASE_TEST_PROJECT_REF, and refuse if .env.testing is missing or names the same project as .env.
 - Frontend repository: one Next.js app with TypeScript, the App Router, server-side rendering, Tailwind CSS and shadcn/ui (theme defined as CSS variables), using pnpm; ESLint and strict TypeScript. Route groups for the public site and the /organizer, /event-owner, /admin and /guard areas.
-- A README in each repository explaining how to run it, plus .env.example files with no real secrets.
+- A README in each repository explaining how to run it locally (in the backend: the API server, the scheduler with `php artisan schedule:work`, and the queue worker; in the frontend: `pnpm dev`), plus .env.example files with no real secrets.
 
-Check that every app starts and its default tests pass.
+Check that every app starts locally and the default tests pass against the Supabase test project.
 ```
 
-**Done when:** the API and the Next.js app run locally and their default tests pass.
+**Done when:** the API and the Next.js app run locally against the Supabase development project, their default tests pass, and the backend tests refuse to run when pointed at the development project.
 
 ### P1.2 — Continuous integration
 
 ```text
 Add a CI workflow to each repository (GitHub Actions unless I say otherwise). On every push and pull request:
-- Backend: install dependencies, run the Pint check, run Larastan, and run the tests against a PostgreSQL service container.
+- Backend: install dependencies, run the Pint check, run Larastan, and run the tests against a PostgreSQL service container with the same major version as the Supabase projects. Never point CI at a Supabase project, so CI runs and local runs can't wipe each other's data. Let the P1.1 test safeguard accept the CI service container.
 - Frontend: install, lint, type-check, build and run unit tests.
 Any failure must fail the build.
 ```
@@ -147,10 +157,11 @@ Requirements:
 - Status columns as strings backed by PHP enums, one enum per state machine in doc/state-machines.md.
 
 Also create Eloquent models with relationships and enum casts, a factory for every model, and update the ERD in doc/diagrams/erd/ (each .mmd file, its .md file and the rendered images; see doc/README.md) so it matches the final schema.
-Run the migrations from scratch against local PostgreSQL and show the output.
+Enable btree_gist in a migration (Supabase supports it), and make sure migrate:fresh touches only the public schema, never Supabase's own schemas (auth, storage and the rest).
+Run the migrations from scratch against the Supabase development project and show the output.
 ```
 
-**Done when:** `migrate:fresh` succeeds, every model has a factory, and the ERD in doc/diagrams/erd/ matches the migrations.
+**Done when:** `migrate:fresh` succeeds on the Supabase development project and in the test suite, every model has a factory, and the ERD in doc/diagrams/erd/ matches the migrations.
 
 ### P1.4a — Google sign-in
 
@@ -236,21 +247,19 @@ Build the frontend foundation described in implementation-plan.md Phase 1 steps 
 
 **Done when:** you can sign in with Google to the Next.js app against the real local API (mock mode uses a fake signed-in user), and you land in the right area for your role.
 
-### P1.8 — Deploy the working skeleton
+### P1.8 — Local working skeleton
 
 ```text
-Prepare the staging deployment described in implementation-plan.md Phase 1 step 17.
+Make the whole system run end to end locally, as Phase 1's working skeleton. implementation-plan.md Phase 1 step 17 describes it on staging; here it runs locally, and staging follows in P8.2.
 
-- /api: a deploy script, or documented steps, for cPanel: update the code, composer install --no-dev, migrate --force, cache config, routes and views. The document root points to /api/public, and the .env file sits outside the web root.
-- Cron: a single entry runs `php artisan schedule:run` every minute. Unless the hosting check showed that long-running processes are allowed, the scheduler processes the database queue with `queue:work --stop-when-empty`, without overlapping runs.
-- A /api/v1/health endpoint that checks the database connection and reports when the scheduler and queue last ran.
-- The Next.js app on Vercel (decision #5), on the www domain, with the API's URL and the allowed domains in its environment variables.
-- The staging Google OAuth settings: document the callback URL to register in the staging OAuth client.
-- doc/deployment.md listing every step and every environment variable.
+- A /api/v1/health endpoint that checks the database connection and reports when the scheduler and queue last ran. Add it to the OpenAPI contract.
+- One command in each repository starts what it needs: in the backend, the API server, the scheduler (`php artisan schedule:work`) and the queue worker; in the frontend, the Next.js dev server.
+- A tunnel with two HTTPS hostnames on one domain: one for the API and one for the Next.js app (for example, Cloudflare Tunnel). With the session cookie domain, Sanctum's stateful domains, CORS and the Google callback URL set for those hostnames, sign-in and the session must work across them as they will across www and api in production. Make it easy to switch between the localhost and tunnel settings. Before setting it up, tell me which tunnel you chose and what it needs from us (an account, a domain).
+- doc/local-development.md: every environment variable and where its value comes from (the Supabase development and test projects, the local Google OAuth client with its localhost and tunnel callback URLs, and the tunnel), how to start everything, and how to reset the development database.
 No real credentials in any file.
 ```
 
-**Done when:** staging serves the API and the Next.js app over HTTPS, Google sign-in works and the session holds across both subdomains, including during server-side rendering, and the health endpoint shows the scheduler running.
+**Done when:** on a fresh clone, following doc/local-development.md starts everything; Google sign-in works on localhost and through the tunnel; the session holds across the two tunnel hostnames, including during server-side rendering; and the health endpoint shows the database connected and the scheduler and queue running.
 
 **Then run the [phase exit check](#phase-exit-check) for Phase 1.**
 
@@ -383,7 +392,7 @@ Tests: draft and closed events never appear; delegation offerings never appear; 
 ```text
 Implement each event's link, QR code and poster (v1.md FR-14, decision #25).
 
-- The link is https://{public site}/events/{slug}. Slugs are unique across the platform (P2.1).
+- The link is {public site URL}/events/{slug}, with the public site URL from config (http://localhost:3000 locally, the tunnel's Next.js hostname when testing with a phone). Slugs are unique across the platform (P2.1).
 - GET /api/v1/organizer/events/{id}/share returns the link. GET /api/v1/organizer/events/{id}/qr-code?format=png|svg returns a QR code that encodes only the link. GET /api/v1/organizer/events/{id}/poster returns a printable A4 PDF with the event's name, date and venue in the event's timezone, the QR code, "Scan to buy tickets" and the link printed beneath it.
 - Only organizer staff of the event's organizer and platform admins can call them.
 - Generate the QR code and the PDF in /api with maintained libraries; tell me which ones you chose and why.
@@ -392,7 +401,7 @@ Implement each event's link, QR code and poster (v1.md FR-14, decision #25).
 - Tests: the QR code decodes to the event's link; another organizer's staff, event owners and guards are refused; the poster renders for a draft event too, and its link shows the event once it's published.
 ```
 
-**Done when:** organizer staff can download the QR code and the poster, and scanning the printed QR code opens the event page.
+**Done when:** organizer staff can download the QR code and the poster, and, with the public site URL set to the tunnel's Next.js hostname, scanning the printed QR code with a phone opens the event page.
 
 **Then run the [phase exit check](#phase-exit-check) for Phase 2.**
 
@@ -427,6 +436,7 @@ Write a concurrency test proving that inventory can't be oversold, as described 
 - Against PostgreSQL, create an offering with 10 tickets left, then fire 50 order requests at the same moment using real parallel processes or connections, not a sequential loop.
 - Assert that exactly 10 tickets are held, 40 requests get "sold out", and reserved_count + sold_count never exceeds capacity.
 - Include a variant with mixed quantities (1–4 tickets per request).
+- Locally it runs on the Supabase test project, which limits connections. Check the limit first; if 50 parallel connections exceed it, tell me before lowering the numbers.
 - Add it to CI. If it can't run reliably in CI, add a separate CI job for it.
 Show me the test output.
 ```
@@ -519,7 +529,7 @@ Implement the Pesapal provider adapter, following the Pesapal API 3.0 documentat
 
 - Base URL, consumer key and consumer secret come from environment variables, with separate values for sandbox and production.
 - Authentication: request an access token (RequestToken) and cache it until shortly before it expires.
-- IPN registration: an artisan command that registers our IPN URL (RegisterIPN) for the current environment and stores the returned IPN ID in config. Run it once per environment and document it.
+- IPN registration: an artisan command that registers our IPN URL (RegisterIPN) for the current environment and stores the returned IPN ID in config. Run it once per environment and document it. Locally, Pesapal can't reach localhost: register the tunnel's API hostname from P1.8, and register again if that hostname changes.
 - initiate(): submit the order (SubmitOrderRequest) with the amount, currency, description, buyer email and name (never a phone or ID number from our checkout), the IPN ID and our callback URL. Use the payment attempt's ID, not the order ID, as the merchant reference, so a buyer can retry a failed payment on the same order. Save the order tracking ID Pesapal returns as the payment's provider reference, and return the hosted checkout URL.
 - queryStatus(): call the transaction status endpoint (GetTransactionStatus) with the order tracking ID and map Pesapal's statuses (completed, failed, invalid, reversed) to our payment states. Keep only the payment method and confirmation code it returns. Never store, log or audit the paying account (Pesapal's payment_account field: the M-Pesa phone number or masked card number); strip it from the response before anything is saved.
 - parseNotification(): read the order tracking ID, merchant reference and notification type from the IPN, then confirm with queryStatus(). Build the IPN reply in the exact format Pesapal requires.
@@ -528,7 +538,7 @@ Implement the Pesapal provider adapter, following the Pesapal API 3.0 documentat
 - Tests with recorded sandbox responses for every method, with the paying account removed from the recordings, plus a test that no stored record or log line contains it. Also write doc/payments-pesapal.md: how to get sandbox credentials, register the IPN, run a test M-Pesa payment and a test card payment, and switch to production.
 ```
 
-**Done when:** a sandbox M-Pesa payment and a sandbox card payment both complete end to end through the IPN and the status check, and the recorded-response tests pass.
+**Done when:** a sandbox M-Pesa payment and a sandbox card payment both complete end to end locally, through the IPN (reaching the local API through the tunnel) and the status check, and the recorded-response tests pass.
 
 ### P4.4 — Reconciliation and refunds
 
@@ -582,7 +592,7 @@ Implement implementation-plan.md Phase 5 steps 3–4.
 - Retrieval tokens: random tokens, stored hashed in ticket_access_tokens, with an expiry date and the ability to revoke them.
 - GET /api/v1/ticket-access/{token} returns the order's tickets for a valid token only.
 - POST /api/v1/ticket-access/resend: the buyer enters their email address and order reference, and a new link is emailed. Rate-limit it, and always return the same response so it doesn't reveal whether an order exists.
-- Email: a queued Laravel notification, sent from the outbox record written in P4.2, with retries and logged failures. Use the provider from implementation-plan.md §11 #9; while the client hasn't chosen one, use a local mail catcher and ask me before configuring a real provider.
+- Email: a queued Laravel notification, sent from the outbox record written in P4.2, with retries and logged failures. Use the provider from implementation-plan.md §11 #9; until Phase 8, use a local mail catcher that runs without Docker (for example Mailpit), and ask me before configuring a real provider.
 - Buyer emails (hurdles.md H9, H10): the order confirmation with the retrieval link, a receipt for every paid order (with orders.receipt_number), postponement emails with the refund-request link, cancellation emails, and transfer emails. No SMS.
 - Document the SPF, DKIM and DMARC DNS records the client must add, in doc/email-setup.md.
 - Tests for valid, expired and revoked tokens, for the resend rate limit, and for the email being queued exactly once per order.
@@ -667,9 +677,9 @@ Build the guard area of the Next.js app, designed for phones first:
 Add component tests for each result state, including the network-error state.
 ```
 
-**Done when:** a guard can scan on a real phone over HTTPS on staging, and switching off the network shows "Unable to verify".
+**Done when:** a guard can scan on a real phone over HTTPS through the tunnel (P1.8), and switching off the network shows "Unable to verify".
 
-**Then run the [phase exit check](#phase-exit-check) for Phase 6.** After that, hold the field rehearsal from implementation-plan.md Phase 6 step 11 with real phones.
+**Then run the [phase exit check](#phase-exit-check) for Phase 6.** The field rehearsal from implementation-plan.md Phase 6 step 11 needs the hosted system, so it moves to Phase 8, after P8.2.
 
 ---
 
@@ -740,7 +750,46 @@ Build:
 
 ## Phase 8 — Testing, deployment and handover
 
-### P8.1 — End-to-end tests
+This is the first deployment: until now everything ran locally. Run P8.1 and P8.2 first, because the rest of this phase runs against staging.
+
+### P8.1 — Hosting check script
+
+```text
+Write a single-file PHP script, tools/hosting-check.php, that I can upload to the cPanel host to check the requirements in implementation-plan.md Phase 0 step 4.
+
+It must check and report as a PASS/FAIL table:
+- PHP version against the minimum for the latest stable Laravel release (state which version you're checking against).
+- Extensions: pdo_pgsql, mbstring, openssl, bcmath, intl, fileinfo, gd.
+- Whether functions Laravel's scheduler and queue rely on (such as proc_open) are disabled.
+- Whether the storage and cache directories would be writable.
+- A PostgreSQL connection to Supabase with SSL required, trying both the direct host and the pooler host, reporting which works, the connection time, and whether the server has IPv6.
+
+Security: read credentials from environment variables or a POST form, never print them, require a secret token in the URL to run at all, and show a warning to delete the file after use.
+```
+
+**Done when:** the script runs on the host and the go/no-go result is recorded in implementation-plan.md's hosting check.
+
+### P8.2 — Deploy staging
+
+```text
+Deploy staging, the first hosted environment, as described in implementation-plan.md Phase 1 step 17, using the results of the P8.1 hosting check.
+
+- A new Supabase project for staging, separate from the development and test projects. Connect to it the way the hosting check found working (direct or pooler), and run the migrations on it.
+- /api: a deploy script, or documented steps, for cPanel: update the code, composer install --no-dev, migrate --force, cache config, routes and views. The document root points to /api/public, and the .env file sits outside the web root.
+- Cron: a single entry runs `php artisan schedule:run` every minute. Unless the hosting check showed that long-running processes are allowed, the scheduler processes the database queue with `queue:work --stop-when-empty`, without overlapping runs.
+- The Next.js app on Vercel (decision #5), on the www domain, with the API's URL and the allowed domains in its environment variables.
+- The staging Google OAuth settings: document the callback URL to register in the staging OAuth client.
+- Pesapal sandbox on staging: register the staging IPN URL with the P4.3 command.
+- Email through the client's provider (decision #9), with the DNS records from doc/email-setup.md. If the client still hasn't chosen one, ask me.
+- doc/deployment.md listing every step and every environment variable.
+No real credentials in any file.
+```
+
+**Done when:** staging serves the API and the Next.js app over HTTPS; Google sign-in works and the session holds across both subdomains, including during server-side rendering; the health endpoint shows the scheduler and queue running; a sandbox M-Pesa payment and a sandbox card payment complete through the staging IPN; the ticket email arrives through the real provider; and a guard can scan on a real phone.
+
+Then hold the field rehearsal from implementation-plan.md Phase 6 step 11 against staging, with real phones on mobile data.
+
+### P8.3 — End-to-end tests
 
 ```text
 Write Playwright end-to-end tests for the full journey, running against staging-like settings with the FakeProvider:
@@ -756,7 +805,7 @@ Add them to CI as a separate job.
 
 **Done when:** the full journey passes in CI.
 
-### P8.2 — Security review
+### P8.4 — Security review
 
 ```text
 Review the whole codebase for security, as described in implementation-plan.md Phase 8 step 3, then fix what you find.
@@ -766,7 +815,7 @@ First report your findings ranked by severity, each with its location and the fi
 
 **Done when:** no critical or high findings remain open.
 
-### P8.3 — Performance tests
+### P8.5 — Performance tests
 
 ```text
 Write k6 scripts for the performance targets recorded in implementation-plan.md Phase 0 step 6, sized to the client's largest expected event and peak buyer numbers (hurdles.md H13):
@@ -777,7 +826,7 @@ Report response times (median and 95th percentile) against the targets, and iden
 
 **Done when:** the targets are met on staging, or the gaps are documented with a plan.
 
-### P8.4 — Monitoring and operations
+### P8.6 — Monitoring and operations
 
 ```text
 Set up production monitoring as described in implementation-plan.md Phase 8 steps 5–6:
@@ -789,7 +838,7 @@ Set up production monitoring as described in implementation-plan.md Phase 8 step
 
 **Done when:** each alert has been triggered on staging and reached the right people, and the runbook covers each one.
 
-### P8.5 — Go-live checklist and handover documents
+### P8.7 — Go-live checklist and handover documents
 
 ```text
 Prepare the go-live and handover documents described in implementation-plan.md Phase 8 steps 7–11:
