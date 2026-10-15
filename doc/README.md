@@ -73,6 +73,8 @@ The authoritative state machines. The state diagrams in v1.md §4.6 are short ve
 
 ## v1: Refined Software Requirements Specification ([v1.md](../v1.md))
 
+Diagram 2, the short ERD that v1.md §4.5 used to show, was removed in v1.md 1.8. §4.5 now links to the [complete ERD](diagrams/erd/00-overview.md).
+
 | # | Diagram | Source section | Status | Files |
 |---|---|---|---|---|
 | 1 | [High-level architecture](diagrams/v1/01-high-level-architecture.md) | §1 Product scope and architecture | Current | [md](diagrams/v1/01-high-level-architecture.md) · [mmd](diagrams/v1/01-high-level-architecture.mmd) · [svg](diagrams/v1/01-high-level-architecture.svg) · [png](diagrams/v1/01-high-level-architecture.png) |
