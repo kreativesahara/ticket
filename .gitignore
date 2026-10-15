@@ -1,0 +1,25 @@
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Sub-repositories (managed in their own git repositories)
+ticketbackend/
+ticketfrontend/
+api/
+frontend/
+
+# Environment Files
+.env
+.env.backup
+.env.production
+.env.local
+.env.*.local
+
+# Docker volumes
+pgdata/
+
+# IDE & Editor
+.idea/
+.vscode/
+*.swp
+*.swo

@@ -1,0 +1,150 @@
+# Dependency log
+
+Every runtime, package and service this codebase depends on, and what each one is for.
+
+**Keep it current.** Any change that adds, removes or upgrades a dependency updates this file in the same commit and adds a line to the [changelog](#7-changelog).
+
+**Versions.** *Declared* is the constraint in `composer.json` or `package.json`. *Locked* is the version that `composer.lock` or `pnpm-lock.yaml` actually installed.
+
+Last checked: 2026-10-15.
+
+---
+
+## 1. Runtimes and tools
+
+| Tool | Version | Used for |
+| --- | --- | --- |
+| PHP | ^8.3 declared · 8.4.21 local (Laravel Herd) | Runs the Laravel API |
+| Composer | 2.9.5 | PHP package manager for `ticketbackend` |
+| Node.js | 24.14.1 | Runs the Next.js dev server, production build and frontend tests |
+| pnpm | 12.11.2 (pinned in `packageManager`) | Package manager for `ticketfrontend` |
+| PostgreSQL | 16 locally · Supabase in production | The database. Tests run against PostgreSQL, never SQLite (CLAUDE.md rule 4) |
+
+## 2. Infrastructure and external services
+
+| Service | Version / source | Used for |
+| --- | --- | --- |
+| `postgres` container | `postgres:16-alpine` in `docker-compose.yml` | Local database `ticket_platform`. `docker/init-db.sql` also creates `ticket_platform_test` for the test suite |
+| Supabase | Hosted PostgreSQL | Production database |
+| Pesapal API 3.0 | External API | M-Pesa and card payments: hosted checkout, IPN notifications, transaction status checks |
+| Google OAuth | External API | Sign-in for admins, organizer staff and event owners |
+| cPanel | Hosting | Runs the API; cron drives the scheduler and queue |
+| Vercel | Hosting | Runs the Next.js frontend |
+
+---
+
+## 3. Backend: `ticketbackend` (Composer)
+
+### Production (`require`)
+
+| Package | Declared → locked | What it's for |
+| --- | --- | --- |
+| `laravel/framework` | ^13.17 → v13.36.0 | The Laravel framework: routing, Eloquent ORM, migrations, validation, policies, queues, scheduler and mail. It also brings in `guzzlehttp/guzzle` 8.2.0, the HTTP client behind Laravel's `Http` facade that we'll use to call Pesapal, and `nesbot/carbon` 3.14.2 for dates and times |
+| `laravel/tinker` | ^3.0 → v3.0.2 | Interactive console (`php artisan tinker`) for inspecting models and data during development |
+
+### Development (`require-dev`)
+
+| Package | Declared → locked | What it's for |
+| --- | --- | --- |
+| `pestphp/pest` | ^4.7 → v4.7.8 | The test framework the suite is written in (`php artisan test`) |
+| `pestphp/pest-plugin-laravel` | ^4.1 → v4.1.0 | Laravel helpers for Pest: HTTP test requests, `actingAs`, database assertions |
+| `phpunit/phpunit` | ^12.5.12 → 12.5.33 | The test engine Pest runs on |
+| `mockery/mockery` | ^1.6 → 1.6.15 | Mock objects in tests, for example to stand in for the Pesapal client |
+| `fakerphp/faker` | ^1.23 → v1.24.1 | Fake names, emails and other data for model factories and seeders |
+| `larastan/larastan` | ^3.13 → v3.13.0 | Static analysis: PHPStan with Laravel support, configured in `phpstan.neon`. This is the backend type check |
+| `laravel/pint` | ^1.27 → v1.32.1 | Code formatter and style linter |
+| `nunomaduro/collision` | ^8.6 → v8.9.5 | Readable error output in the console and test runner |
+| `laravel/pail` | ^1.2.5 → v1.2.7 | Follows the application log from the terminal (`php artisan pail`) |
+| `laravel/pao` | ^1.0.6 → v1.1.5 | Compact, agent-friendly output for the test and analysis tools. Ships with the Laravel 13 skeleton |
+
+### Node packages (`package.json`): skeleton defaults, not installed
+
+The Laravel skeleton includes these packages for building Blade views. The API serves no HTML, because every screen lives in `ticketfrontend`. `node_modules` has never been installed here. See [§6](#6-cleanup-candidates).
+
+| Package | Declared | What it's for |
+| --- | --- | --- |
+| `vite` | ^8.0.0 | Bundles CSS and JS for Blade views |
+| `laravel-vite-plugin` | ^3.1 | Connects Vite to Laravel |
+| `tailwindcss` | ^4.0.0 | Styles the default welcome page |
+| `@tailwindcss/vite` | ^4.0.0 | Tailwind plugin for Vite |
+| `concurrently` | ^10.0.3 | Runs several dev processes in one terminal |
+| `@laravel/multiplex` (optional) | ^0.4.1 | Used by `php artisan dev` to start the server, queue, log viewer and Vite together |
+
+---
+
+## 4. Frontend: `ticketfrontend` (pnpm)
+
+### `dependencies`
+
+| Package | Declared → locked | What it's for |
+| --- | --- | --- |
+| `next` | 16.4.1 (exact) | The React framework: App Router, server-side rendering and the routes for every role area |
+| `react` | 19.3.0 | The UI library |
+| `react-dom` | 19.3.0 | Renders React to the browser DOM |
+| `@base-ui/react` | ^1.9.0 → 1.9.0 | Headless, accessible primitives (dialogs, menus, popovers) underneath shadcn's `base-nova` style. Not imported yet; shadcn components added through the CLI will use it |
+| `class-variance-authority` | ^0.7.1 → 0.7.1 | Defines component variants such as size and colour. Used by `src/components/ui/button.tsx` |
+| `clsx` | ^2.1.1 → 2.1.1 | Builds `className` strings conditionally. Used by `cn()` in `src/lib/utils.ts` |
+| `tailwind-merge` | ^3.7.0 → 3.7.0 | Resolves conflicting Tailwind classes. Used by `cn()` in `src/lib/utils.ts` |
+| `lucide-react` | ^1.57.0 → 1.57.0 | Icon set, configured as shadcn's icon library in `components.json` |
+| `shadcn` | ^4.21.4 → 4.21.4 | The shadcn/ui CLI, which copies component source into `src/components/ui` |
+| `tw-animate-css` | ^1.4.0 → 1.4.0 | Tailwind v4 enter and exit animations that shadcn components use. Not yet imported in `globals.css` |
+| `cn` | ^0.4.0 → 0.4.0 | A class-name merge utility. **Not imported anywhere**: it duplicates our own `cn()` helper. See [§6](#6-cleanup-candidates) |
+
+### `devDependencies`
+
+| Package | Declared → locked | What it's for |
+| --- | --- | --- |
+| `typescript` | ^5 → 5.9.3 | Type checking (`pnpm type-check`) |
+| `@types/node` | ^20 → 20.19.43 | Type definitions for Node.js |
+| `@types/react` | ^19 → 19.3.0 | Type definitions for React |
+| `@types/react-dom` | ^19 → 19.3.0 | Type definitions for React DOM |
+| `tailwindcss` | ^4 → 4.3.3 | Utility-first CSS framework |
+| `@tailwindcss/turbopack` | ^4 → 4.3.3 | Lets Next.js's Turbopack bundler process Tailwind |
+| `eslint` | ^9 → 9.39.5 | Linter (`pnpm lint`) |
+| `eslint-config-next` | 16.4.1 | Next.js lint rules |
+| `vitest` | ^5.0.4 → 5.0.4 | Unit and component test runner (`pnpm test`) |
+| `@vitejs/plugin-react` | ^6.1.2 → 6.1.2 | Lets Vitest compile JSX and TSX |
+| `jsdom` | ^30.1.2 → 30.1.2 | Simulated browser DOM for component tests |
+| `@testing-library/react` | ^16.3.3 → 16.3.3 | Renders components in tests and queries them the way a user would |
+| `@testing-library/jest-dom` | ^7.0.1 → 7.0.1 | DOM assertions such as `toBeInTheDocument` |
+
+### shadcn/ui components
+
+These are not packages. The shadcn CLI copies each component's source into the repository, where we own it.
+
+| Component | File |
+| --- | --- |
+| Button | `src/components/ui/button.tsx` |
+
+---
+
+## 5. Planned: named in the specification, not installed yet
+
+| Package or tool | Repo | Purpose | When |
+| --- | --- | --- | --- |
+| `laravel/socialite` | backend | Google OAuth sign-in for admins, organizer staff and event owners | Phase 1, backend track step 9 |
+| `laravel/sanctum` | backend | SPA cookie sessions after sign-in, for every role | Phase 1, backend track step 9 |
+| OpenAPI client generator and mock server | frontend | A typed API client and a mock server generated from `/api/docs/openapi.yaml` | Phase 1, frontend track step 16. Tool not chosen yet |
+| k6 | tooling | Concurrent-request tests (no overselling, no double redemption) and performance tests | Phase 3 and Phase 8 (implementation-plan.md §12) |
+| Playwright | frontend | End-to-end tests in a real browser | Phase 5 (implementation-plan.md §12) |
+
+Packages for QR code images, guest-list export and the guard scanner's camera haven't been chosen. They'll be logged here when they're added.
+
+---
+
+## 6. Cleanup candidates
+
+Nothing here has been changed. Each item needs a decision first.
+
+1. **`cn` (frontend).** It's never imported, and `src/lib/utils.ts` already defines `cn()` using `clsx` and `tailwind-merge`. Remove it with `pnpm remove cn`.
+2. **Backend Node packages.** An API-only backend doesn't use them. Removing them means deleting `package.json`, `vite.config.js`, `resources/css`, `resources/js`, the welcome view, and the `npm install` and `npm run build` steps in the `composer setup` script.
+3. **`tw-animate-css` (frontend).** It's installed but not imported. Add `@import "tw-animate-css";` to `globals.css` when the first animated component (dialog, dropdown) is added.
+4. **`shadcn` (frontend).** The CLI is only needed while adding components, so it could move to `devDependencies`. It should stay in `dependencies` if `globals.css` later imports `shadcn/tailwind.css`.
+
+---
+
+## 7. Changelog
+
+| Date | Change |
+| --- | --- |
+| 2026-10-15 | Log created from `composer.json`, `composer.lock`, both `package.json` files, `pnpm-lock.yaml` and `docker-compose.yml` |
