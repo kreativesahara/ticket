@@ -1,7 +1,7 @@
 # Roles, Privileges & Authorization Architecture
 
-**Multi-Organizer Event Ticketing Platform · Version 1.1 · October 2026**  
-**References:** [audit ticket business rules.md](../audit%20ticket%20business%20rules.md) (§1, §2), [v1.md](../v1.md) (§FR-01, §FR-02, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2).
+**Multi-Organizer Event Ticketing Platform · Version 1.2 · 15 October 2026**  
+**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2).
 
 ---
 
@@ -48,10 +48,10 @@ graph TD
 * **Key Capabilities:**
   * Full administrative control over all organizers, events, ticket offerings, pricing, and delegations.
   * Direct ability to view, filter, and export all customer orders and attendee data platform-wide.
-  * Direct ability to execute or approve customer refunds, cancellations, and ticket revocations.
-  * Full oversight and approval of organizer payouts and platform fee configurations.
+  * Sole authority to start and approve refunds; can cancel events and revoke tickets.
+  * Verifies organizers before their first paid event, manages the event category list, sees every settlement report, and records manual payouts.
   * Full access to platform audit logs and security telemetry.
-  * Support override access to gate scanning operations and real-time gate diagnostics.
+  * Real-time gate diagnostics. Admins don't scan tickets: only guard accounts do.
 
 ### 2.2 Organizer Staff
 * **Description:** Organization manager holding **full operational and administrative authority** over their organizer account.
@@ -61,20 +61,21 @@ graph TD
   * Every organizer account must have at least **one active organizer staff member**.
   * Organizer staff can invite and manage other organizer staff members and assign event owners.
   * Full control over organizer profile, legal details, branding, and payout banking information.
-  * Create, edit, publish, close, cancel, and archive events.
+  * Create, edit, publish, cancel, and archive events (closing is automatic).
   * Configure ticket types, categories, prices, seating layouts, and delegations.
   * Issue complimentary, sponsor, or media tickets directly.
   * Create and manage guard password accounts and gate assignments.
   * Access comprehensive financial reports, ticket sales summaries, and settlement calculations.
+  * Cannot start refunds (platform admins only) and cannot scan tickets with their Google sign-in; a staff member who works a gate uses a guard account.
 
 ### 2.3 Event Owner
 * **Description:** An event-level role assigned to external event hosts, clients, or promoters who need visibility into who is attending their specific event.
 * **Scope:** Scoped strictly to the specific event(s) assigned to them.
 * **Authentication:** Google OAuth only (invited by Organizer Staff or Platform Admin).
 * **Sole Privileges:**
-  1. **View Guest Data:** View the roster of attendees and order details for their assigned event(s).
+  1. **View Guest Data:** View each ticket holder's name, ticket category, delegation and check-in status for their assigned event(s). No contact details, identity numbers or order amounts.
   2. **Filter Guest Data:** Filter attendees by ticket category, delegation, purchase date, or check-in status.
-  3. **Export Guest Data:** Download guest lists and attendee details as a CSV spreadsheet.
+  3. **Export Guest Data:** Download the same columns as a CSV spreadsheet.
 * **Strict Restrictions:**
   * Event Owners **cannot** edit event details, dates, venue, or descriptions.
   * Event Owners **cannot** modify ticket offerings, change prices, or alter inventory allocations.
@@ -84,10 +85,8 @@ graph TD
 ### 2.4 Guard
 * **Description:** Field operational personnel stationed at venue gates to scan QR codes or type 6-character short codes for entry verification.
 * **Scope:** Scoped strictly to assigned events and designated gates.
-* **Authentication:** Supports two secure paths:
-  1. **Google OAuth Invitation:** Guard accepts email invitation with a verified Google account.
-  2. **Temporary Guard Password Account:** Created by Organizer Staff or Platform Admin.
-* **Strict Rules for Guard Password Accounts ([audit ticket business rules.md §2](../audit%20ticket%20business%20rules.md)):**
+* **Authentication:** Guard password account only: the guard's own email address and a password, created by Organizer Staff or a Platform Admin. Guards never sign in with Google, and only guard accounts can scan.
+* **Strict Rules for Guard Password Accounts ([limitation.md §2](../limitation.md)):**
   * Password accounts belong strictly to the creating organizer (`managed_by_organizer_id`).
   * Account can **never** become an Organizer Staff, Event Owner, or Platform Admin.
   * Credentials work for **one event only**.
@@ -99,7 +98,7 @@ graph TD
 * **Description:** Public consumer purchasing or claiming tickets.
 * **Scope:** Access restricted to their own purchased orders and tickets.
 * **Authentication:** **Guest checkout** (no account or password required).
-* **Credential Access:** Orders and tickets are accessed exclusively via cryptographically secure, tokenized retrieval links (`/t/{access_token}`) delivered to the buyer’s email.
+* **Credential Access:** Orders and tickets are accessed exclusively via cryptographically secure, tokenized retrieval links (`/t/{access_token}`) delivered to the buyer's email, plus a checkout token during checkout. A holder can transfer a ticket from its link until the event starts, unless the event collects ID numbers.
 
 ---
 
@@ -114,6 +113,8 @@ graph TD
 | Functional Area | Capability | Platform Admin | Organizer Staff | Event Owner | Guard | Buyer / Guest |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Platform Ops** | View system audit logs | Full | No | No | No | No |
+| | View audit records for own events | Full | Limited (Own events, read-only) | No | No | No |
+| | Verify organizers & manage event categories | Full | No | No | No | No |
 | | Create/appoint Platform Admins | Full | No | No | No | No |
 | | Approve/Suspend Organizers | Full | No | No | No | No |
 | | View platform-wide financial aggregates | Full | No | No | No | No |
@@ -126,17 +127,19 @@ graph TD
 | | Configure reserved seating sections & seats | Full | Full (Own org) | No | No | No |
 | | Create & manage delegations (sponsors/groups) | Full | Full (Own org) | No | No | No |
 | | Issue sponsor/media tickets directly | Full | Full (Own org) | No | No | No |
-| **Guest Data** | **View attendee & order lists** | **Full** | **Full (Own events)** | **Limited (Assigned event)** | **No** | **Own Order Only** |
-| | **Filter attendee lists (category/status)** | **Full** | **Full (Own events)** | **Limited (Assigned event)** | **No** | **No** |
-| | **Export guest lists (CSV)** | **Full** | **Full (Own events)** | **Limited (Assigned event)** | **No** | **No** |
+| **Guest Data** | **View attendee & order lists** | **Full** | **Full (Own events)** | **Limited (Names & status, assigned event)** | **No** | **Own Order Only** |
+| | **Filter attendee lists (category/status)** | **Full** | **Full (Own events)** | **Limited (Names & status, assigned event)** | **No** | **No** |
+| | **Export guest lists (CSV)** | **Full** | **Full (Own events)** | **Limited (Names & status, assigned event)** | **No** | **No** |
 | **Orders & Sales** | Revoke or cancel individual tickets | Full | Full (Own events) | No | No | No |
-| | Request/approve customer refunds | Full | Request (Own events) | No | No | Request via policy |
+| | Start or approve refunds | Full | No | No | No | Request after a postponement |
+| | Transfer a ticket | No | No | No | No | Own tickets, before the event starts |
 | **Gate & Scanning** | Create guard password accounts & issue credentials | Full | Full (Own org) | No | No | No |
 | | Assign guards to specific events and gates | Full | Full (Own events) | No | No | No |
-| | Scan QR codes and redeem tickets | Full (Override) | Optional | No | Scoped (Assigned gates) | No |
-| | Enter short code for manual entry fallback | Full (Override) | Optional | No | Scoped (Assigned gates) | No |
+| | Scan QR codes and redeem tickets | No | No | No | Scoped (Assigned gates) | No |
+| | Enter short code for manual entry fallback | No | No | No | Scoped (Assigned gates) | No |
 | | View real-time gate attendance counts | Full | Full (Own events) | No | Scoped (Assigned gate) | No |
-| **Financials** | View settlement reports & payout calculations | Full | Full (Own events) | No | No | View own receipt |
+| **Financials** | View settlement reports & payout calculations | Full | Full (Own organizer) | No | No | View own receipt |
+| | Record manual payouts | Full | No | No | No | No |
 
 ---
 
@@ -300,7 +303,7 @@ class AttendeePolicy
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
+    email VARCHAR(255) NOT NULL,
     phone VARCHAR(50),
     sign_in_method VARCHAR(20) NOT NULL DEFAULT 'google', -- 'google', 'password'
     google_id VARCHAR(255) UNIQUE,
@@ -308,7 +311,8 @@ CREATE TABLE users (
     platform_role VARCHAR(20) DEFAULT NULL, -- 'admin' or NULL
     status VARCHAR(20) NOT NULL DEFAULT 'active', -- 'active', 'suspended'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT uq_user_email_method UNIQUE (email, sign_in_method)
 );
 
 -- Organizers (Tenants)
@@ -361,7 +365,7 @@ CREATE TABLE guard_credentials (
 -- System Audit Logs
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    actor_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
     organizer_id UUID REFERENCES organizers(id) ON DELETE SET NULL,
     event_id UUID REFERENCES events(id) ON DELETE SET NULL,
     action VARCHAR(100) NOT NULL,

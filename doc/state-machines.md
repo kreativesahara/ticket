@@ -1,6 +1,6 @@
 # State Machines
 
-**Multi-Organizer Event Ticketing Platform · Version 1.0 · 15 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.1 · 15 October 2026**
 
 **Based on:** [v1.md](../v1.md) §4.6 (version 1.7), [implementation-plan.md](../implementation-plan.md), [limitation.md](../limitation.md), [hurdles.md](../hurdles.md) and [techstack.md](../techstack.md) §5.
 
@@ -240,7 +240,7 @@ stateDiagram-v2
 - **Identity field.** Staff choose `events.identity_field` when they create the event: `none`, `phone` or `id_number`. It can change only while the event is a `draft`. Buyers never choose; checkout asks for exactly the field the event set.
   - `phone` or `id_number`: details are collected for every ticket, and each ticket holder gives their name and that field. Phone numbers are stored in full; ID numbers only as their last 4 digits. The scanner shows the holder's name and the last 4 digits with a "Check" prompt.
   - `none`: no phone number or ID number is collected from anyone in the order.
-  - No event collects both. Phone and ID number can't be added as organizer-defined questions, and any submission containing a field the event didn't ask for is refused.
+  - No event collects both. Organizer-defined questions are pick-lists, checkboxes or dates only (no free text), so a phone or ID number can't be collected any other way, and any submission containing a field the event didn't ask for is refused.
   - Tickets for `id_number` events can't be transferred.
 - Guards can't revoke, reinstate, transfer or issue tickets. Event owners only see a ticket's check-in status in the guest list.
 - A refund doesn't change a `redeemed` ticket.

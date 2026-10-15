@@ -59,7 +59,7 @@ Rules for guard password accounts:
 - **2.11** A guard password account can only ever be used for guard duties. It can never become an organizer staff member, event owner or admin.
 - **2.12** A guard password account belongs to the organizer who created it. No other organizer can use that guard.
 - **2.13** Each password works for **one event only**. The guard is assigned to one event at a time.
-- **2.14** The password is **deleted as soon as the event closes**, and the guard is signed out immediately. An event closes when its last gate closes, or when the organizer cancels or archives it, whichever happens first.
+- **2.14** The password is **deleted as soon as the event closes**, and the guard is signed out immediately. An event closes when its last gate closes (or at its end time, if it has no gates), or when the organizer cancels or archives it, whichever happens first.
 - **2.15** The guard's name stays on record after the password is deleted, so past ticket checks still show who did them. For the next event, the organizer issues a new password.
 - **2.16** If a guard forgets their password, the organizer issues a new one. There is no "forgot password" email.
 - **2.17** Repeated wrong passwords temporarily lock the account.

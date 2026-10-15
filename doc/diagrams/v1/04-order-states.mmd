@@ -1,4 +1,12 @@
 stateDiagram-v2
+    PartiallyRefunded : Partially refunded
     [*] --> Pending
     Pending --> Paid
+    Pending --> Expired
+    Pending --> Cancelled
     Paid --> Completed
+    Paid --> PartiallyRefunded
+    Paid --> Refunded
+    Completed --> PartiallyRefunded
+    Completed --> Refunded
+    PartiallyRefunded --> Refunded

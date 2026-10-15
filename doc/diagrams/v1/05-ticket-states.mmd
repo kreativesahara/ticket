@@ -1,5 +1,10 @@
 stateDiagram-v2
     PendingIssuance : Pending issuance
     [*] --> PendingIssuance
-    PendingIssuance --> Valid
+    [*] --> Valid
+    PendingIssuance --> Valid : approved
+    PendingIssuance --> Revoked : rejected
     Valid --> Redeemed
+    Valid --> Revoked
+    Revoked --> Valid : reinstated
+    Valid --> Expired : event closes

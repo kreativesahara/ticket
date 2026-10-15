@@ -1,11 +1,10 @@
 flowchart LR
-    A[Attendees] --> W[Next.js Website]
-    O[Organizers] --> D[React Dashboard]
-    EO[Event Owners] --> D
-    G[Platform Admins and Guards] --> D
+    A[Attendees] --> W[Next.js app on Vercel]
+    O[Organizer staff] --> W
+    EO[Event owners] --> W
+    G[Platform admins and guards] --> W
 
     W -- HTTPS REST API --> API[Laravel API on cPanel]
-    D -- HTTPS REST API --> API
 
     API --> S[Laravel Sanctum]
     API --> GO[Google OAuth sign-in]

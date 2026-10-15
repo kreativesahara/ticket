@@ -16,7 +16,5 @@ flowchart LR
     API --> EMAIL[Email Service]
     API --> QR[Ticket and QR Service]
 
-    PAY --> MPESA[M-Pesa Gateway]
-    PAY --> CARD[Card Payment Gateway]
-    MPESA -- Verified Webhooks --> API
-    CARD -- Verified Webhooks --> API
+    PAY --> PESAPAL[Pesapal: M-Pesa and card]
+    PESAPAL -- IPN, confirmed by status check --> API

@@ -502,7 +502,7 @@ Each part of this phase is built and tested on its own, and the core flow doesn'
 3. **Security review:** authorization tests across all endpoints, the Google sign-in flow (state check, verified emails, linking by Google account ID, no open redirects), guard password sign-in (hashing, rate limiting, lockout, forced password change, guard-only scope), checks against common web vulnerabilities (the OWASP Top 10), rate limits, no secrets in the repository, security headers, a dependency audit, and attempts to forge payment notifications.
 4. **Performance test** against the Phase 0 targets: a burst of checkouts on one event, and scanning throughput.
 5. **Backup and recovery.** Confirm what backups the Supabase plan includes, run a restore into staging, and document the procedure.
-6. **Monitoring.** Error tracking, uptime checks on the API and both frontends, and alerts for failed jobs, payments stuck in pending, and email failures.
+6. **Monitoring.** Error tracking, uptime checks on the API and the Next.js app, and alerts for failed jobs, payments stuck in pending, and email failures.
 7. **Production setup.** A production Supabase project; configuration stored outside the web root; cron; the agreed way of running queued jobs; HTTPS on both subdomains; the Next.js app on Vercel; Sanctum configured for the production domains; production Pesapal keys, with the production IPN URL registered; and a production Google OAuth client, with its callback URL registered and the consent screen published.
 8. **Data protection.** Publish the privacy notice and the deletion-on-request procedure (personal data is kept until someone asks for it to be deleted; hurdles.md H12), and agree each party's role (controller or processor). Confirm any registration obligations with Kenya's Office of the Data Protection Commissioner.
 9. **UAT.** The client tests on staging against the acceptance criteria in SOW §5. Defects are logged and classified, and critical and high defects are fixed before sign-off. The client has five business days to review.
@@ -583,7 +583,7 @@ These decisions affect the database, the integrations or the schedule. Each need
 | The 12-week schedule is too tight                         | Run tracks in parallel; use Phase 7 as the scope lever                                    | Both     |
 | Holidays fall inside the project window                   | Add one to two weeks of buffer when the start date is fixed                               | Both     |
 | Business decisions arrive late                            | Decision log with owners and deadlines                                                    | Client   |
-| Payment notifications are duplicated or late              | Duplicate checks, reconciliation job, late-payment policy                                 | Provider |
+| Payment notifications are duplicated or late              | Duplicate checks, reconciliation job, automatic refunds                                   | Provider |
 | Poor connectivity at gates                                | Scanner fails closed; field rehearsal; check venue connectivity before each event         | Both     |
 | Ticket emails go to spam or fail                          | SPF, DKIM and DMARC records; retries; buyers can request a new link                       | Both     |
 | Some staff or event owners can't sign in with Google      | Confirm in Phase 0; help them create a Google account with their existing email           | Client   |

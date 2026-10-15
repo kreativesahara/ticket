@@ -1,6 +1,11 @@
 stateDiagram-v2
     [*] --> Pending
     Pending --> Succeeded
+    Pending --> Rejected
     Pending --> Failed
     Pending --> Cancelled
     Pending --> Expired
+    Expired --> Rejected : late confirmation
+    Rejected --> Refunded : automatic refund
+    Succeeded --> Refunded
+    Succeeded --> Reversed

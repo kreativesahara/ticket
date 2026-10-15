@@ -2,15 +2,15 @@ sequenceDiagram
     participant Buyer
     participant Backend
     participant Database
-    participant Gateway as Payment Gateway
+    participant Gateway as Pesapal
     participant Email as Email Service
 
     Buyer->>Backend: Submit order
     Backend->>Database: Reserve inventory and create order
     Backend-->>Buyer: Pending order and payment instructions
     Buyer->>Gateway: Pay using M-Pesa or card
-    Gateway->>Backend: Payment notification
-    Backend->>Gateway: Verify payment if required
+    Gateway->>Backend: IPN notification
+    Backend->>Gateway: Confirm status (transaction status endpoint)
     Backend->>Database: Atomically record payment and issue tickets
     Backend->>Email: Queue ticket delivery
     Email-->>Buyer: Secure retrieval link

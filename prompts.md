@@ -135,7 +135,7 @@ Any failure must fail the build.
 ```text
 Using v1.md §4 (every table and column) and doc/state-machines.md, write Laravel migrations for the full MVP schema, including seating, so that later phases need no structural rework.
 
-First check hurdles.md H1 (settlement and payout records), H3 (zero-total orders and delegation claim codes), H5 (cancelled and postponed events) and H12 (anonymizing personal data while keeping financial records). Each can add tables or columns. If any is still Open, ask me before writing migrations.
+Include the tables and columns the decided hurdles add: H1 (settlement report and payout log), H3 (zero-total orders, delegation sub-quotas and claim codes), H5 (cancellation and postponement), H11 (checkout tokens) and H12 (deleting a person's data on request while keeping financial and scan records), plus the identity field, ticket transfers and event categories. How the platform fee is calculated (decision #2) is still open: store platform_fee_amount on order items, and ask me before adding any fee settings.
 
 Requirements:
 - UUID primary keys for records referenced from outside the system.
@@ -174,7 +174,7 @@ Implement sign-in with Google as described in implementation-plan.md Phase 1 ste
 Implement guard password sign-in as described in techstack.md §3 ("Guard password accounts") and v1.md FR-01. Organizers create these accounts and issue their passwords in P2.4; for now, use factories in tests.
 
 - Passwords live in guard_credentials (v1.md §4.1): one row per issued password, tied to one event, with the hash, password_change_required, who issued it, and revoked_at.
-- POST /api/v1/auth/guard/login (email and password) using Sanctum's SPA flow; this is the only way guards sign in: the client fetches /sanctum/csrf-cookie first. Only users with sign_in_method = password can use it, and only with an unrevoked credential whose event is still open. An event is closed when its last gate closing time has passed or it has been cancelled or archived. On success, log in and regenerate the session.
+- POST /api/v1/auth/guard/login (email and password) using Sanctum's SPA flow; this is the only way guards sign in: the client fetches /sanctum/csrf-cookie first. Only users with sign_in_method = password can use it, and only with an unrevoked credential whose event is still open. An event is closed when its last gate closing time has passed (or its end time, if it has no gates) or it has been cancelled or archived. On success, log in and regenerate the session.
 - Every request from a password guard checks again that their credential is unrevoked and its event still open. If not, end the session and return a clear "your access for this event has ended" error.
 - A password account can only ever hold the guard role. Enforce this in the models and policies, so it can never become an organizer member, event owner or platform admin.
 - Hash passwords with Laravel's default hasher. Rate-limit sign-in by email and IP, lock temporarily after repeated failures, and return the same error for an unknown email and a wrong password.
@@ -272,7 +272,7 @@ Implement events in /api as described in implementation-plan.md Phase 2 steps 1�
 - Policies, tenant-isolation tests and feature tests for every rule.
 ```
 
-**Done when:** the lifecycle and time-window rules are tested, events close automatically when their last gate closes, and the public endpoints never return draft or closed events.
+**Done when:** the lifecycle and time-window rules are tested, events close automatically when their last gate closes (or at their end time without gates), and the public endpoints never return draft or closed events.
 
 ### P2.2 — Ticket types, categories, offerings and delegations
 

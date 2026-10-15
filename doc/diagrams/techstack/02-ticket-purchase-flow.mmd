@@ -7,6 +7,6 @@ flowchart TD
     F -- Successful --> G[Mark payment paid]
     G --> H[Issue unique tickets]
     H --> I[Send secure ticket retrieval link]
-    F -- Failed --> J[Fail or expire order]
-    J --> K[Release reserved inventory]
+    F -- Failed or cancelled --> J[Buyer may retry while the hold lasts]
+    J --> K[Hold expires: release inventory and expire order]
     F -- Pending --> L[Await callback or reconciliation]

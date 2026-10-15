@@ -1,7 +1,7 @@
 # Sponsored Tickets & Delegations Distribution Specification
 
-**Multi-Organizer Event Ticketing Platform · Version 1.0 · October 2026**  
-**References:** [audit ticket business rules.md](../audit%20ticket%20business%20rules.md), [hurdles.md](../hurdles.md) (H1, H3, H6), [v1.md](../v1.md) (§FR-05, §4.5, §6), [implementation-plan.md](../implementation-plan.md) (Phases 2–6).
+**Multi-Organizer Event Ticketing Platform · Version 1.1 · 15 October 2026**  
+**References:** [limitation.md](../limitation.md), [hurdles.md](../hurdles.md) (H1, H3, H6, all decided), [doc/state-machines.md](state-machines.md), [v1.md](../v1.md) (§FR-05, §4.5, §6), [implementation-plan.md](../implementation-plan.md) (Phases 2–6).
 
 ---
 
@@ -28,12 +28,12 @@ Sponsored tickets are managed through the **Delegations** subsystem ([v1.md §FR
   * `id`: Unique identifier (UUID).
   * `event_id`: The event the delegation belongs to.
   * `name`: Identifier of the group/sponsor (e.g., *"Safaricom VIP Delegation"*, *"Platinum Sponsor Guest List"*).
-  * `capacity`: Total number of tickets allocated.
-  * `claimed_count`: Tickets already issued/claimed.
-  * `allowed_categories`: The ticket categories this delegation can claim (e.g., `VIP`, `VVIP`, `General Admission`).
+  * `capacity`: Total number of tickets allocated. This is a sub-quota of the offerings' capacity, never extra to it.
+  * `sold_count` and `reserved_count`: Tickets issued and tickets currently held.
+  * Allowed categories: the ticket categories this delegation can claim (the `delegation_categories` table).
   * `price_rule`: Pricing configuration (typically `KES 0` / complimentary, or a fixed sponsor discount).
-  * `access_code`: Unique 6–8 character alphanumeric code for claiming.
-  * `claim_token`: High-entropy URL token for direct 1-click private claim links.
+  * Access code: a 6–8 character code for claiming, stored as `access_code_hash` plus `access_code_encrypted`.
+  * Claim token: a high-entropy URL token for private claim links, stored as `claim_token_hash` plus `claim_token_encrypted`, so staff can show the link again.
   * `status`: `active`, `paused`, or `exhausted`.
 
 ---
@@ -45,7 +45,7 @@ The system supports two distribution pipelines for sponsored tickets:
 | Feature | Mode A: Self-Service Claim (Private Link / Code) | Mode B: Direct Organizer Issuance (Bulk Upload) |
 | :--- | :--- | :--- |
 | **Use Case** | Sponsor distributes a private link/code to their staff, clients, or executives to register themselves. | Sponsor provides a roster/CSV of names and emails directly to the organizer. |
-| **Data Collection** | Attendees input their own details and dietary/custom questions during checkout. | Organizer imports attendee details in bulk via dashboard. |
+| **Data Collection** | Attendees input their own details, the event's identity field if it has one, and the event's pick-list questions during checkout. | Organizer imports attendee details in bulk via dashboard. |
 | **Capacity Check** | Real-time atomic inventory reservation during order placement. | Batch allocation verified before mass insertion. |
 | **Recipient Experience** | Receives order confirmation and ticket retrieval email upon form completion. | Receives personalized ticket link email immediately upon organizer dispatch. |
 
@@ -66,12 +66,12 @@ sequenceDiagram
     actor Guard as Gate Guard
 
     Note over Organizer, DB: 1. Setup & Configuration
-    Organizer->>API: POST /api/v1/organizers/events/{id}/delegations
+    Organizer->>API: POST /api/v1/organizer/events/{id}/delegations
     API->>DB: Create delegation record with capacity & claim token
 
     Note over SponsorUser, DB: 2. Claim & Order Submission
     SponsorUser->>Web: Navigate to /claim/{token} or input Access Code
-    Web->>API: GET /api/v1/delegations/validate?token={token}
+    Web->>API: GET /api/v1/delegation-claims/{token}
     API-->>Web: Return delegation metadata (allowed categories, remaining quota)
     SponsorUser->>Web: Select category, enter attendee details & submit
     Web->>API: POST /api/v1/orders (with delegation context)
@@ -79,11 +79,11 @@ sequenceDiagram
     Note over API, DB: 3. Inventory Reservation & Zero-Cost Pipeline
     critical Atomic Database Transaction
         API->>DB: Check & hold inventory (UPDATE event_ticket_offerings reserved_count)
-        API->>DB: Check & increment delegation claimed_count
+        API->>DB: Check & hold delegation quota (UPDATE delegations reserved_count)
         API->>API: Calculate order total -> KES 0
         Note over API: BYPASS PESAPAL (Hurdle H3)
-        API->>DB: Set order status = 'completed', payment_status = 'complimentary'
-        API->>DB: Convert reserved inventory to sold_count
+        API->>DB: Order pending -> paid -> completed (no payment row)
+        API->>DB: Convert reserved offering and delegation holds to sold_count
         API->>DB: Insert tickets (linked to delegation_id, QR hash, short code)
         API->>DB: Insert outbox delivery event (`ticket.issued`)
     end
@@ -97,7 +97,7 @@ sequenceDiagram
 
     Note over SponsorUser, Guard: 5. Gate Verification & Entry
     SponsorUser->>Guard: Present QR code or 6-char short code
-    Guard->>API: Scan credential (POST /api/v1/manage/gates/{id}/scans)
+    Guard->>API: Scan credential (POST /api/v1/events/{id}/scans/validate)
     API->>DB: Validate ticket, check open gate, atomic mark redeemed
     API-->>Guard: Valid Ticket: Display Attendee Name + "Delegation: [Sponsor Name]"
 ```
@@ -107,27 +107,28 @@ sequenceDiagram
 ## 5. Detailed Pipeline Stages
 
 ### Stage 1: Delegation Setup & Authorization
-1. Organizer creates a delegation in `/manage/events/{id}/delegations`.
+1. Organizer staff create a delegation in the event's Delegations screen in the organizer area.
 2. The platform generates:
-   * A private retrieval claim URL: `https://tickets.domain.com/events/{event-slug}/claim?token={claim_token}`
+   * A private claim URL: `https://www.yourdomain.com/claim/{claim_token}`
    * An optional short claim code (e.g., `ACME2026`).
-3. Total capacity allocated across all delegations + public offerings cannot exceed the event's total venue capacity:
-   $$\sum \text{Offering Capacity} + \sum \text{Delegation Standalone Capacity} \le \text{Event Capacity}$$
+3. A delegation is a sub-quota of its offerings, so its tickets are never counted twice. Offering capacity alone counts against the event:
+   $$\sum \text{Offering Capacity} \le \text{Event Capacity}$$
+   A delegation ticket uses its offering's capacity and its delegation's quota in the same transaction.
 
 ### Stage 2: Eligibility & Reservation (Backend Pipeline)
 When `POST /api/v1/orders` is invoked with a `delegation_token` or `access_code`:
 1. **Delegation Guard Validation:**
    * Delegation exists and belongs to the active event.
    * Delegation status is `active`.
-   * Requested ticket count $\le$ (`capacity` - `claimed_count`).
+   * Requested ticket count $\le$ (`capacity` - `sold_count` - `reserved_count`).
    * Selected category $\in$ `allowed_categories`.
 2. **Atomic Quota Reservation:**
    ```sql
    UPDATE delegations
-   SET claimed_count = claimed_count + :qty
+   SET reserved_count = reserved_count + :qty
    WHERE id = :delegation_id
      AND status = 'active'
-     AND (capacity - claimed_count) >= :qty;
+     AND capacity - sold_count - reserved_count >= :qty;
    ```
    If zero rows update, the claim fails with `Delegation allocation exhausted`.
 
@@ -135,13 +136,9 @@ When `POST /api/v1/orders` is invoked with a `delegation_token` or `access_code`
 1. **Bypass Logic:**
    * Backend checks `final_amount == 0`.
    * Standard redirect to Pesapal hosted checkout is skipped.
-   * Payment record is written with:
-     * `provider`: `'complimentary'` / `'delegation'`
-     * `status`: `'completed'`
-     * `amount`: `0`
-     * `currency`: `'KES'`
+   * No payment record is written, because there is nothing to pay; the order records a zero total.
 2. **Atomic Issuance Transaction:**
-   * Order status transitions immediately: `pending` $\rightarrow$ `completed`.
+   * Order status transitions immediately: `pending` $\rightarrow$ `paid` $\rightarrow$ `completed` (doc/state-machines.md §2).
    * One record created in `tickets` for each unit:
      * `delegation_id`: Populated with the sponsor delegation ID.
      * `ticket_number`: Unique alphanumeric format (e.g., `TCK-XXXXX`).
@@ -164,8 +161,8 @@ When `POST /api/v1/orders` is invoked with a `delegation_token` or `access_code`
    * Downloadable PDF ticket with offline presentation capability.
 
 ### Stage 5: Gate Scan & Verification
-When a guard scans the ticket at the gate ([audit ticket business rules.md §9](../audit%20ticket%20business%20rules.md)):
-1. Backend verifies: Guard authenticated $\rightarrow$ Assigned to event $\rightarrow$ Gate open $\rightarrow$ Ticket valid.
+When a guard scans the ticket at the gate ([limitation.md §9](../limitation.md)):
+1. Backend verifies: Guard password account authenticated $\rightarrow$ Assigned to event $\rightarrow$ Within the entry window $\rightarrow$ Ticket valid.
 2. Atomically marks ticket:
    ```sql
    UPDATE tickets
@@ -205,14 +202,24 @@ CREATE TABLE delegations (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     capacity INTEGER NOT NULL CHECK (capacity > 0),
-    claimed_count INTEGER NOT NULL DEFAULT 0 CHECK (claimed_count <= capacity),
+    sold_count INTEGER NOT NULL DEFAULT 0,
+    reserved_count INTEGER NOT NULL DEFAULT 0,
     price_rule VARCHAR(50) NOT NULL DEFAULT 'complimentary', -- 'complimentary', 'discount_fixed', 'discount_percent'
-    allowed_categories JSONB NOT NULL DEFAULT '[]', -- Array of category UUIDs
-    access_code VARCHAR(32) UNIQUE,
-    claim_token VARCHAR(64) UNIQUE NOT NULL,
+    access_code_hash VARCHAR(255) UNIQUE,
+    access_code_encrypted TEXT,
+    claim_token_hash VARCHAR(255) UNIQUE NOT NULL,
+    claim_token_encrypted TEXT NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active', -- 'active', 'paused', 'exhausted'
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CHECK (sold_count >= 0 AND reserved_count >= 0 AND sold_count + reserved_count <= capacity)
+);
+
+-- Categories a delegation may claim
+CREATE TABLE delegation_categories (
+    delegation_id UUID NOT NULL REFERENCES delegations(id) ON DELETE CASCADE,
+    category_id UUID NOT NULL REFERENCES ticket_categories(id) ON DELETE CASCADE,
+    PRIMARY KEY (delegation_id, category_id)
 );
 
 -- Ticket Relationship
@@ -220,7 +227,7 @@ ALTER TABLE tickets
 ADD COLUMN delegation_id UUID REFERENCES delegations(id) ON DELETE SET NULL;
 
 CREATE INDEX idx_tickets_delegation_id ON tickets(delegation_id);
-CREATE INDEX idx_delegations_event_claim_token ON delegations(event_id, claim_token);
+CREATE INDEX idx_delegations_event ON delegations(event_id);
 ```
 
 ---
