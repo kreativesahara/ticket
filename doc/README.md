@@ -11,7 +11,7 @@ Every diagram has four files with the same name:
 
 There are two kinds of diagram:
 
-- **Copies** of the Mermaid blocks in the specification documents (v1.md, v2.md, techstack.md, implementation-plan.md, doc/state-machines.md, doc/roleandprivileage.md and doc/sponsored.md). The document is the source; the `.md` and `.mmd` files must match it.
+- **Copies** of the Mermaid blocks in the specification documents (v1.md, techstack.md, implementation-plan.md, doc/state-machines.md, doc/roleandprivileage.md and doc/sponsored.md). The document is the source; the `.md` and `.mmd` files must match it.
 - **Standalone diagrams** drawn from the specification: the complete database ERD, the use case diagrams and the buyer journey activity diagrams. Their `.mmd` and `.md` files are the source.
 
 Mermaid has no use case or activity diagram type, so those are drawn as flowcharts that follow UML conventions. Each one explains its notation.
@@ -81,16 +81,6 @@ The authoritative state machines. The state diagrams in v1.md §4.6 are short ve
 | 5 | [Ticket states](diagrams/v1/05-ticket-states.md) | §4.6 Important state models | Short version | [md](diagrams/v1/05-ticket-states.md) · [mmd](diagrams/v1/05-ticket-states.mmd) · [svg](diagrams/v1/05-ticket-states.svg) · [png](diagrams/v1/05-ticket-states.png) |
 | 6 | [Payment-to-ticket issuance sequence](diagrams/v1/06-payment-to-ticket-sequence.md) | §6 Payment-to-ticket issuance workflow | Current | [md](diagrams/v1/06-payment-to-ticket-sequence.md) · [mmd](diagrams/v1/06-payment-to-ticket-sequence.mmd) · [svg](diagrams/v1/06-payment-to-ticket-sequence.svg) · [png](diagrams/v1/06-payment-to-ticket-sequence.png) |
 | 7 | [Event states](diagrams/v1/07-event-states.md) | §4.6 Important state models | Short version | [md](diagrams/v1/07-event-states.md) · [mmd](diagrams/v1/07-event-states.mmd) · [svg](diagrams/v1/07-event-states.svg) · [png](diagrams/v1/07-event-states.png) |
-
-## v2: Requirements Review ([v2.md](../v2.md), replaced)
-
-v1.md replaces v2.md. These diagrams are kept for reference only; their names and decisions are out of date.
-
-| # | Diagram | Source section | Files |
-|---|---|---|---|
-| 1 | [Ticket purchasing flow](diagrams/v2/01-ticket-purchasing-flow.md) | §2 Recommended ticket purchasing flow | [md](diagrams/v2/01-ticket-purchasing-flow.md) · [mmd](diagrams/v2/01-ticket-purchasing-flow.mmd) · [svg](diagrams/v2/01-ticket-purchasing-flow.svg) · [png](diagrams/v2/01-ticket-purchasing-flow.png) |
-| 2 | [Guard account delegation](diagrams/v2/02-guard-delegation-flow.md) | §6 Roles and permissions | [md](diagrams/v2/02-guard-delegation-flow.md) · [mmd](diagrams/v2/02-guard-delegation-flow.mmd) · [svg](diagrams/v2/02-guard-delegation-flow.svg) · [png](diagrams/v2/02-guard-delegation-flow.png) |
-| 3 | [Database structure (ERD)](diagrams/v2/03-database-structure-erd.md) | §10 Recommended database structure | [md](diagrams/v2/03-database-structure-erd.md) · [mmd](diagrams/v2/03-database-structure-erd.mmd) · [svg](diagrams/v2/03-database-structure-erd.svg) · [png](diagrams/v2/03-database-structure-erd.png) |
 
 ## Tech stack: Architecture Blueprint ([techstack.md](../techstack.md))
 
