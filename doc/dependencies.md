@@ -18,14 +18,17 @@ Last checked: 2026-10-15.
 | Composer | 2.9.5 | PHP package manager for `ticketbackend` |
 | Node.js | 24.14.1 | Runs the Next.js dev server, production build and frontend tests |
 | pnpm | 12.11.2 (pinned in `packageManager`) | Package manager for `ticketfrontend` |
-| PostgreSQL | 16 locally · Supabase in production | The database. Tests run against PostgreSQL, never SQLite (CLAUDE.md rule 4) |
+| PostgreSQL | 16 (local container & CI service container) · Supabase (remote) | The database. Tests run against PostgreSQL, never SQLite (CLAUDE.md rule 4) |
+| Supabase Agent Skills | `supabase`, `supabase-postgres-best-practices` | Postgres best practices and Supabase workflow guidelines installed in `.agents/skills` |
 
 ## 2. Infrastructure and external services
 
 | Service | Version / source | Used for |
 | --- | --- | --- |
-| `postgres` container | `postgres:16-alpine` in `docker-compose.yml` | Local database `ticket_platform`. `docker/init-db.sql` also creates `ticket_platform_test` for the test suite |
-| Supabase | Hosted PostgreSQL | Production database |
+| `postgres` container | `postgres:16-alpine` in `docker-compose.yml` & CI workflow | Local database `ticket_platform` and isolated CI test runner service container (`ticket_platform_test`) |
+| Supabase | Hosted PostgreSQL 16 (`aws-1-eu-central-1.pooler.supabase.com:5432`, ref: `qglaepourqlklgsfvkai`) | Development and production database via session pooler with `sslmode=require` |
+| Supabase MCP Server | `https://mcp.supabase.com/mcp` | IDE MCP server for remote schema inspection, logs, migrations, and keys |
+| GitHub Actions | `ubuntu-latest` | CI workflows for backend (Pint, Larastan, Pest) and frontend (lint, type-check, build, test) |
 | Pesapal API 3.0 | External API | M-Pesa and card payments: hosted checkout, IPN notifications, transaction status checks |
 | Google OAuth | External API | Sign-in for admins, organizer staff and event owners |
 | cPanel | Hosting | Runs the API; cron drives the scheduler and queue |
@@ -141,10 +144,22 @@ Nothing here has been changed. Each item needs a decision first.
 3. **`tw-animate-css` (frontend).** It's installed but not imported. Add `@import "tw-animate-css";` to `globals.css` when the first animated component (dialog, dropdown) is added.
 4. **`shadcn` (frontend).** The CLI is only needed while adding components, so it could move to `devDependencies`. It should stay in `dependencies` if `globals.css` later imports `shadcn/tailwind.css`.
 
+### CI Actions (GitHub Actions)
+
+| Action | Version | Used for |
+| --- | --- | --- |
+| `actions/checkout` | v4 | Checks out the repository in CI runner |
+| `shivammathur/setup-php` | v2 | Installs PHP 8.3 with required PostgreSQL extensions in backend CI |
+| `actions/cache` | v4 | Caches Composer dependencies across CI runs |
+| `pnpm/action-setup` | v4 | Installs pinned `pnpm` (12.11.2) in frontend CI |
+| `actions/setup-node` | v4 | Installs Node.js 20 with pnpm cache in frontend CI |
+
 ---
 
 ## 7. Changelog
 
 | Date | Change |
 | --- | --- |
+| 2026-10-15 | Added GitHub Actions CI workflows, Supabase project pooler details (`qglaepourqlklgsfvkai`), Supabase MCP server, and Supabase agent skills (`supabase`, `supabase-postgres-best-practices`) |
 | 2026-10-15 | Log created from `composer.json`, `composer.lock`, both `package.json` files, `pnpm-lock.yaml` and `docker-compose.yml` |
+

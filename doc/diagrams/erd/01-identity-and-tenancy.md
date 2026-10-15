@@ -11,7 +11,7 @@ erDiagram
     users {
         key id PK
         string name
-        string email "unique per sign_in_method"
+        string email UK
         string phone
         string sign_in_method "google or password"
         string google_id UK "Google users only"
@@ -48,7 +48,7 @@ erDiagram
         key organizer_id FK
         key category_id FK
         string name
-        string slug "unique per organizer"
+        string slug UK "unique across platform"
         text description
         string image_path
         string venue
@@ -61,6 +61,11 @@ erDiagram
         boolean captcha_required
         text refund_policy
         timestamp refund_requests_until "set on postponement"
+        timestamp cancelled_at "set on cancellation"
+        text cancellation_reason
+        timestamp postponed_at "set on postponement"
+        timestamp original_starts_at
+        timestamp original_ends_at
         string status "draft, published, closed, cancelled, archived"
     }
     event_gates {

@@ -52,6 +52,7 @@ erDiagram
         string email
         string phone "CHECK: phone or id_number_last4, never both"
         string id_number_last4
+        timestamp anonymized_at "H12 right to be forgotten"
     }
     ticket_field_definitions {
         key id PK

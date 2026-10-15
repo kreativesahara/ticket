@@ -111,6 +111,7 @@ erDiagram
         string reference
         timestamp paid_at
         key recorded_by FK
+        text notes "optional settlement notes"
     }
     outbox_messages {
         key id PK
