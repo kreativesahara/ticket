@@ -197,7 +197,7 @@ Use temporary inventory reservations with an expiry. Otherwise, abandoned paymen
 
 Pesapal notifies Laravel of payment changes through IPN (instant payment notification) calls. Treat each IPN only as a signal: confirm the actual result with Pesapal's transaction status endpoint before marking anything paid. Processing must also be **idempotent**: a repeated IPN must not issue duplicate tickets or process the same payment twice. A scheduled reconciliation process should ask Pesapal about payments that stay pending or look inconsistent.
 
-Buyers choose M-Pesa or card on Pesapal's hosted checkout, so card details never reach the platform. The buyer's return to the callback URL only shows a status page; it never marks the order as paid.
+Buyers choose M-Pesa or card on Pesapal's hosted checkout, so card details never reach the platform. Pesapal's status response reports the paying account (the M-Pesa phone number or masked card number); Laravel discards it and keeps only the payment method and confirmation code. The buyer's return to the callback URL only shows a status page; it never marks the order as paid.
 
 ### B. QR scanning at the gate
 

@@ -271,7 +271,7 @@ Implement events in /api as described in implementation-plan.md Phase 2 steps 1�
 - A scheduled job runs every minute and moves published events to closed once their last gate closing time has passed. No user can set or undo closed. Closed events can't be bought or scanned, and drop out of the public list.
 - DELETE /api/v1/organizer/events/{id} deletes a draft that was never published, with an audit log entry. Any other event returns a conflict response: once published, an event can only be archived (from closed or cancelled), never deleted.
 - Cancelling here only changes the event's state. What happens to tickets already sold follows hurdles.md H5 and is built in P4.4.
-- Name, slug (unique per organizer), description, venue, timezone (an IANA name) and images stored in Supabase Storage with validated type and size.
+- Name, slug (unique per organizer), description, venue, timezone (an IANA name), the identity field (none, phone or id_number; see P2.3) and images stored in Supabase Storage with validated type and size.
 - Separate time windows, each validated: sales start and end, gate opening and closing, event start and end. Store times in UTC and return them together with the event's timezone.
 - Policies, tenant-isolation tests and feature tests for every rule.
 ```
@@ -299,10 +299,12 @@ Implement ticket configuration as described in implementation-plan.md Phase 2 st
 Implement attendee information settings for each event, as described in implementation-plan.md Phase 2 step 7.
 
 - The collection mode: purchaser details only, or details for every ticket.
-- Field definitions: key, label, type (text, email, phone, select, checkbox, date), whether it's required, options for select fields, display order, and whether it applies to the purchaser or each ticket.
+- Field definitions: key, label, type (text, email, select, checkbox, date), whether it's required, options for select fields, display order, and whether it applies to the purchaser or each ticket.
 - Full name and email are always collected from the purchaser.
-- A reusable validator that, given an event, validates submitted purchaser and attendee data against the event's setup. Phase 3 will use it.
-- Tests for both collection modes and every field type.
+- The identity field (v1.md FR-07): events.identity_field is none, phone or id_number. Staff set it when creating the event and can change it only while the event is a draft. With phone or id_number, the collection mode is forced to every ticket, and each ticket holder must give their name and that field. Phone and ID number are not field types organizers can add as questions, so no event can ask for both, and buyers never choose which one to give.
+- A reusable validator that, given an event, validates submitted purchaser and attendee data against the event's setup. It requires the identity field for every ticket holder when the event sets one, and rejects any field the event didn't ask for, such as an ID number on a phone event or either one on a none event. Phase 3 will use it.
+- Store phone numbers in attendees.phone and only the last 4 digits of an ID number in attendees.id_number_last4, with a CHECK constraint so an attendee row never has both.
+- Tests for both collection modes and every field type, including: a phone event rejects an ID number, an ID event rejects a phone number and a none event rejects both; every ticket holder must give the identity field; the identity field can't change once the event is published; only the last 4 ID digits reach the database.
 ```
 
 **Done when:** the validator accepts valid data and rejects invalid data in both collection modes.
@@ -424,7 +426,7 @@ Implement hold expiry as described in implementation-plan.md Phase 3 step 3.
 ```text
 Implement the rest of order building, as described in implementation-plan.md Phase 3 steps 4–7.
 
-- Validate purchaser and attendee data with the validator from P2.3, and store the purchaser separately from ticket holders.
+- Validate purchaser and attendee data with the validator from P2.3, and store the purchaser separately from ticket holders. An order whose details include a field the event didn't ask for, such as an ID number on a phone event, is rejected before any inventory is held.
 - Pricing service (backend only): unit price × quantity, group rules, then discounts. Order items keep a snapshot of the unit price, discount, fees and currency. Any platform fee follows implementation-plan.md §11 #2 (ask me if it's still open).
 - Orders that total zero (a 100% discount or a free delegation) follow hurdles.md H3. The recommendation is to skip payment and issue tickets with the same checks and audit trail; ask me if it's still Open.
 - Core promotions: percentage or fixed discount; eligible offerings; start and end dates; a total usage limit; a per-buyer limit (by email); a minimum quantity or order value. Count usage against the hold so concurrent orders can't exceed a limit, and release the usage when the hold expires.
@@ -494,12 +496,12 @@ Implement the Pesapal provider adapter, following the Pesapal API 3.0 documentat
 - Base URL, consumer key and consumer secret come from environment variables, with separate values for sandbox and production.
 - Authentication: request an access token (RequestToken) and cache it until shortly before it expires.
 - IPN registration: an artisan command that registers our IPN URL (RegisterIPN) for the current environment and stores the returned IPN ID in config. Run it once per environment and document it.
-- initiate(): submit the order (SubmitOrderRequest) with the amount, currency, description, buyer email, phone and name, the IPN ID and our callback URL. Use the payment attempt's ID, not the order ID, as the merchant reference, so a buyer can retry a failed payment on the same order. Save the order tracking ID Pesapal returns as the payment's provider reference, and return the hosted checkout URL.
-- queryStatus(): call the transaction status endpoint (GetTransactionStatus) with the order tracking ID and map Pesapal's statuses (completed, failed, invalid, reversed) to our payment states. Keep the payment method and confirmation code it returns.
+- initiate(): submit the order (SubmitOrderRequest) with the amount, currency, description, buyer email and name (never a phone or ID number from our checkout), the IPN ID and our callback URL. Use the payment attempt's ID, not the order ID, as the merchant reference, so a buyer can retry a failed payment on the same order. Save the order tracking ID Pesapal returns as the payment's provider reference, and return the hosted checkout URL.
+- queryStatus(): call the transaction status endpoint (GetTransactionStatus) with the order tracking ID and map Pesapal's statuses (completed, failed, invalid, reversed) to our payment states. Keep only the payment method and confirmation code it returns. Never store, log or audit the paying account (Pesapal's payment_account field: the M-Pesa phone number or masked card number); strip it from the response before anything is saved.
 - parseNotification(): read the order tracking ID, merchant reference and notification type from the IPN, then confirm with queryStatus(). Build the IPN reply in the exact format Pesapal requires.
 - refund(): use Pesapal's refund request (RefundRequest) where Pesapal supports it for the payment method, and track the refund's status.
 - If an order total isn't a whole number of shillings, check how Pesapal handles that for M-Pesa and ask me before rounding anything.
-- Tests with recorded sandbox responses for every method. Also write doc/payments-pesapal.md: how to get sandbox credentials, register the IPN, run a test M-Pesa payment and a test card payment, and switch to production.
+- Tests with recorded sandbox responses for every method, with the paying account removed from the recordings, plus a test that no stored record or log line contains it. Also write doc/payments-pesapal.md: how to get sandbox credentials, register the IPN, run a test M-Pesa payment and a test card payment, and switch to production.
 ```
 
 **Done when:** a sandbox M-Pesa payment and a sandbox card payment both complete end to end through the IPN and the status check, and the recorded-response tests pass.
@@ -607,7 +609,7 @@ Redeem with one atomic update:
 - The endpoint accepts either a QR token or a 6-character short code (case-insensitive; spaces and dashes ignored). A short code is looked up by its keyed hash within this event only, then goes through exactly the same checks and the same atomic update.
 - Short code entry is rate-limited per guard (for example, 10 per minute). After 5 invalid codes in a row, lock short code entry for that guard until the organizer unlocks it, and notify the organizer. QR scanning keeps working during a lock.
 - Log every attempt in ticket_scans, including rejected ones: result, gate, guard, time and method (qr or short_code).
-- The response contains only: the result, the reason, the category, the attendee name where collected, the seat or delegation, and, for a ticket already used, the earlier time and gate.
+- The response contains only: the result, the reason, the category, the attendee name where collected, the last 4 digits of the holder's phone or ID number when the event has an identity field, the seat or delegation, and, for a ticket already used, the earlier time and gate.
 - Rate-limit by guard.
 - Re-entry is not supported: a redeemed ticket never admits again (hurdles.md H7, limitation.md rule 9.10). If that decision has changed, stop and ask me.
 ```
@@ -632,7 +634,7 @@ Show me the output.
 ```text
 Build the guard area in /manage, designed for phones first:
 - Sign in (with Google, or with a guard email and password) → list of assigned events → choose a gate → full-screen camera scanner. Include a visible "Sign out" button for shift changes on shared phones. When a password guard's event closes, show that their access has ended. Use a maintained browser QR-scanning library and tell me which one you chose and why. Note that camera access requires HTTPS.
-- An "Enter code" button for when a QR code won't scan. The guard asks the attendee to show their downloaded or printed ticket and types its 6-character short code on a large keypad with letters and numbers. The result screen shows the attendee name (where collected) and category, so the guard can compare it with the ticket shown. If short code entry is locked, say so clearly and point the guard back to QR scanning.
+- An "Enter code" button for when a QR code won't scan. The guard asks the attendee to show their downloaded or printed ticket and types its 6-character short code on a large keypad with letters and numbers. The result screen shows the attendee name (where collected) and category, so the guard can compare it with the ticket shown. When the event has an identity field, it also shows the last 4 digits of the holder's phone or ID number with a "Check" prompt. If short code entry is locked, say so clearly and point the guard back to QR scanning.
 - Result screens: large and high-contrast, readable at arm's length, each with a distinct color and icon, plus a sound or vibration where the device supports it. The four states are VALID (admit), ALREADY USED (show the time and gate), INVALID (show the reason) and UNABLE TO VERIFY.
 - Fail closed: a timeout (about 5 seconds, configurable) or a network error shows "Unable to verify — do not admit". It must never show success.
 - After each result, the scanner returns to scanning with one tap.

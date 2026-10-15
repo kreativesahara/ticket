@@ -99,6 +99,7 @@ Rules for guard password accounts:
 - **5.4** Tickets are held for the buyer for a limited time while they pay. If time runs out, the tickets go back on sale and the order expires. (Hold length: see decision C11.)
 - **5.5** One order can contain many tickets. Each ticket gets its own QR code and short code, and can be used by a different person.
 - **5.6** The platform calculates every price and total itself. It never relies on figures sent from the buyer's browser.
+- **5.7** When creating an event, the organizer chooses whether buyers must give a **phone number**, an **ID number**, or neither. Buyers can't choose: checkout asks for exactly what the event set, and never for both. With a phone or ID number, every ticket holder gives their name and that number; only the last 4 digits of an ID number are kept, and the guard checks the last 4 digits at the gate. The choice can be changed only while the event is still a draft.
 
 ### 6. Promotions and discount codes
 
@@ -109,7 +110,7 @@ Rules for guard password accounts:
 
 ### 7. Payments
 
-- **7.1** All payments go through **Pesapal**. Buyers pay by M-Pesa or card on Pesapal's secure payment page. Card details never reach the platform.
+- **7.1** All payments go through **Pesapal**. Buyers pay by M-Pesa or card on Pesapal's secure payment page. Card details never reach the platform, and the platform doesn't keep the M-Pesa number or card used to pay.
 - **7.2** An order counts as paid only when the platform has confirmed the payment directly with Pesapal. A "payment successful" screen alone is never enough.
 - **7.3** If Pesapal reports the same payment more than once, it's processed only once and tickets are issued only once.
 - **7.4** If no confirmation arrives, the platform checks with Pesapal automatically every few minutes.
@@ -141,7 +142,7 @@ Rules for guard password accounts:
   - **Invalid:** with the reason, such as cancelled, unpaid, wrong event, or gate not open.
   - **Unable to verify:** do not admit.
 - **9.5** Each ticket admits **one person, once**. If two guards check the same ticket at the same moment, only one succeeds.
-- **9.6** If a QR code won't scan, the attendee shows their downloaded or printed ticket and the guard **types its 6-character short code**. The code goes through the same checks and admits once. The result shows the attendee's name (where collected) so the guard can compare it with the ticket.
+- **9.6** If a QR code won't scan, the attendee shows their downloaded or printed ticket and the guard **types its 6-character short code**. The code goes through the same checks and admits once. The result shows the attendee's name (where collected) so the guard can compare it with the ticket, and, when the event asks for a phone or ID number, its last 4 digits.
 - **9.7** Code typing is limited per guard. After **5 wrong codes in a row**, that guard's code entry is locked until the organizer unlocks it; QR scanning keeps working.
 - **9.8** Every check is recorded, whether it succeeded or not: the guard, the gate, the time, and whether the QR code was scanned or the code typed.
 - **9.9** Guards see only the details needed to check entry, not buyers' full information.

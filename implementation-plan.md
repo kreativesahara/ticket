@@ -235,7 +235,7 @@ These items can delay launch no matter how fast development goes:
 4. **Ticket types and categories.** Seed the defaults (Early Bird, Normal, At the Gate, Group and Promoted; VVIP, VIP and Media) and let organizers add their own.
 5. **Offerings.** Each allowed type × category combination, with a price in minor units of KES, capacity, sales window, and minimum and maximum per order. Include group quantity rules, and an approval or manual-issue flag for Media tickets.
 6. **Delegations.** Each with its allocation, allowed categories and price rules.
-7. **Attendee details setup.** The collection mode (purchaser only, or details for every ticket) and the field definitions, including event-specific questions.
+7. **Attendee details setup.** The collection mode (purchaser only, or details for every ticket) and the field definitions, including event-specific questions. Staff choose the event's identity field when they create it (none, phone number or ID number; v1.md FR-07) and can change it only while the event is a draft. With a phone or ID number, details are collected for every ticket and each holder gives that field; phone and ID number can't be added as questions, so no event asks for both.
 8. **Gates and staff.** Create gates, add guards either by email invitation (the guard accepts by signing in with a Google account that uses that address) or by creating a guard password account and giving the guard its temporary password, assign each guard to an event and optionally a gate, and remove assignments. A guard password account works for one event at a time. When that event closes (its last gate closes, or it is cancelled or archived), the password is deleted, the guard's sessions end and the assignment ends. A job runs this every minute, and every request from a password guard also checks the event is still open (techstack.md §3). Assign event owners to an event by email invitation (role `event_owner`, with the event attached), and remove them; removal ends their access to that event immediately.
 9. **Publishing rules.** An event can be published only if it has at least one active offering, valid time windows, and capacity that covers its allocations. Changes after publishing are audited. Changes that would affect existing orders, such as lowering capacity below tickets already sold, are blocked or need explicit confirmation.
 10. **Admin.** List organizers, suspend or reactivate them, and oversee events.
@@ -419,7 +419,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
    ```
 
 3. **Scan log.** Record every attempt in `ticket_scans`, including rejected ones, with the result, gate, guard, time and method (QR scan or short code).
-4. **Minimal response.** Return only what the guard needs: the result and reason, the category, the attendee name where collected, the seat or delegation, and, for a ticket already used, when and at which gate.
+4. **Minimal response.** Return only what the guard needs: the result and reason, the category, the attendee name where collected, the last 4 digits of the holder's phone or ID number when the event has an identity field, the seat or delegation, and, for a ticket already used, when and at which gate.
 
 ### Frontend (guard area in `/manage`)
 
