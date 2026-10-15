@@ -1,0 +1,136 @@
+erDiagram
+    organizers {
+        key id PK "see 01 identity and tenancy"
+    }
+    events {
+        key id PK "see 01 identity and tenancy"
+    }
+    event_gates {
+        key id PK "see 01 identity and tenancy"
+    }
+    users {
+        key id PK "see 01 identity and tenancy"
+    }
+    event_ticket_offerings {
+        key id PK "see 02 ticket configuration"
+    }
+    delegations {
+        key id PK "see 02 ticket configuration"
+    }
+    seats {
+        key id PK "see 02 ticket configuration"
+    }
+    orders {
+        key id PK
+        key organizer_id FK
+        key event_id FK
+        string purchaser_name
+        string purchaser_email
+        string checkout_token_hash UK "buyer calls need the token"
+        money subtotal "bigint minor units"
+        money discount_total
+        money total
+        char(3) currency "KES"
+        string receipt_number UK
+        string status "pending, paid, completed, expired, cancelled, partially_refunded, refunded"
+    }
+    order_items {
+        key id PK
+        key order_id FK
+        key offering_id FK
+        int quantity
+        money unit_price "price snapshot"
+        money discount_amount
+        money platform_fee_amount
+        money line_total
+        char(3) currency
+    }
+    attendees {
+        key id PK
+        key order_id FK
+        string name
+        string email
+        string phone "CHECK: phone or id_number_last4, never both"
+        string id_number_last4
+    }
+    ticket_field_definitions {
+        key id PK
+        key event_id FK
+        string field_key
+        string label
+        string field_type "select, checkbox, date; no free text"
+        json options
+        boolean required
+        string scope
+    }
+    attendee_field_values {
+        key id PK
+        key attendee_id FK
+        key field_definition_id FK
+        string value
+    }
+    tickets {
+        key id PK
+        key order_item_id FK
+        key event_id FK
+        key offering_id FK
+        key attendee_id FK "optional"
+        key seat_id FK "optional: reserved seating"
+        key delegation_id FK "optional"
+        string ticket_number UK
+        string qr_token_hash UK
+        text qr_token_encrypted
+        string short_code_hash "keyed hash, unique per event"
+        text short_code_encrypted
+        string status "pending_issuance, valid, redeemed, revoked, expired"
+        timestamp redeemed_at
+    }
+    ticket_access_tokens {
+        key id PK
+        key ticket_id FK "ticket or order"
+        key order_id FK "ticket or order"
+        string token_hash UK "hash only"
+        timestamp expires_at
+        timestamp revoked_at
+    }
+    ticket_scans {
+        key id PK
+        key ticket_id FK "optional: unknown codes match no ticket"
+        key event_id FK
+        key gate_id FK "optional: events without gates"
+        key guard_user_id FK
+        string method "qr or short_code"
+        string result "admitted, already_redeemed, revoked, ..."
+        timestamp scanned_at
+    }
+    ticket_transfers {
+        key id PK
+        key ticket_id FK
+        key from_attendee_id FK
+        key to_attendee_id FK
+        timestamp transferred_at
+    }
+
+    organizers ||--o{ orders : "receives"
+    events ||--o{ orders : "receives"
+    orders ||--|{ order_items : "contains"
+    event_ticket_offerings ||--o{ order_items : "bought as"
+    orders ||--o{ attendees : "records"
+    events ||--o{ ticket_field_definitions : "asks"
+    attendees ||--o{ attendee_field_values : "answers"
+    ticket_field_definitions ||--o{ attendee_field_values : "answered by"
+    order_items ||--o{ tickets : "issues"
+    events ||--o{ tickets : "admits"
+    event_ticket_offerings ||--o{ tickets : "issued from"
+    attendees |o--o{ tickets : "holds"
+    seats |o--o{ tickets : "assigned (one active)"
+    delegations |o--o{ tickets : "claimed through"
+    tickets |o--o{ ticket_access_tokens : "retrieved by"
+    orders |o--o{ ticket_access_tokens : "retrieved by"
+    tickets |o--o{ ticket_scans : "scanned as"
+    events ||--o{ ticket_scans : "logs"
+    event_gates |o--o{ ticket_scans : "at"
+    users ||--o{ ticket_scans : "scanned by guard"
+    tickets ||--o{ ticket_transfers : "transferred"
+    attendees ||--o{ ticket_transfers : "from"
+    attendees ||--o{ ticket_transfers : "to"

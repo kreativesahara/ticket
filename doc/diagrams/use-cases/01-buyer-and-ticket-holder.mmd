@@ -1,0 +1,69 @@
+flowchart LR
+    classDef actor fill:#ffffff,stroke:#1f2937,stroke-width:2px,color:#111827
+    classDef external fill:#f3f4f6,stroke:#6b7280,stroke-width:1px,stroke-dasharray:4 3,color:#374151
+    classDef usecase fill:#eef2ff,stroke:#4f46e5,stroke-width:1px,color:#1e1b4b
+
+    Buyer["«actor»<br/><b>Buyer</b><br/>guest, no sign-in"]:::actor
+    Member["«actor»<br/><b>Delegation member</b><br/>has claim link or code"]:::actor
+    Holder["«actor»<br/><b>Ticket holder</b><br/>has retrieval link"]:::actor
+
+    subgraph SYS["Ticketing platform: public website"]
+        UC1(["Browse on-sale events and their public tickets on the landing page"]):::usecase
+        UC1F(["Filter events by category"]):::usecase
+        UC16(["Open an event from its link or gate QR code"]):::usecase
+        UC2(["View an event page and its public tickets"]):::usecase
+        UC3(["Buy tickets"]):::usecase
+        UC4(["Choose offering and quantity"]):::usecase
+        UC5(["Choose seats"]):::usecase
+        UC6(["Enter purchaser or attendee details"]):::usecase
+        UC7(["Complete CAPTCHA"]):::usecase
+        UC8(["Apply promo code"]):::usecase
+        UC9(["Pay by M-Pesa or card"]):::usecase
+        UC10(["Claim delegation tickets"]):::usecase
+        UC11(["Receive confirmation, receipt and ticket link"]):::usecase
+        UC12(["View and download tickets"]):::usecase
+        UC13(["Request a new ticket link"]):::usecase
+        UC14(["Transfer a ticket"]):::usecase
+        UC15(["Request a refund after postponement"]):::usecase
+    end
+
+    Pesapal["«system»<br/><b>Pesapal</b><br/>hosted checkout"]:::external
+    Email["«system»<br/><b>Email service</b>"]:::external
+
+    Buyer --- UC1
+    Buyer --- UC16
+    Buyer --- UC2
+    Buyer --- UC3
+    Buyer --- UC13
+    Buyer --- UC15
+    Member --- UC10
+    Holder --- UC12
+    Holder --- UC14
+
+    UC1F -.->|"«extend»"| UC1
+    UC16 -.->|"«include»"| UC2
+    UC3 -.->|"«include»"| UC4
+    UC3 -.->|"«include»"| UC6
+    UC5 -.->|"«extend» reserved seating"| UC3
+    UC7 -.->|"«extend» high-demand event"| UC3
+    UC8 -.->|"«extend» buyer has a code"| UC3
+    UC9 -.->|"«extend» total above zero"| UC3
+    UC10 -.->|"«include»"| UC6
+    UC9 -.->|"«extend» price rule not free"| UC10
+    UC3 -.->|"«include»"| UC11
+    UC10 -.->|"«include»"| UC11
+    UC14 -.->|"«include»"| UC11
+
+    %% layout only: keep actors in the leftmost column
+    Buyer ~~~ UC1F
+    Buyer ~~~ UC5
+    Buyer ~~~ UC7
+    Buyer ~~~ UC8
+    Buyer ~~~ UC9
+    Member ~~~ UC9
+    Holder ~~~ UC9
+    UC11 ~~~ Pesapal
+
+    UC9 --- Pesapal
+    UC11 --- Email
+    UC13 --- Email

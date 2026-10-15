@@ -1,0 +1,11 @@
+stateDiagram-v2
+    [*] --> pending : order created, holds placed
+    pending --> paid : payment confirmed / zero total
+    pending --> expired : hold expires
+    pending --> cancelled : voided before payment
+    paid --> completed : all tickets issued
+    paid --> partially_refunded : partial refund
+    paid --> refunded : full refund
+    completed --> partially_refunded : partial refund
+    completed --> refunded : full refund or reversal
+    partially_refunded --> refunded : remaining tickets refunded

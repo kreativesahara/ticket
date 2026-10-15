@@ -1,0 +1,10 @@
+stateDiagram-v2
+    [*] --> valid : issued
+    [*] --> pending_issuance : approval-required offering
+    pending_issuance --> valid : approved
+    pending_issuance --> revoked : rejected
+    valid --> valid : transferred (new holder, new credentials)
+    valid --> redeemed : scanned or short code entered
+    valid --> revoked : revoked, refunded, reversed or event cancelled
+    revoked --> valid : reinstated
+    valid --> expired : event closes, ticket unused

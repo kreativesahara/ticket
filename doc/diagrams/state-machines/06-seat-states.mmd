@@ -1,0 +1,7 @@
+stateDiagram-v2
+    [*] --> available : created
+    available --> held : chosen at checkout
+    held --> available : hold expires or order cancelled
+    held --> sold : order paid
+    sold --> available : ticket refunded or revoked
+    available --> [*] : removed by organizer

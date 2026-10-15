@@ -1,0 +1,131 @@
+erDiagram
+    organizers {
+        key id PK "see 01 identity and tenancy"
+    }
+    events {
+        key id PK "see 01 identity and tenancy"
+    }
+    users {
+        key id PK "see 01 identity and tenancy"
+    }
+    event_ticket_offerings {
+        key id PK "see 02 ticket configuration"
+    }
+    orders {
+        key id PK "see 03 orders, attendees and tickets"
+    }
+    tickets {
+        key id PK "see 03 orders, attendees and tickets"
+    }
+    payments {
+        key id PK
+        key order_id FK
+        string provider "pesapal"
+        string provider_reference "Pesapal tracking ID; unique per provider"
+        money amount "bigint minor units"
+        char(3) currency
+        string payment_method "M-Pesa or card; never the paying account"
+        string confirmation_code
+        string status "pending, succeeded, rejected, failed, cancelled, expired, refunded, reversed"
+        string idempotency_key UK
+    }
+    payment_webhook_events {
+        key id PK
+        string provider
+        string order_tracking_id "no unique key: Pesapal sends no event ID"
+        string notification_type
+        json payload
+        timestamp received_at
+        timestamp processed_at
+        string status
+    }
+    refunds {
+        key id PK
+        key payment_id FK
+        money amount
+        string provider_reference
+        string source "admin, system, postponement_request"
+        key requested_by FK "optional"
+        key approved_by FK "optional"
+        string status "requested, approved, processing, succeeded, failed, rejected"
+        text reason
+    }
+    refund_tickets {
+        key refund_id PK, FK
+        key ticket_id PK, FK
+    }
+    promotions {
+        key id PK
+        key event_id FK
+        string code
+        string discount_type "percentage or fixed"
+        int discount_value "percent, or minor units if fixed"
+        timestamp starts_at
+        timestamp ends_at
+        int usage_limit
+        int per_buyer_limit "by purchaser email"
+        int min_quantity
+        money min_order_value
+        int used_count
+        string status
+    }
+    promotion_offerings {
+        key promotion_id PK, FK
+        key offering_id PK, FK
+    }
+    promotion_redemptions {
+        key id PK
+        key promotion_id FK
+        key order_id FK
+        string purchaser_email
+        money discount_amount
+        string status
+    }
+    audit_logs {
+        key id PK
+        key actor_user_id FK "optional: system actions"
+        key organizer_id FK "optional"
+        key event_id FK "optional"
+        string action
+        string resource_type
+        key resource_id "polymorphic, no FK"
+        json metadata
+        string ip_address
+        string user_agent
+        timestamp created_at
+    }
+    organizer_payouts {
+        key id PK
+        key organizer_id FK
+        money amount
+        char(3) currency
+        string reference
+        timestamp paid_at
+        key recorded_by FK
+    }
+    outbox_messages {
+        key id PK
+        string type
+        json payload
+        timestamp available_at
+        timestamp processed_at
+        int attempts
+        text last_error
+    }
+
+    orders ||--o{ payments : "paid through"
+    payments ||--o{ refunds : "refunded by"
+    refunds ||--|{ refund_tickets : "covers"
+    tickets ||--o{ refund_tickets : "refunded in"
+    users |o--o{ refunds : "requested_by"
+    users |o--o{ refunds : "approved_by"
+    events ||--o{ promotions : "configures"
+    promotions ||--o{ promotion_offerings : "applies to"
+    event_ticket_offerings ||--o{ promotion_offerings : "discounted by"
+    promotions ||--o{ promotion_redemptions : "redeemed as"
+    orders ||--o{ promotion_redemptions : "uses"
+    users |o--o{ audit_logs : "acts in"
+    organizers |o--o{ audit_logs : "scopes"
+    events |o--o{ audit_logs : "scopes"
+    organizers ||--o{ organizer_payouts : "is paid by"
+    users ||--o{ organizer_payouts : "recorded_by"

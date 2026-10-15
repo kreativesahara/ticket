@@ -1,0 +1,9 @@
+stateDiagram-v2
+    [*] --> requested : buyer request after postponement
+    [*] --> approved : started by an admin or the system
+    requested --> approved : admin approves
+    requested --> rejected : admin declines
+    approved --> processing : submitted to Pesapal
+    processing --> succeeded
+    processing --> failed
+    failed --> processing : admin retries

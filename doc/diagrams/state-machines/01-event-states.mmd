@@ -1,0 +1,8 @@
+stateDiagram-v2
+    [*] --> draft
+    draft --> [*] : deleted (never published)
+    draft --> published : publish
+    published --> closed : entry ends (system)
+    published --> cancelled : cancel
+    closed --> archived : archive
+    cancelled --> archived : archive

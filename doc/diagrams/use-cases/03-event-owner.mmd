@@ -1,0 +1,28 @@
+flowchart LR
+    classDef actor fill:#ffffff,stroke:#1f2937,stroke-width:2px,color:#111827
+    classDef external fill:#f3f4f6,stroke:#6b7280,stroke-width:1px,stroke-dasharray:4 3,color:#374151
+    classDef usecase fill:#eef2ff,stroke:#4f46e5,stroke-width:1px,color:#1e1b4b
+
+    Owner["«actor»<br/><b>Event owner</b><br/>assigned events only"]:::actor
+
+    subgraph SYS["Ticketing platform: organizer area, read-only"]
+        O1(["Sign in with Google"]):::usecase
+        O2(["Accept an event owner invitation"]):::usecase
+        O3(["View the guest list of an assigned event"]):::usecase
+        O4(["Filter by category, delegation, purchase date or check-in status"]):::usecase
+        O5(["Export the guest list as CSV"]):::usecase
+    end
+
+    Google["«system»<br/><b>Google</b><br/>OAuth"]:::external
+
+    Owner --- O1
+    Owner --- O2
+    Owner --- O3
+    Owner --- O4
+    Owner --- O5
+
+    O2 -.->|"«include»"| O1
+    O4 -.->|"«extend»"| O3
+    O5 -.->|"«extend»"| O3
+
+    O1 --- Google

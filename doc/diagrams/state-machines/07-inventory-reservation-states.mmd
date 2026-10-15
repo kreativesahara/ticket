@@ -1,0 +1,5 @@
+stateDiagram-v2
+    [*] --> active : hold placed
+    active --> converted : order paid
+    active --> expired : expires_at passes
+    active --> released : order cancelled

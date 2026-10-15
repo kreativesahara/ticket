@@ -1,0 +1,61 @@
+flowchart LR
+    classDef actor fill:#ffffff,stroke:#1f2937,stroke-width:2px,color:#111827
+    classDef external fill:#f3f4f6,stroke:#6b7280,stroke-width:1px,stroke-dasharray:4 3,color:#374151
+    classDef usecase fill:#eef2ff,stroke:#4f46e5,stroke-width:1px,color:#1e1b4b
+
+    Admin["«actor»<br/><b>Platform admin</b><br/>all organizers"]:::actor
+
+    subgraph SYS["Ticketing platform: admin area"]
+        subgraph P1["Platform"]
+            A1(["Sign in with Google"]):::usecase
+            A2(["Manage platform users and suspensions"]):::usecase
+            A3(["Designate platform admins"]):::usecase
+            A4(["Manage event categories"]):::usecase
+        end
+        subgraph P2["Organizers"]
+            A5(["Approve organizer applications"]):::usecase
+            A6(["Verify organizer details and payout account"]):::usecase
+            A7(["Suspend organizers"]):::usecase
+            A8(["Act on any organizer's events and team"]):::usecase
+        end
+        subgraph P3["Money"]
+            A9(["Start refunds, ticket by ticket"]):::usecase
+            A10(["Approve or decline postponement refund requests"]):::usecase
+            A11(["Retry failed refunds"]):::usecase
+            A12(["Submit refund to Pesapal"]):::usecase
+            A13(["Search payments and reconcile"]):::usecase
+            A14(["View settlement reports"]):::usecase
+            A15(["Record manual payouts"]):::usecase
+        end
+        subgraph P4["Oversight"]
+            A16(["View platform-wide reports"]):::usecase
+            A17(["View all audit records"]):::usecase
+        end
+    end
+
+    Google["«system»<br/><b>Google</b><br/>OAuth"]:::external
+    Pesapal["«system»<br/><b>Pesapal</b><br/>refunds API"]:::external
+
+    Admin --- A1
+    Admin --- A2
+    Admin --- A3
+    Admin --- A4
+    Admin --- A5
+    Admin --- A6
+    Admin --- A7
+    Admin ---|"every organizer staff use case"| A8
+    Admin --- A9
+    Admin --- A10
+    Admin --- A11
+    Admin --- A13
+    Admin --- A14
+    Admin --- A15
+    Admin --- A16
+    Admin --- A17
+
+    A9 -.->|"«include»"| A12
+    A10 -.->|"«include»"| A12
+    A11 -.->|"«include»"| A12
+
+    A1 --- Google
+    A12 --- Pesapal

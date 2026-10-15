@@ -1,0 +1,11 @@
+stateDiagram-v2
+    [*] --> pending : attempt started
+    pending --> succeeded : confirmed and accepted
+    pending --> rejected : confirmed but can't be accepted
+    pending --> failed
+    pending --> cancelled
+    pending --> expired : order stopped waiting
+    expired --> rejected : late confirmation
+    rejected --> refunded : automatic refund succeeds
+    succeeded --> refunded : refunds reach full amount
+    succeeded --> reversed : Pesapal reports reversal

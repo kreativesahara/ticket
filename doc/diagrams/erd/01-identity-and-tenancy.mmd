@@ -1,0 +1,112 @@
+erDiagram
+    users {
+        key id PK
+        string name
+        string email "unique per sign_in_method"
+        string phone
+        string sign_in_method "google or password"
+        string google_id UK "Google users only"
+        key managed_by_organizer_id FK "guard password accounts only"
+        string platform_role "marks platform admins"
+        string status
+    }
+    organizers {
+        key id PK
+        string name
+        string slug UK
+        string status
+        string contact_email
+        string verification_status "unverified, pending, verified, rejected"
+        json business_details
+        text payout_account_encrypted "encrypted, never plain"
+        key verified_by FK
+        timestamp verified_at
+    }
+    organizer_members {
+        key organizer_id PK, FK
+        key user_id PK, FK
+        string role "staff"
+        string status
+    }
+    event_categories {
+        key id PK
+        string name
+        string slug UK
+        string status
+    }
+    events {
+        key id PK
+        key organizer_id FK
+        key category_id FK
+        string name
+        string slug "unique per organizer"
+        text description
+        string image_path
+        string venue
+        string timezone
+        timestamp starts_at
+        timestamp ends_at
+        int capacity
+        string attendee_collection_mode "purchaser or per_ticket"
+        string identity_field "none, phone, id_number; fixed once published"
+        boolean captcha_required
+        text refund_policy
+        timestamp refund_requests_until "set on postponement"
+        string status "draft, published, closed, cancelled, archived"
+    }
+    event_gates {
+        key id PK
+        key event_id FK
+        string name
+        timestamp opens_at
+        timestamp closes_at
+        string status
+    }
+    event_staff {
+        key id PK
+        key event_id FK
+        key gate_id FK "optional, guards only"
+        key user_id FK
+        string role "guard or event_owner"
+        string status
+        int short_code_failures
+        timestamp short_code_locked_at "locks after 5 invalid codes"
+    }
+    invitations {
+        key id PK
+        key organizer_id FK
+        key event_id FK "event owner invitations only"
+        string email
+        string role "staff or event_owner"
+        string token_hash UK "hash only"
+        key invited_by FK
+        timestamp expires_at
+        timestamp accepted_at
+    }
+    guard_credentials {
+        key id PK
+        key user_id FK
+        key event_id FK
+        string password_hash "deleted when the event closes"
+        boolean password_change_required
+        key issued_by FK
+        timestamp issued_at
+        timestamp revoked_at
+    }
+
+    organizers ||--o{ organizer_members : "has staff"
+    users ||--o{ organizer_members : "belongs to"
+    organizers |o--o{ users : "owns guard accounts"
+    users |o--o{ organizers : "verifies"
+    organizers ||--o{ events : "owns"
+    event_categories ||--o{ events : "categorizes"
+    events ||--o{ event_gates : "has"
+    events ||--o{ event_staff : "assigns"
+    users ||--o{ event_staff : "is assigned"
+    event_gates |o--o{ event_staff : "limits guard to"
+    organizers ||--o{ invitations : "sends"
+    events |o--o{ invitations : "event owner invite for"
+    users ||--o{ invitations : "invited_by"
+    users ||--o{ guard_credentials : "holds password"
+    events ||--o{ guard_credentials : "valid only for"
+    users ||--o{ guard_credentials : "issued_by"

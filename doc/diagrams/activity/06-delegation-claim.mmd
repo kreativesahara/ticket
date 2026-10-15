@@ -1,0 +1,43 @@
+%%{init: {"flowchart": {"wrappingWidth": 320}}}%%
+flowchart TD
+    classDef startNode fill:#111827,stroke:#111827,color:#ffffff
+    classDef endNode fill:#111827,stroke:#111827,color:#ffffff
+    classDef buyer fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b
+    classDef system fill:#ecfdf5,stroke:#059669,color:#064e3b
+    classDef external fill:#f3f4f6,stroke:#6b7280,stroke-dasharray:4 3,color:#374151
+    classDef decision fill:#fff7ed,stroke:#ea580c,color:#7c2d12
+    classDef stop fill:#fef2f2,stroke:#dc2626,color:#7f1d1d
+
+    start(("Start")):::startNode
+    a1["Open the private claim link,<br/>or enter the access code"]:::buyer
+    s1["Look up the delegation by<br/>the hashed token or code"]:::system
+    d1{"Delegation active and<br/>event on sale?"}:::decision
+    x1["Show 'link or code not valid'"]:::stop
+    s2["Show the allowed categories<br/>and remaining quota"]:::system
+    a2["Choose an allowed category<br/>and quantity"]:::buyer
+    a3["Enter the attendee details<br/>the event asks for"]:::buyer
+    d2{"CAPTCHA required?"}:::decision
+    a4["Complete the CAPTCHA"]:::buyer
+    m1{" "}:::decision
+    a5["Submit the claim"]:::buyer
+    s3["In one transaction, hold the offering's capacity<br/>and the delegation's quota with atomic<br/>conditional updates"]:::system
+    d3{"Both holds<br/>succeed?"}:::decision
+    x2["Show 'allocation exhausted'"]:::stop
+    s4["Create the pending order and checkout token;<br/>price from the delegation's price rule"]:::system
+    d4{"Total is zero?"}:::decision
+    s5["Order paid and completed with no payment;<br/>tickets issued with the delegation"]:::system
+    s6["Show the ticket link at once;<br/>email it through the outbox"]:::system
+    a6[["Pay by M-Pesa or card on Pesapal<br/>see 03"]]:::external
+    done(["End: tickets issued"]):::endNode
+    failed((("End"))):::endNode
+
+    start --> a1 --> s1 --> d1
+    d1 -->|"no"| x1 --> failed
+    d1 -->|"yes"| s2 --> a2 --> a3 --> d2
+    d2 -->|"yes"| a4 --> m1
+    d2 -->|"no"| m1
+    m1 --> a5 --> s3 --> d3
+    d3 -->|"no"| x2 --> failed
+    d3 -->|"yes"| s4 --> d4
+    d4 -->|"yes"| s5 --> s6 --> done
+    d4 -->|"no"| a6 --> done
