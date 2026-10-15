@@ -1,6 +1,6 @@
 # Implementation Plan: Multi-Organizer Event Ticketing Platform
 
-**Version 1.4 · 13 October 2026 · System design and analysis**
+**Version 1.5 · 15 October 2026 · System design and analysis**
 
 **Based on:** [v1.md](v1.md) (requirements specification), [sow.md](sow.md) (statement of work), [techstack.md](techstack.md) (architecture blueprint) and [v2.md](v2.md) (requirements review).
 
@@ -100,7 +100,7 @@ These items can delay launch no matter how fast development goes:
 
 ### Steps
 
-1. **Confirm the naming baseline.** v1.md is the single source of truth for table names, roles and API paths, and techstack.md has been aligned to it (13 October 2026). These decisions have been applied:
+1. **Confirm the naming baseline.** v1.md is the single source of truth for table names, roles and API paths, and techstack.md has been aligned to it (15 October 2026). These decisions have been applied:
 
    | Topic            | Standard (v1.md)                                                        | Replaced names                                  |
    | ---------------- | ----------------------------------------------------------------------- | ----------------------------------------------- |
@@ -109,7 +109,8 @@ These items can delay launch no matter how fast development goes:
    | Scan record      | `ticket_scans` (every attempt); redemption is a ticket status           | `ticket_redemptions`                            |
    | Sellable unit    | `event_ticket_offerings` (type × category) with `inventory_reservations` | `ticket_inventory`                             |
    | Roles            | Platform admin, organizer staff, event owner, guard, attendee           | The earlier four-role and five-role lists       |
-   | API paths        | `/api/v1/...`, with organizer endpoints under `/api/v1/organizer`       | `/organizer/events/:id`, `/api/v1/events/{id}`  |
+   | API paths        | `/api/v1/...`, with organizer endpoints under `/api/v1/organizer`       | `/organizer/events/:id`                         |
+   | Frontend         | One Next.js app for every role, in its own repository                  | `/web` plus a React + Vite `/manage` dashboard  |
 
    Confirm these with the client. Make any later change in v1.md first.
 
@@ -128,7 +129,7 @@ These items can delay launch no matter how fast development goes:
 
    Record the result as **go** or **no-go**. If it's no-go, fall back to a small VPS running the same Laravel application. No code changes are needed.
 
-5. **Decide where the frontends are hosted.** A Next.js site that renders on the server needs a Node runtime, for example Vercel, or cPanel's Node.js app support if the plan has it. The Vite dashboard builds to static files, which cPanel can serve. All three applications must share a parent domain for Sanctum's cookie sessions to work.
+5. **Frontend hosting (decided, #5).** The Next.js app, which serves every role with server-side rendering, runs on Vercel. It must share a parent domain with the API for Sanctum's cookie sessions to work.
 
 6. **Set measurable performance targets.** v1.md requires these before launch. Proposed starting values for the client to confirm:
    - Scan validation: 95% of scans answered within 1 second over mobile data.
@@ -137,7 +138,7 @@ These items can delay launch no matter how fast development goes:
 
 7. **Fix the baseline schedule and risk register.** Confirm the team, the dates and the milestone review windows.
 
-8. **Prepare Google sign-in.** The client creates, or gives access to, a Google Cloud project for the platform. Set up the OAuth consent screen with the app name, support email, privacy policy link and the platform's domains, requesting only the `openid`, `email` and `profile` scopes. Create OAuth clients for local development and staging now; the production client follows in Phase 8. Also confirm that every organizer staff member and event owner has, or can create, a Google account. Guards without one will use guard password accounts.
+8. **Prepare Google sign-in.** The client creates, or gives access to, a Google Cloud project for the platform. Set up the OAuth consent screen with the app name, support email, privacy policy link and the platform's domains, requesting only the `openid`, `email` and `profile` scopes. Create OAuth clients for local development and staging now; the production client follows in Phase 8. Also confirm that every organizer staff member and event owner has, or can create, a Google account. Guards don't need one: they sign in only with guard password accounts.
 
 ### Deliverables
 
@@ -173,20 +174,23 @@ These items can delay launch no matter how fast development goes:
 
 ### Backend track
 
-6. **Repository and environments.** Recommended layout in one repository:
+6. **Repositories and environments.** Two repositories (decision #8):
 
    ```text
-   /api            Laravel API
-   /web            Next.js public website
-   /manage         React + Vite dashboard (organizer, admin and guard areas)
-   /packages/ui    Shared shadcn/ui components and theme
+   backend repository (this one)
+     /api          Laravel API
+     *.md, /doc    The specification
+   frontend repository
+     Next.js app   Public site and the organizer, event owner, admin and guard areas, with shadcn/ui
    ```
+
+   The frontend builds against the OpenAPI contract published from the backend repository.
 
    Set up three environments (local, staging and production), each with its own Supabase project, so test data never reaches production.
 
 7. **Continuous integration.** On every push, run linting, static analysis and the test suite against PostgreSQL.
 8. **Laravel foundation.** Install Laravel, connect to Supabase over SSL, and add migrations for the identity and tenancy tables. Use UUIDs for any record referenced from outside the system.
-9. **Google sign-in.** Sign users in through Google OAuth with Laravel Socialite, following the rules in techstack.md §3: verified Google emails only, users matched by Google account ID, and a Sanctum cookie session started after sign-in. Add logout, the `me` endpoint, account suspension, invitation acceptance, organizer applications that a platform admin approves, and a command for granting platform admin. Passwords exist only for guard password accounts (techstack.md §3): add guard sign-in with email and password, the forced password change at first sign-in, rate limiting with temporary lockout, and shorter guard sessions. Use the database session driver, so a specific guard's sessions can be ended. There is no self-registration, email verification or email-based password reset. Configure stateful domains, the session cookie domain, CORS and CSRF for the `www`, `manage` and `api` subdomains.
+9. **Google sign-in.** Sign users in through Google OAuth with Laravel Socialite, following the rules in techstack.md §3: verified Google emails only, users matched by Google account ID, and a Sanctum cookie session started after sign-in. Add logout, the `me` endpoint, account suspension, invitation acceptance (staff and event owners), organizer applications that a platform admin approves, and a command for granting platform admin. Passwords exist only for guard password accounts (techstack.md §3): add guard sign-in with email and password (the only way guards sign in), the forced password change at first sign-in, rate limiting with temporary lockout, and shorter guard sessions. Use the database session driver, so a specific guard's sessions can be ended. There is no self-registration, email verification or email-based password reset. Configure stateful domains, the session cookie domain, CORS and CSRF for the `www` and `api` subdomains, including requests made by the Next.js server during server-side rendering.
 10. **Tenancy and authorization.** Build organizers, staff membership and event owner assignments, with a Laravel policy for every resource. Keep platform admin permissions separate from organizer permissions. Event owners pass only the guest-list policy (view, filter and export) for their assigned events.
 11. **Audit log.** A single service call records who acted, the organizer, the event, the action, the affected resource and details.
 12. **API conventions.** The `/api/v1` prefix, the standard error format, rate limits on the sign-in routes, and a correlation ID on every request.
@@ -194,13 +198,13 @@ These items can delay launch no matter how fast development goes:
 
 ### Frontend track
 
-14. Create `/web` (Next.js and TypeScript) and `/manage` (Vite, React and TypeScript), both using Tailwind CSS and shadcn/ui with the shared theme.
-15. Build the "Sign in with Google" page, the guard email-and-password sign-in form with its first-sign-in password change, the invitation acceptance page and the organizer application form in `/manage`, with routing to the organizer, event owner, admin and guard areas by role.
+14. Create the Next.js app (TypeScript, server-side rendering, Tailwind CSS and shadcn/ui) in the frontend repository.
+15. Build the "Sign in with Google" page, the guard email-and-password sign-in form with its first-sign-in password change, the invitation acceptance page and the organizer application form in the Next.js app, with routing to the organizer, event owner, admin and guard areas by role.
 16. Generate a typed API client from the OpenAPI specification, plus a mock server so screens can be built before the backend is ready.
 
 ### Deployment track
 
-17. **Working skeleton on staging.** The API runs on cPanel over HTTPS, cron runs the scheduler, queued jobs are processed, both frontends are deployed, and Google sign-in works end to end across the subdomains.
+17. **Working skeleton on staging.** The API runs on cPanel over HTTPS, cron runs the scheduler, queued jobs are processed, the Next.js app is deployed on Vercel, and Google sign-in works end to end across the subdomains.
 
 ### Deliverables
 
@@ -214,9 +218,9 @@ These items can delay launch no matter how fast development goes:
 - [ ] Organizers cannot read or change another organizer's resources, and the automated tests prove it.
 - [ ] Event owners can't change anything, and can reach guest data only for their assigned events.
 - [ ] Every protected endpoint refuses requests that aren't logged in or aren't authorized.
-- [ ] Google sign-in works on staging, and the session holds across `www`, `manage` and `api`.
+- [ ] Google sign-in works on staging, and the session holds across `www` and `api`, including during server-side rendering.
 - [ ] Unverified Google accounts, suspended users and users without an invitation or approved organizer can't reach the organizer, guard or admin areas.
-- [ ] A guard password account must change its temporary password before doing anything else, and can never reach the organizer or admin areas.
+- [ ] A guard password account must change its temporary password before doing anything else, and can never reach the organizer or admin areas. Google users can't reach the scanner.
 - [ ] The database design, API contract and designs are approved.
 
 ---
@@ -229,28 +233,28 @@ These items can delay launch no matter how fast development goes:
 
 ### Backend
 
-1. **Event lifecycle.** Draft → published → closed (set automatically when the last gate closes) or cancelled → archived, as in v1.md §4.6, enforced by the backend. A scheduled job moves published events to closed. Unpublished drafts can be deleted; events that were ever published are only archived, never deleted. Store times in UTC alongside the event's own timezone.
-2. **Event details and media.** Name, description, venue and images, with images stored in Supabase Storage.
+1. **Event lifecycle.** Draft → published → closed (set automatically when the last gate closes, or at the event's end time if it has no gates) or cancelled → archived, as in v1.md §4.6, enforced by the backend. A scheduled job moves published events to closed. Unpublished drafts can be deleted; events that were ever published are only archived, never deleted. Store times in UTC alongside the event's own timezone.
+2. **Event details and media.** Name, description, venue, category (from the admins' list), capacity, refund policy, the optional checkout CAPTCHA and images, with images stored in Supabase Storage. Cancelling revokes every ticket, cancels pending orders, ends guard access and emails every buyer; changing a published event's dates (postponement) emails buyers a refund-request link (v1.md FR-03).
 3. **Time windows.** Store and validate each window separately: sales start and end, gate opening and closing, and event start and end.
 4. **Ticket types and categories.** Seed the defaults (Early Bird, Normal, At the Gate, Group and Promoted; VVIP, VIP and Media) and let organizers add their own.
 5. **Offerings.** Each allowed type × category combination, with a price in minor units of KES, capacity, sales window, and minimum and maximum per order. Include group quantity rules, and an approval or manual-issue flag for Media tickets.
-6. **Delegations.** Each with its allocation, allowed categories and price rules.
+6. **Delegations.** Each with its allocation (a sub-quota of its offerings' capacity), allowed categories, price rules, and a private claim link and access code (doc/sponsored.md).
 7. **Attendee details setup.** The collection mode (purchaser only, or details for every ticket) and the field definitions, including event-specific questions. Staff choose the event's identity field when they create it (none, phone number or ID number; v1.md FR-07) and can change it only while the event is a draft. With a phone or ID number, details are collected for every ticket and each holder gives that field; phone and ID number can't be added as questions, so no event asks for both.
-8. **Gates and staff.** Create gates, add guards either by email invitation (the guard accepts by signing in with a Google account that uses that address) or by creating a guard password account and giving the guard its temporary password, assign each guard to an event and optionally a gate, and remove assignments. A guard password account works for one event at a time. When that event closes (its last gate closes, or it is cancelled or archived), the password is deleted, the guard's sessions end and the assignment ends. A job runs this every minute, and every request from a password guard also checks the event is still open (techstack.md §3). Assign event owners to an event by email invitation (role `event_owner`, with the event attached), and remove them; removal ends their access to that event immediately.
-9. **Publishing rules.** An event can be published only if it has at least one active offering, valid time windows, and capacity that covers its allocations. Changes after publishing are audited. Changes that would affect existing orders, such as lowering capacity below tickets already sold, are blocked or need explicit confirmation.
-10. **Admin.** List organizers, suspend or reactivate them, and oversee events.
+8. **Gates and staff.** Create gates (optional: an event without gates admits people between its start and end times). Add guards by creating a guard password account with the guard's own email and giving the guard its temporary password; assign each guard to an event and optionally a gate, and remove assignments. An event can have several guards. A guard password account works for one event at a time. When that event closes (entry ends, or it is cancelled or archived), the password is deleted, the guard's sessions end and the assignment ends. A job runs this every minute, and every request from a password guard also checks the event is still open (techstack.md §3). Assign event owners to an event by email invitation (role `event_owner`, with the event attached), and remove them; removal ends their access to that event immediately.
+9. **Publishing rules.** An event can be published only if it has at least one active offering, valid time windows, capacity that covers its allocations, and, if any offering is paid, a verified organizer. Changes after publishing are audited. Changes that would affect existing orders, such as lowering capacity below tickets already sold, are blocked or need explicit confirmation.
+10. **Admin.** List organizers, verify them before their first paid event (business or ID details and payout account), suspend or reactivate them, manage the event category list, and oversee events.
 
 ### Frontend
 
-11. **Organizer dashboard:** an event list and a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), an offerings grid, delegation management, and staff and event owner invitations.
-12. **Admin dashboard:** organizers, users, and suspension controls.
-13. **Public website:** event listing and event detail pages that show published events only.
+11. **Organizer dashboard:** an event list and a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), an offerings grid, delegation management with claim links, staff and event owner invitations, and guard accounts.
+12. **Admin dashboard:** organizers, users, organizer verification, event categories and suspension controls.
+13. **Public website:** event listing (with a category filter) and event detail pages that show published events only.
 
 ### Exit criteria
 
 - [ ] An organizer can publish an event with valid offerings and capacity limits.
 - [ ] Unpublished events never appear on public endpoints.
-- [ ] Guard invitation and assignment work, and guards see only the events assigned to them.
+- [ ] Guard account creation and assignment work, and guards see only the events assigned to them.
 - [ ] Event owner invitation and assignment work, and event owners see only the events assigned to them.
 - [ ] When an event closes, its guard passwords are deleted and those guards are signed out immediately; their past scans still show their names.
 - [ ] Tenant-isolation tests cover every new resource.
@@ -265,7 +269,7 @@ These items can delay launch no matter how fast development goes:
 
 ### Backend
 
-1. **Order creation.** Check the offering, the sales window, quantity limits, group rules and delegation eligibility.
+1. **Order creation.** Check the offering, the sales window, quantity limits, group rules, delegation eligibility (claim link or access code) and, when the event requires it, the CAPTCHA. Return a random checkout token, stored hashed, that the buyer's later calls must send.
 2. **Inventory hold**, made in one transaction with an atomic conditional update:
 
    ```sql
@@ -280,15 +284,15 @@ These items can delay launch no matter how fast development goes:
 
    In the same transaction, insert the matching `inventory_reservations` row with its expiry time. If no row was updated, return a clear "sold out" response.
 
-3. **Hold expiry.** Holds last for a configurable time (see the decision log). A scheduled job runs every minute, releases expired holds and expires their orders. Build the hold mechanism generically so seat holds in Phase 7 can reuse it.
+3. **Hold expiry.** Holds last 15 minutes by default, configurable (decision #10). A scheduled job runs every minute, releases expired holds and expires their orders. Build the hold mechanism generically so seat holds in Phase 7 can reuse it.
 4. **Attendee details.** Validate them against the event's field setup and collection mode, and store purchaser details separately from ticket-holder details.
 5. **Promotions (core).** Percentage or fixed discounts, eligible offerings, start and end dates, total and per-buyer limits, and minimum quantity or order value. Count each use against the hold so that orders placed at the same moment can't exceed a limit.
-6. **Pricing.** Only the backend calculates totals. Each order item stores a snapshot of the unit price, discount, fees and currency, so later price edits don't change past orders.
-7. **Order states.** Pending → paid → completed, plus expired and cancelled.
+6. **Pricing.** Only the backend calculates totals. Orders that total zero skip payment and issue their tickets directly (hurdles.md H3). The platform fee is deducted from the organizer, so it never changes what the buyer pays. Each order item stores a snapshot of the unit price, discount, fees and currency, so later price edits don't change past orders.
+7. **Order states.** Pending → paid → completed, plus expired and cancelled (doc/state-machines.md §2).
 
 ### Frontend
 
-8. **Public checkout:** choose an offering and quantity, fill in attendee forms built from the event's setup, enter a promo code, review the order summary, and see a countdown for the hold, with clear handling when it expires.
+8. **Public checkout:** choose an offering and quantity, fill in attendee forms built from the event's setup, enter a promo code, pass the CAPTCHA when the event requires one, review the order summary, and see a countdown for the hold, with clear handling when it expires.
 9. **Organizer dashboard:** the order list for each event.
 
 ### Tests
@@ -323,14 +327,14 @@ Pesapal is the single payment gateway. Buyers pay on Pesapal's hosted checkout, 
 4. **Handling Pesapal notifications**, in this order:
    1. **Confirm the result with Pesapal.** Treat an IPN only as a signal that something changed. Fetch the real result from Pesapal's transaction status endpoint using the order tracking ID, and act only on that response.
    2. **Skip duplicates.** Pesapal IPNs don't carry a unique event ID, so record every notification in `payment_webhook_events` and make processing idempotent. If the order is already paid, acknowledge and stop.
-   3. **Record the result in one transaction:** lock the order, check that the amount and currency match, mark the payment as succeeded, mark the order as paid, issue the tickets (built in Phase 5), and write an outbox record for the email.
+   3. **Record the result in one transaction:** lock the order, check that the amount and currency match and the order is still pending (otherwise mark the payment rejected and refund it automatically), mark the payment as succeeded, mark the order as paid, issue the tickets (built in Phase 5), and write an outbox record for the email.
    4. **Reply to the IPN** in the format Pesapal expects, so it stops retrying.
 
    When the buyer is sent back to the callback URL, that page only shows the status. It never marks anything as paid.
-5. **Payment after the hold expired.** Apply the policy chosen in the decision log, for example: hold the tickets again if they're still available, otherwise flag the order for a refund.
+5. **Payment after the hold expired.** Refund it automatically (decision #11); the buyer can order again.
 6. **Reconciliation job.** Every few minutes, ask Pesapal for the status of payments that have been pending longer than a set time, then resolve them or flag them. Produce a report of mismatches.
-7. **Refunds and reversals.** Request refunds through Pesapal's refund API where Pesapal supports refunds for the payment method, and track their status. Move the order to partially refunded or refunded, and decide ticket eligibility explicitly, for example by revoking tickets after a full refund. If Pesapal reports a completed payment as reversed, handle it the same way.
-8. **Payment history and reconciliation screens:** organizers see their own events, and platform admins see the whole platform.
+7. **Refunds and reversals.** Only platform admins start refunds (decision #12), naming the tickets each covers; the system starts them only for rejected payments, and buyers can request one only through a postponement email. Request refunds through Pesapal's refund API where Pesapal supports refunds for the payment method, and track their status. Move the order to partially refunded or refunded, and decide ticket eligibility explicitly, for example by revoking tickets after a full refund. If Pesapal reports a completed payment as reversed, handle it the same way.
+8. **Payment history and reconciliation screens:** organizers see their own events, and platform admins see the whole platform. Store the payment method and confirmation code, never the paying account Pesapal reports.
 
 ### Frontend
 
@@ -348,10 +352,10 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 | No IPN arrives                            | Reconciliation resolves the payment                   |
 | Duplicate IPN                             | Processed once only                                   |
 | IPNs arrive out of order                  | Final state matches Pesapal's status                  |
-| IPN after the hold expired                | The late-payment policy is applied                    |
-| Amount doesn't match the order            | Not marked paid; flagged for review                   |
+| IPN after the hold expired                | Payment rejected and refunded automatically           |
+| Amount doesn't match the order            | Payment rejected and refunded automatically           |
 | Forged IPN                                | No change, because Pesapal's status check doesn't confirm it |
-| Completed payment later reversed          | Order flagged; tickets handled under the refund policy |
+| Completed payment later reversed          | Order refunded; unredeemed tickets revoked; admin alerted |
 
 ### Deliverables
 
@@ -376,13 +380,14 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 1. **Issuance**, inside the payment transaction: one ticket per unit bought, each with a unique, non-sequential ticket number, plus its attendee, offering, delegation and seat where applicable.
 2. **QR credential.** Generate a random, hard-to-guess token. The QR code contains only this token and no personal details. Store it twice, as v1.md §4.3 requires: a hash (`qr_token_hash`) to find the ticket when it's scanned, and an encrypted copy (`qr_token_encrypted`) so the ticket page can show the QR code again. Never store it in plain text. The encryption uses Laravel's application key, so keep that key stable and backed up. Also generate each ticket's 6-character short code (characters that are hard to confuse, unique within the event), stored as a keyed hash plus an encrypted copy (v1.md §4.3). Guards type it in when a QR code won't scan.
 3. **Retrieval links.** Each link uses a random token whose hash is stored in `ticket_access_tokens`, with an expiry date and the ability to revoke it. Buyers can request a new link by entering their email address. This request is rate-limited and doesn't reveal whether an email address has an order.
-4. **Email delivery** through the queue, driven by the outbox records, with retries and logging of failures.
+4. **Email delivery** through the queue, driven by the outbox records, with retries and logging of failures: the order confirmation with the retrieval link, a receipt for every paid order, and emails for event changes, cancellations and transfers. No SMS (hurdles.md H9, H10).
 5. **Revocation.** Organizers and admins can revoke a ticket with a reason. Revocations are audited, and revoked tickets are rejected at the gate.
-6. **Media tickets.** An approval or manual-issue flow for organizers.
+6. **Media tickets.** Approval after payment: tickets wait in pending issuance until staff approve them; rejected ones are revoked and an admin refunds them. Staff can also issue Media tickets manually.
+6a. **Transfers.** From the retrieval link, the holder transfers a valid ticket to a new holder before the event starts, except at events whose identity field is ID number. The ticket gets a new QR code and short code, and the recipient gets their own retrieval link.
 
 ### Frontend
 
-7. **Ticket page** on the public website: event details, category, attendee name (where collected), ticket number, seat or delegation, the QR code and the 6-character short code, with a download as PDF or image that shows the short code too.
+7. **Ticket page** on the public website: event details, category, attendee name (where collected), ticket number, seat or delegation, the QR code and the 6-character short code, with a download as PDF or image that shows the short code too, a transfer form, and a refund-request form after a postponement.
 8. **Organizer dashboard:** ticket list and search, revocation, and manual issuance of Media tickets.
 
 ### Deliverables
@@ -406,7 +411,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 
 ### Backend
 
-1. **Scan checks**, in this order: the guard is logged in → the guard is assigned to this event (and gate) → the gate is open, judged by server time → the ticket exists (looked up by hash) → it belongs to this event → it is paid and not revoked → redeem it. The same checks apply when a guard types a ticket's short code instead of scanning; short code entry is rate-limited per guard and locks after repeated invalid codes.
+1. **Scan checks**, in this order: a guard password account is logged in → the guard is assigned to this event (and gate) → it is within the entry window, judged by server time (the gate is open, or, for an event without gates, between its start and end times) → the ticket exists (looked up by hash) → it belongs to this event → it is paid and not revoked → redeem it. The same checks apply when a guard types a ticket's short code instead of scanning; short code entry is rate-limited per guard and locks after 5 invalid codes in a row, until organizer staff unlock it.
 2. **Redemption with one atomic update:**
 
    ```sql
@@ -421,9 +426,9 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 3. **Scan log.** Record every attempt in `ticket_scans`, including rejected ones, with the result, gate, guard, time and method (QR scan or short code).
 4. **Minimal response.** Return only what the guard needs: the result and reason, the category, the attendee name where collected, the last 4 digits of the holder's phone or ID number when the event has an identity field, the seat or delegation, and, for a ticket already used, when and at which gate.
 
-### Frontend (guard area in `/manage`)
+### Frontend (guard area in the Next.js app)
 
-5. **Designed for phones first:** sign in (with Google, or with a guard email and password) → see assigned events → choose a gate → scan with the camera. A visible "Sign out" button supports shift changes on shared phones. Browsers only allow camera access over HTTPS. If a QR code won't scan, an "Enter code" button lets the guard type the 6-character short code from the attendee's downloaded or printed ticket.
+5. **Designed for phones first:** sign in with the guard email and password → see assigned events → choose a gate (skipped for events without gates) → scan with the camera. A visible "Sign out" button supports shift changes on shared phones. Browsers only allow camera access over HTTPS. If a QR code won't scan, an "Enter code" button lets the guard type the 6-character short code from the attendee's downloaded or printed ticket.
 6. **Result screens** that are large and high-contrast: valid, already used, invalid (with the reason), and unable to verify.
 7. **Fail closed.** A timeout or network error shows "Unable to verify — do not admit" and never a success.
 8. **Organizer dashboard:** live gate activity and attendance counts.
@@ -462,9 +467,9 @@ Each part of this phase is built and tested on its own, and the core flow doesn'
 
 ### Reporting
 
-2. **Organizer reports**, for their own events only: sales by offering, payment status, remaining capacity, promotion performance, attendance and gate activity.
-3. **Admin reports:** platform-wide summaries, transaction oversight and an audit log viewer.
-4. **Guest list:** view the attendees of an event, filter them by ticket category, delegation, purchase date and check-in status, and export them as CSV. Available to organizer staff for their own events and to event owners for their assigned events only (doc/roleandprivileage.md). Event owners see no sales, payment or settlement figures.
+2. **Organizer reports**, for their own events only: sales by offering, payment status, remaining capacity, promotion performance, attendance and gate activity; a sales list CSV export; and a read-only list of the event's audit records.
+3. **Admin reports:** platform-wide summaries, transaction oversight, an audit log viewer, and a settlement report per organizer and event (sales, refunds, Pesapal fees, platform fee and amount owed) with a log for recording each manual payout (hurdles.md H1). Organizer staff see their own organizer's settlement report.
+4. **Guest list:** view the attendees of an event, filter them by ticket category, delegation, purchase date and check-in status, and export them as CSV. Available to organizer staff for their own events and to event owners for their assigned events only (doc/roleandprivileage.md). Event owners see only each holder's name, ticket category, delegation and check-in status.
 
 ### Reserved seating
 
@@ -498,8 +503,8 @@ Each part of this phase is built and tested on its own, and the core flow doesn'
 4. **Performance test** against the Phase 0 targets: a burst of checkouts on one event, and scanning throughput.
 5. **Backup and recovery.** Confirm what backups the Supabase plan includes, run a restore into staging, and document the procedure.
 6. **Monitoring.** Error tracking, uptime checks on the API and both frontends, and alerts for failed jobs, payments stuck in pending, and email failures.
-7. **Production setup.** A production Supabase project; configuration stored outside the web root; cron; the agreed way of running queued jobs; HTTPS on all three subdomains; Sanctum configured for the production domains; production Pesapal keys, with the production IPN URL registered; and a production Google OAuth client, with its callback URL registered and the consent screen published.
-8. **Data protection.** Publish the privacy notice and retention rules, and agree each party's role (controller or processor). Confirm any registration obligations with Kenya's Office of the Data Protection Commissioner.
+7. **Production setup.** A production Supabase project; configuration stored outside the web root; cron; the agreed way of running queued jobs; HTTPS on both subdomains; the Next.js app on Vercel; Sanctum configured for the production domains; production Pesapal keys, with the production IPN URL registered; and a production Google OAuth client, with its callback URL registered and the consent screen published.
+8. **Data protection.** Publish the privacy notice and the deletion-on-request procedure (personal data is kept until someone asks for it to be deleted; hurdles.md H12), and agree each party's role (controller or processor). Confirm any registration obligations with Kenya's Office of the Data Protection Commissioner.
 9. **UAT.** The client tests on staging against the acceptance criteria in SOW §5. Defects are logged and classified, and critical and high defects are fixed before sign-off. The client has five business days to review.
 10. **Go-live.** Deploy, run smoke tests, then make one real low-value payment with each method and refund it.
 11. **Handover (D13, D14):** source code, migrations, environment documentation, API documentation, deployment guide, payment and email setup guide, admin and organizer guides, test results, known issues, and a secure transfer of credentials.
@@ -529,21 +534,27 @@ These decisions affect the database, the integrations or the schedule. Each need
 | #  | Decision                              | Options                                                     | Recommendation                                                                       | Needed by |
 | -- | ------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ | --------- |
 | 1  | Naming baseline                       | —                                                           | **Decided:** v1.md names; platform admin (full rights), organizer staff (full control), event owner (guest data read-only), guard, and attendee roles; `/api/v1` paths; applied to v1.md and techstack.md | Decided   |
-| 2  | Booking or platform fees              | None; added to the buyer's total; deducted from the organizer | Business decision for the client; it changes how prices are stored on orders       | Phase 0   |
+| 2  | Booking or platform fees              | None; added to the buyer's total; deducted from the organizer | **Decided:** deducted from the organizer's settlement, never added to the buyer's total; Pesapal's fees are also deducted from the organizer. **Open:** how the platform fee is calculated (client) | Phase 7 |
 | 3  | Payment gateway                       | —                                                           | **Decided: Pesapal**, for both M-Pesa and card payments through its hosted checkout  | Decided   |
-| 4  | Paying organizers                     | Manual payouts outside the platform; automated payouts      | All buyer payments land in the platform's Pesapal merchant account. Pay organizers manually from the reconciliation reports; automated payouts are out of scope (SOW §9) unless added by change request | Phase 0   |
-| 5  | Frontend hosting                      | Vercel, cPanel Node.js support, or static files             | Vercel for the Next.js site; cPanel static hosting for the Vite dashboard            | Phase 0   |
-| 6  | Attendee accounts at launch           | Guest checkout only, or optional accounts                   | Guest checkout with retrieval links (SOW §2.1); accounts later | Phase 1   |
-| 7  | Organizer onboarding                  | Self sign-up with admin approval, or created by admins      | Self sign-up with admin approval                                                     | Phase 1   |
-| 8  | Repository structure                  | One repository or several                                   | One repository (see Phase 1)                                                         | Phase 1   |
-| 9  | Email provider                        | Client's choice                                             | Any provider that supports domain authentication                                     | Phase 1   |
-| 10 | Hold duration                         | 5–20 minutes                                                | 10–15 minutes, configurable                                                          | Phase 3   |
-| 11 | Payment that arrives after the hold expired | Honor it if tickets remain; always refund; handle manually | Honor it if tickets remain, otherwise flag it for a refund                     | Phase 4   |
-| 12 | Refund policy and who can approve     | Organizer only; admin only; organizer requests and admin approves | Per-event policy: the organizer requests, the platform admin approves         | Phase 4   |
-| 13 | Sign-in method                        | —                                                           | **Decided: Google OAuth** for admins, organizer staff and event owners; guards use Google or a guard password account. Buyers still check out as guests | Decided   |
-| 14 | Guard sign-in without Google          | —                                                           | **Decided:** individual email-and-password guard accounts, created by the guard's organizer or a platform admin. Each password is valid for one event and deleted as soon as that event closes | Decided   |
-| 15 | Guards change the temporary password at first sign-in | Required; optional                          | Required, so only the guard knows their password and their scans are truly theirs. The organizer can still reset it at any time | Phase 1   |
+| 4  | Paying organizers                     | Manual payouts outside the platform; automated payouts      | **Decided:** all buyer payments land in the platform's Pesapal merchant account; admins pay organizers manually from a settlement report per organizer and event, recording each payout in a payout log (hurdles.md H1). Automated payouts are out of scope (SOW §9) | Decided |
+| 5  | Frontend hosting                      | Vercel, cPanel Node.js support, or static files             | **Decided:** one Next.js app for every role, server-rendered, on Vercel           | Decided   |
+| 6  | Attendee accounts at launch           | Guest checkout only, or optional accounts                   | **Decided:** guest checkout; buyers reach their order only through a checkout token and their retrieval link (hurdles.md H11) | Decided |
+| 7  | Organizer onboarding                  | Self sign-up with admin approval, or created by admins      | **Decided:** self sign-up with admin approval, plus verification (business or ID details and payout account) before the first paid event (hurdles.md H2) | Decided |
+| 8  | Repository structure                  | One repository or several                                   | **Decided:** two repositories: the backend (Laravel and the specification, this repository) and the frontend (the Next.js app) | Decided |
+| 9  | Email provider                        | Client's choice                                             | Any provider that supports domain authentication; the client chooses. Development uses a local mail catcher | Phase 5 |
+| 10 | Hold duration                         | 5–20 minutes                                                | **Decided:** 15 minutes, configurable                                            | Decided   |
+| 11 | Payment that arrives after the hold expired | Honor it if tickets remain; always refund; handle manually | **Decided:** always refund automatically; the buyer orders again             | Decided   |
+| 12 | Refund policy and who can approve     | Organizer only; admin only; organizer requests and admin approves | **Decided:** only platform admins start refunds, ticket by ticket; the system refunds rejected payments automatically; buyers can request a refund only after a postponement | Decided |
+| 13 | Sign-in method                        | —                                                           | **Decided: Google OAuth** for admins, organizer staff and event owners; guards use guard password accounts only. Buyers still check out as guests | Decided   |
+| 14 | Guard sign-in                         | —                                                           | **Decided:** guards sign in only with individual email-and-password accounts, created with the guard's own email by organizer staff or a platform admin. Each password is valid for one event and deleted as soon as that event closes. Only guard accounts scan | Decided |
+| 15 | Guards change the temporary password at first sign-in | Required; optional                          | **Decided:** required, so only the guard knows their password and their scans are truly theirs. The organizer can still reset it at any time | Decided |
 | 16 | Entry when a QR code won't scan       | —                                                           | **Decided:** the attendee shows their downloaded or printed ticket, and the guard types its 6-character short code | Decided   |
+| 17 | Ticket transfers                      | Not allowed; in-platform transfer                           | **Decided:** the holder transfers from their retrieval link until the event starts, except at events whose identity field is ID number; new QR code and short code | Decided |
+| 18 | Identity field                        | —                                                           | **Decided:** staff choose none, phone number or ID number per event; every ticket holder gives that field; no event collects both; no free-text questions | Decided |
+| 19 | CSV exports                           | —                                                           | **Decided:** guest list export (staff and assigned event owners) and sales list export (staff) | Decided |
+| 20 | Event categories                      | —                                                           | **Decided:** a platform list managed by admins; organizers pick one per event; the public site filters by it | Decided |
+| 21 | Bot protection                        | None; CAPTCHA per event; CAPTCHA always                     | **Decided:** staff or admins can require a CAPTCHA at checkout per event; load-test against the client's largest event (hurdles.md H13) | Decided |
+| 22 | Personal data retention               | Fixed period; delete on request                             | **Decided:** kept until someone asks for deletion; then names, emails, phone numbers and ID digits are removed and financial and scan records kept (hurdles.md H12) | Decided |
 
 ---
 

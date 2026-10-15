@@ -1,8 +1,8 @@
 # Architecture Blueprint: Multi-Organizer Event Ticketing SaaS
 
-We're locking in **Laravel + Sanctum + Supabase PostgreSQL**, with Laravel initially hosted on **cPanel**. This gives you a practical starting point without forcing you to build the entire infrastructure on AWS before the product is ready.
+We're locking in **Laravel + Sanctum + Supabase PostgreSQL**, with Laravel initially hosted on **cPanel**, and one **Next.js** app on **Vercel** for every user. This gives you a practical starting point without forcing you to build the entire infrastructure on AWS before the product is ready.
 
-> **Key architectural principle:** Laravel owns the business rules, Supabase PostgreSQL owns the persistent data, and the frontends communicate with Laravel through a versioned API.
+> **Key architectural principle:** Laravel owns the business rules, Supabase PostgreSQL owns the persistent data, and the frontend communicates with Laravel through a versioned API.
 
 ---
 
@@ -10,22 +10,20 @@ We're locking in **Laravel + Sanctum + Supabase PostgreSQL**, with Laravel initi
 
 | Layer                   | Technology                 | Responsibilities                                                                                                    |
 | ----------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Public frontend**     | Next.js + TypeScript       | Event discovery, event pages, guest checkout and ticket retrieval                                                   |
-| **Management frontend** | React + Vite + TypeScript  | Organizer dashboard (including the event owner guest list), platform admin and guard interface                      |
-| **UI and styling**      | shadcn/ui + Tailwind CSS   | Shared component library and design system for both frontends                                                       |
+| **Frontend**            | Next.js + TypeScript (server-side rendering) | One app for every role: event discovery, event pages, guest checkout and ticket retrieval, plus the organizer, event owner, platform admin and guard areas |
+| **UI and styling**      | shadcn/ui + Tailwind CSS   | Component library and design system for the frontend                                                                |
 | **Backend**             | Laravel REST API           | Sanctum, policies, event management, orders, payments, tickets, QR validation and reporting                         |
-| **Authentication**      | Google OAuth (Laravel Socialite) + Sanctum | Google sign-in for admins, organizer staff and event owners; guards use Google or an email and password created by their organizer; Sanctum cookie sessions keep everyone signed in |
+| **Authentication**      | Google OAuth (Laravel Socialite) + Sanctum | Google sign-in for admins, organizer staff and event owners; guards sign in only with an email and password created by their organizer; Sanctum cookie sessions keep everyone signed in |
 | **Database**            | Supabase PostgreSQL        | Persistent records, relationships, transactions, constraints and inventory                                          |
 | **Payment gateway**     | Pesapal (API 3.0)          | M-Pesa and card payments through Pesapal's hosted checkout, with IPN notifications and transaction status checks    |
-| **Initial deployment**  | cPanel                     | Laravel API, provided the hosting supports the required PHP version, extensions, HTTPS, database connectivity and background tasks |
+| **Initial deployment**  | cPanel and Vercel          | Laravel API on cPanel, provided the hosting supports the required PHP version, extensions, HTTPS, database connectivity and background tasks; the Next.js app on Vercel |
 
 ### UI and styling with shadcn/ui
 
-Both frontends use **shadcn/ui** for components, styled with **Tailwind CSS**. shadcn/ui supports both Next.js and Vite.
+The frontend uses **shadcn/ui** for components, styled with **Tailwind CSS**.
 
 - **Components live in your code.** shadcn/ui is not installed as a package. Its CLI copies each component's source into the project, where you own and can modify it.
-- **One theme for both frontends.** Define the colors, radius and typography once as CSS variables, and use the same values in the Next.js website and the React dashboard so they look like one product.
-- **Keep the two copies in sync.** Each frontend gets its own copy of the components. To avoid drift, either agree on one theme file that both projects copy, or move the shared components into a common package if the frontends live in one repository.
+- **One theme.** Define the colors, radius and typography once as CSS variables, so the public site and the dashboards look like one product.
 - **Accessible by default.** The components are built on accessible primitives, which supports the keyboard-accessible public forms required in the specification.
 - **Design the gate scanner for the job.** Guards work fast, often outdoors, on phones. Use large, high-contrast result states (valid, already used, invalid, unavailable) rather than default component sizes.
 
@@ -35,13 +33,12 @@ Both frontends use **shadcn/ui** for components, styled with **Tailwind CSS**. s
 
 ```mermaid
 flowchart LR
-    A[Attendees] --> W[Next.js Website]
-    O[Organizers] --> D[React Dashboard]
-    EO[Event Owners] --> D
-    G[Platform Admins and Guards] --> D
+    A[Attendees] --> W[Next.js app on Vercel]
+    O[Organizer staff] --> W
+    EO[Event owners] --> W
+    G[Platform admins and guards] --> W
 
     W -- HTTPS REST API --> API[Laravel API on cPanel]
-    D -- HTTPS REST API --> API
 
     API --> S[Laravel Sanctum]
     API --> GO[Google OAuth sign-in]
@@ -55,19 +52,19 @@ flowchart LR
     PAY -- IPN, confirmed by status check --> API
 ```
 
-The frontends must never write directly to ticket inventory, payment records, orders or redemptions. All those operations go through Laravel, so the platform has one place to enforce authorization and transactional rules.
+The frontend must never write directly to ticket inventory, payment records, orders or redemptions. All those operations go through Laravel, so the platform has one place to enforce authorization and transactional rules.
 
 ---
 
 ## 3. Authentication and role design
 
-Admins, organizer staff and event owners sign in with their **Google account**. Guards can also use Google, or sign in with an **email and password** that their organizer creates for them (see [Guard password accounts](#guard-password-accounts)). Laravel Socialite handles the Google OAuth flow. Once Google confirms who the user is, Laravel starts a Sanctum **cookie-based SPA session** that keeps them signed in, rather than giving the browser long-lived bearer tokens. Buyers don't sign in at all: they check out as guests.
+Admins, organizer staff and event owners sign in with their **Google account**. Guards never use Google: they sign in only with an **email and password** that their organizer creates for them (see [Guard password accounts](#guard-password-accounts)). Laravel Socialite handles the Google OAuth flow. Once Google confirms who the user is, Laravel starts a Sanctum **cookie-based SPA session** that keeps them signed in, rather than giving the browser long-lived bearer tokens. Buyers don't sign in at all: they check out as guests.
 
 ### Google sign-in flow
 
 ```mermaid
 sequenceDiagram
-    participant B as Browser (manage dashboard)
+    participant B as Browser (Next.js app)
     participant A as Laravel API
     participant G as Google
 
@@ -88,7 +85,7 @@ sequenceDiagram
 - **Identity scopes only.** Request `openid`, `email` and `profile`. Don't store Google's access or refresh tokens; the platform only needs to know who the user is.
 - **Verified emails only.** Reject Google accounts whose email address Google hasn't verified.
 - **Link by Google account ID.** Store Google's stable account ID in `users.google_id` and look users up by it, not by email.
-- **Invitations decide access.** Staff, event owners, and guards who use Google, are invited by email and accept by signing in with a Google account that uses that address. A new user with no invitation can apply for an organizer account, which a platform admin approves. Platform admins are designated by an existing admin or system command, never through sign-in.
+- **Invitations decide access.** Staff and event owners are invited by email and accept by signing in with a Google account that uses that address. A new user with no invitation can apply for an organizer account, which a platform admin approves. Platform admins are designated by an existing admin or system command, never through sign-in.
 - **Suspended users stay out.** A valid Google sign-in doesn't let a suspended user in.
 - **Browser routes, not API routes.** The redirect and callback are browser navigations that need the session for Google's `state` check, so they live in Laravel's web routes, not under `/api/v1`.
 - **No open redirects.** After sign-in, send users only to allowed frontend addresses.
@@ -98,11 +95,11 @@ See [Laravel Socialite](https://laravel.com/docs/socialite) and [Laravel Sanctum
 
 ### Guard password accounts
 
-Guards who can't or don't want to use Google sign in with an email and password instead.
+Guards sign in only with an email and password. They never use Google, and only guard accounts can scan tickets.
 
-- **One account per guard.** An organizer staff member or a platform admin creates the account. Never create one account for several guards: every scan is recorded against the signed-in guard.
+- **One account per guard.** An organizer staff member or a platform admin creates the account with the guard's own email address. Never create one account for several guards: every scan is recorded against the signed-in guard.
 - **Temporary password, then the guard's own.** The platform generates a temporary password and shows it once. The organizer gives it to the guard in person or by direct message, never in a group chat. At first sign-in the guard must set their own password, so only they know it.
-- **Guard-only.** A password account can never become an organizer staff member, event owner or platform admin, so a leaked password exposes at most the scanner. It is never linked to a Google sign-in, and Google sign-in with the same email is refused.
+- **Guard-only.** A password account can never become an organizer staff member, event owner or platform admin, so a leaked password exposes at most the scanner. It is never linked to a Google sign-in. A Google user may have the same email address; the two stay separate users, and each sign-in path looks up only its own kind of account. A staff member who works a gate uses a guard account.
 - **Owned by one organizer.** The account belongs to the organizer that created it. Only that organizer, or a platform admin, can assign it to events, issue its password or disable it. Another organizer can't assign it, because the owning organizer could issue a new password and sign in as the guard.
 - **One event per password.** The account is assigned to one event at a time, and each password is issued for that event and stored in `guard_credentials`. It works only while that event is open, and only to scan that event's tickets at the gates the organizer assigned.
 - **Deleted when the event closes.** An event closes when its last gate closing time passes, or when the organizer cancels or archives it. At that moment the password is revoked: the platform deletes the password hash, ends the guard's sessions and ends their assignment. A scheduled job does this every minute, and every request from a password guard also checks that their event is still open, so there is no gap in between. The account itself is kept, without a password, so scan records still show who admitted whom.
@@ -115,11 +112,10 @@ Guards who can't or don't want to use Google sign in with an email and password 
 
 A clean domain setup would look like this:
 
-- `www.yourdomain.com` — public event website
-- `manage.yourdomain.com` — organizer and admin dashboard
+- `www.yourdomain.com` — the Next.js app: the public event website, with the organizer, event owner, admin and guard areas under `/organizer`, `/event-owner`, `/admin` and `/guard`
 - `api.yourdomain.com` — Laravel API
 
-These are illustrative domains. Using a common top-level domain makes Sanctum's cookie-based approach practical, provided the session cookie, CORS, CSRF and stateful-domain settings are configured correctly. Preview deployments on unrelated Vercel domains need separate consideration.
+These are illustrative domains. Using a common top-level domain makes Sanctum's cookie-based approach practical, provided the session cookie, CORS, CSRF and stateful-domain settings are configured correctly. Preview deployments on unrelated Vercel domains need separate consideration. When the Next.js server renders a signed-in page, it forwards the user's session cookie, plus the `Origin` or `Referer` header, to Laravel, so Sanctum treats the request as part of the same session.
 
 Create a Google OAuth client for each environment (local, staging and production), and register that environment's callback address, for example `https://api.yourdomain.com/auth/google/callback`, as an authorized redirect URI.
 
@@ -129,8 +125,8 @@ Create a Google OAuth client for each environment (local, staging and production
 | ------------------- | ------------------------------------------------------------------------------------------------------------- |
 | **Platform admin**  | Full rights and privileges across the platform: manage platform users, organizer accounts, event oversight, dispute intervention, global configuration, and platform-wide reports |
 | **Organizer staff** | Full control of their organizer account: profile, members, events, pricing, offerings, delegations, guards, and settlement reports |
-| **Event owner**     | Access restricted strictly to assigned events to view, filter, and export guest/attendee data                 |
-| **Guard**           | Scan and redeem tickets only for assigned events and gates                                                    |
+| **Event owner**     | View, filter and export the names, ticket categories, delegations and check-in status of the ticket holders at their assigned events |
+| **Guard**           | Scan and redeem tickets only for assigned events and gates, signed in with a guard password account           |
 | **Attendee**        | Buy tickets as a guest and view their own orders and tickets through a secure retrieval link; accounts are not required for the initial release |
 
 The full permissions matrix is in v1.md §3. Use Laravel **Policies** and **Gates** to authorize operations. A role alone should never grant access to every record of that type.
@@ -149,12 +145,12 @@ Table names follow v1.md §4, which lists every column.
 
 | Module                                 | Tables                                                                                                           |
 | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| **Identity and tenancy**               | `users`, `organizers`, `organizer_members`                                                                       |
-| **Events and access**                  | `events`, `event_gates`, `event_staff`                                                                           |
-| **Ticket configuration and inventory** | `ticket_types`, `ticket_categories`, `event_ticket_offerings`, `delegations`, `inventory_reservations`, `seating_sections` and `seats` (optional) |
-| **Orders and tickets**                 | `orders`, `order_items`, `attendees`, `ticket_field_definitions`, `attendee_field_values`, `tickets`, `ticket_access_tokens`, `ticket_scans` |
-| **Payments and promotions**            | `payments`, `payment_webhook_events`, `refunds`, `promotions`, `promotion_redemptions`                           |
-| **Audit**                              | `audit_logs`                                                                                                     |
+| **Identity and tenancy**               | `users`, `organizers`, `organizer_members`, `invitations`, `guard_credentials`                                   |
+| **Events and access**                  | `events`, `event_categories`, `event_gates`, `event_staff`                                                       |
+| **Ticket configuration and inventory** | `ticket_types`, `ticket_categories`, `event_ticket_offerings`, `delegations`, `delegation_categories`, `inventory_reservations`, `seating_sections` and `seats` (optional) |
+| **Orders and tickets**                 | `orders`, `order_items`, `attendees`, `ticket_field_definitions`, `attendee_field_values`, `tickets`, `ticket_transfers`, `ticket_access_tokens`, `ticket_scans` |
+| **Payments and promotions**            | `payments`, `payment_webhook_events`, `refunds`, `refund_tickets`, `organizer_payouts`, `promotions`, `promotion_offerings`, `promotion_redemptions` |
+| **Audit and outbox**                   | `audit_logs`, `outbox_messages`                                                                                  |
 
 ### Key design decisions
 
@@ -188,12 +184,12 @@ flowchart TD
     F -- Successful --> G[Mark payment paid]
     G --> H[Issue unique tickets]
     H --> I[Send secure ticket retrieval link]
-    F -- Failed --> J[Fail or expire order]
-    J --> K[Release reserved inventory]
+    F -- Failed or cancelled --> J[Buyer may retry while the hold lasts]
+    J --> K[Hold expires: release inventory and expire order]
     F -- Pending --> L[Await callback or reconciliation]
 ```
 
-Use temporary inventory reservations with an expiry. Otherwise, abandoned payment sessions can block ticket availability indefinitely.
+Use temporary inventory reservations with an expiry (15 minutes by default). Otherwise, abandoned payment sessions can block ticket availability indefinitely.
 
 Pesapal notifies Laravel of payment changes through IPN (instant payment notification) calls. Treat each IPN only as a signal: confirm the actual result with Pesapal's transaction status endpoint before marking anything paid. Processing must also be **idempotent**: a repeated IPN must not issue duplicate tickets or process the same payment twice. A scheduled reconciliation process should ask Pesapal about payments that stay pending or look inconsistent.
 
@@ -258,9 +254,10 @@ All endpoints are versioned under `/api/v1` and follow v1.md §5, which has the 
 | **Organizers**       | `POST /api/v1/organizers`, `GET /api/v1/organizers/me`                                                     |
 | **Events**           | `GET /api/v1/events`, `POST /api/v1/organizer/events`, `PATCH /api/v1/organizer/events/{id}`               |
 | **Ticket offerings** | `GET /api/v1/events/{id}/tickets`, `POST /api/v1/organizer/events/{id}/offerings`                          |
-| **Orders**           | `POST /api/v1/orders`, `GET /api/v1/orders/{id}`                                                           |
+| **Orders**           | `POST /api/v1/orders`, `GET /api/v1/orders/{id}` (with the checkout token), `GET /api/v1/organizer/orders/{id}` |
 | **Payments**         | `POST /api/v1/orders/{id}/payments`, `POST /api/v1/webhooks/payments/{provider}`                           |
 | **Ticket retrieval** | `GET /api/v1/ticket-access/{token}`, `POST /api/v1/ticket-access/resend`                                   |
+| **Refunds**          | `POST /api/v1/admin/refunds`, `POST /api/v1/admin/refunds/{id}/approve`                                   |
 | **Gate scanning**    | `POST /api/v1/events/{id}/scans/validate`                                                                  |
 | **Attendees**        | `GET /api/v1/organizer/events/{id}/attendees`, `GET /api/v1/organizer/events/{id}/attendees/export` (staff and assigned event owners) |
 | **Reports**          | `GET /api/v1/organizer/events/{id}/reports/sales`                                                          |

@@ -10,10 +10,9 @@ SOURCE DOCUMENTS (they are the specification — read the relevant parts before 
 - limitation.md — the client-facing business rules (Part A), accepted limitations (Part B) and client decisions (Part C). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
 
 STACK:
-- /api — Laravel (latest stable release), PostgreSQL on Supabase. Admins, organizer staff and event owners sign in with Google OAuth through Laravel Socialite. Guards can also use an email and password that is valid only for their assigned event. Sanctum SPA cookie sessions after sign-in.
-- /web — Next.js + TypeScript: public event site, checkout, ticket retrieval.
-- /manage — React + Vite + TypeScript: organizer dashboard, platform admin, guard scanner.
-- /packages/ui — shared shadcn/ui components and theme, Tailwind CSS.
+- Two repositories. The backend repository (this one) holds /api and the specification; the frontend repository holds the Next.js app.
+- /api — Laravel (latest stable release), PostgreSQL on Supabase. Admins, organizer staff and event owners sign in with Google OAuth through Laravel Socialite. Guards sign in only with an email and password account created by their organizer, valid only for their assigned event; only guard accounts scan. Sanctum SPA cookie sessions after sign-in.
+- Frontend — one Next.js + TypeScript app with server-side rendering, on Vercel, for every role: the public event site, checkout and ticket retrieval, plus the organizer, event owner, admin and guard areas. shadcn/ui components and Tailwind CSS.
 - Payments — Pesapal API 3.0: buyers pay by M-Pesa or card on Pesapal's hosted checkout; Pesapal sends IPN notifications; results are confirmed with Pesapal's transaction status endpoint.
 - API hosted on cPanel: scheduler and queue run from cron.
 

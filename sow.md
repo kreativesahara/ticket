@@ -1,8 +1,8 @@
 # STATEMENT OF WORK (SOW)
 ## Event Ticketing, Management and Access Control Platform
 
-**Document Version:** 1.4  
-**Date:** 13 October 2026  
+**Document Version:** 1.5  
+**Date:** 15 October 2026  
 **Project Name:** Multi-Organizer Event Ticketing Platform  
 **Client:** [Client / Organization Name]  
 **Service Provider:** [Developer / Software Development Company]  
@@ -55,13 +55,13 @@ The system shall provide secure authentication and role-based access control for
 Functional requirements include:
 
 - Sign-in with Google accounts (Google OAuth) for platform administrators, organizer staff and event owners.
-- Guard sign-in with Google or with an individual email and password account created by the guard's organizer or a platform administrator. The guard shall set their own password at first sign-in, and passwords shall be stored only as secure hashes. Each guard password shall be valid only for the event it was issued for, and shall be revoked and deleted as soon as that event closes (when its last gate closes, or when it is cancelled or archived).
+- Guard sign-in only with an individual email and password account, created with the guard's own email address by organizer staff or a platform administrator. The guard shall set their own password at first sign-in, and passwords shall be stored only as secure hashes. Each guard password shall be valid only for the event it was issued for, and shall be revoked and deleted as soon as that event closes (when entry ends, or when it is cancelled or archived). Only guard accounts shall scan tickets.
 - User profile management.
 - Account activation and suspension.
-- Organizer account applications, approval and management.
+- Organizer account applications, approval and management, including verification of business or ID details and the payout account before an organizer's first paid event.
 - Organizer membership through the organizer staff role, with full control of the organizer account.
 - Event owners assigned to specific events, with access limited to viewing, filtering and exporting that event's guest data.
-- Staff, event owner and guard invitations by email, accepted by signing in with a Google account that uses the invited email address, and guard password accounts created directly by the organizer.
+- Staff and event owner invitations by email, accepted by signing in with a Google account that uses the invited email address, and guard password accounts created directly by organizer staff.
 - Event-specific and gate-specific guard assignments, and event-specific event owner assignments.
 - Enforcement of access restrictions through the backend API.
 
@@ -81,7 +81,7 @@ Authorized organizers shall be able to create and manage multiple events through
 
 Each event shall support:
 
-- Event name, description, images and venue information.
+- Event name, description, images, venue information and an event category from a list maintained by platform administrators.
 - Event location and date/time configuration.
 - Explicit event timezone.
 - Ticket sales start and end dates.
@@ -93,7 +93,9 @@ Each event shall support:
 - Optional seating configuration.
 - Guard and gate assignments.
 - Event publication, cancellation and archiving.
-- Event-specific attendee information requirements.
+- Event-specific attendee information requirements, including an identity field (none, phone number or ID number) chosen by organizer staff, and extra questions limited to pick-lists, checkboxes and dates.
+- An optional CAPTCHA at checkout for high-demand events.
+- Handling of cancelled events (ticket revocation, buyer emails and administrator refunds) and postponed events (buyer refund requests).
 
 The system shall distinguish between ticket sales deadlines, event start/end times and gate operating times.
 
@@ -117,7 +119,7 @@ Organizers shall be able to configure additional ticket types and categories acc
 
 Ticket offerings shall support configurable prices, availability periods, allocations, quantity limits and eligibility rules.
 
-Delegations shall enable organizers to allocate tickets to groups, sponsors, departments, invited guests or other designated groups.
+Delegations shall enable organizers to allocate tickets to groups, sponsors, departments, invited guests or other designated groups, as a sub-quota of the event's ticket offerings, claimed through a private link or access code. Orders that total zero shall skip payment and issue tickets directly.
 
 The system shall enforce ticket inventory limits and prevent overselling through transaction-safe inventory management.
 
@@ -138,16 +140,13 @@ The purchasing process shall include:
 9. Payment initiation and confirmation.
 10. Ticket issuance following verified successful payment.
 
-Orders shall support multiple tickets, with each issued ticket having an independent ticket identifier and QR credential.
+Orders shall support multiple tickets, with each issued ticket having an independent ticket identifier and QR credential. Ticket holders shall be able to transfer a ticket to another person until the event starts, except for events that collect ID numbers.
 
 The system shall maintain order records, pricing snapshots, payment references, order status and associated ticket records.
 
 ### 2.5 Module Five: Payment Gateway Integration
 
-The platform shall integrate:
-
-- M-Pesa payment processing.
-- Card payment processing through an agreed payment service provider.
+The platform shall integrate Pesapal (API 3.0) for M-Pesa and card payments through Pesapal's hosted checkout.
 
 The implementation shall include payment initiation, gateway response handling, server-side payment verification, webhook processing, transaction references and payment status tracking.
 
@@ -159,7 +158,10 @@ Additional requirements include:
 - Idempotent payment processing.
 - Payment reconciliation records.
 - Secure handling of payment credentials.
-- Refund initiation and status tracking where supported by the selected provider.
+- Refund initiation by platform administrators, and automatic refunds of payments that can't be accepted, with status tracking where supported by Pesapal.
+- An emailed receipt for every paid order.
+- A settlement report per organizer and event, and a log of manual payouts recorded by platform administrators.
+- No storage of the paying account (M-Pesa number or card number) that Pesapal reports.
 
 The Client shall provide or facilitate the required payment provider accounts, credentials, merchant registrations and approvals.
 
@@ -173,7 +175,7 @@ The system shall provide:
 
 - Unique ticket generation for each ticket purchased.
 - Secure QR-code generation.
-- Email delivery of ticket retrieval links.
+- Email delivery of order confirmations with ticket retrieval links, receipts, and notices of event changes and cancellations. SMS messaging is not included.
 - A secure ticket retrieval page.
 - Ticket display and download functionality.
 - A 6-character short code on every ticket, unique within its event, for entry when the QR code can't be scanned.
@@ -181,7 +183,7 @@ The system shall provide:
 - Ticket revocation controls for authorized users.
 - Secure access-token management.
 
-QR codes shall reference secure ticket identifiers and shall not contain unnecessary personal information.
+QR codes shall reference secure ticket identifiers and shall not contain any personal information.
 
 Ticket retrieval links shall use secure tokens rather than predictable database identifiers.
 
@@ -191,7 +193,7 @@ The platform shall provide a dedicated interface for authorized guards.
 
 Guard functionality shall include:
 
-- Secure sign-in with Google or with a guard email and password account.
+- Secure sign-in with a guard email and password account.
 - Scanning limited to tickets for the events and gates the event organizer has assigned to the guard.
 - Viewing assigned events and gates.
 - QR-code scanning using supported mobile devices.
@@ -251,6 +253,8 @@ The administrator interface shall provide authorized platform-wide management ca
 - Account suspension and activation.
 - Platform-level transaction oversight.
 - Audit log access.
+- Organizer verification and the event category list.
+- Refunds, settlement reports and the manual payout log.
 - Operational and summary reports.
 
 **Organizer Dashboard**
@@ -264,7 +268,8 @@ Organizers shall be able to access:
 - Promotion management.
 - Guard and gate assignments.
 - Event owner assignments.
-- Guest lists with filters and CSV export, which event owners can also access for their assigned events.
+- Guest lists with filters and CSV export, which event owners can also access for their assigned events (limited to each ticket holder's name, ticket category, delegation and check-in status).
+- Sales list CSV export and the audit records of their own events.
 - Attendance reports.
 - Ticket revocation controls.
 - Event-specific operational summaries.
@@ -300,7 +305,7 @@ The Service Provider shall deliver the following project artifacts and software 
 | D13. Documentation | Setup instructions, API documentation and operational guidance |
 | D14. Handover | Source code, configuration guidance and agreed access credentials |
 
-The specific frameworks, hosting services, email provider, database technology and payment gateway providers shall be documented in the approved technical design.
+D5 to D8 are delivered as areas of one web application. The specific frameworks, hosting services, email provider, database technology and payment gateway providers shall be documented in the approved technical design.
 
 ---
 
@@ -343,10 +348,11 @@ The project shall be considered functionally complete when the following criteri
 
 ### 5.1 Identity and Access
 
-- Authorized users can sign in, with Google or with a guard password account, and access their assigned interfaces.
+- Authorized users can sign in, with Google or (guards only) with a guard password account, and access their assigned interfaces.
 - Guard password accounts can reach only the guard interface, for their assigned event and gates, and their passwords stop working as soon as that event closes.
 - Organizers cannot access another organizer's private resources.
 - Guards can access only assigned events and permitted gates.
+- Event owners can view, filter and export the guest list only for their assigned events, and every other organizer action rejects them.
 - Unauthorized actions are rejected by the backend.
 
 ### 5.2 Event and Ticket Management
@@ -362,7 +368,7 @@ The project shall be considered functionally complete when the following criteri
 - M-Pesa and card payment integrations pass agreed test scenarios.
 - Tickets are not issued solely because of a client-side payment success message.
 - Duplicate callbacks do not create duplicate ticket issuance.
-- Failed or expired transactions are handled according to the approved business rules.
+- Failed or expired transactions are handled according to the approved business rules, and payments that can't be accepted are refunded automatically.
 
 ### 5.4 Digital Tickets
 
@@ -370,6 +376,7 @@ The project shall be considered functionally complete when the following criteri
 - Each ticket has a unique QR credential.
 - The retrieval link provides authorized access to the relevant tickets.
 - Revoked or invalid retrieval tokens are rejected.
+- A transferred ticket's previous QR code and short code are rejected at the gate.
 
 ### 5.5 Gate Access
 
@@ -433,12 +440,12 @@ This SOW is based on the following assumptions:
 
 - The platform will support multiple organizers on a shared application.
 - The backend will be the authoritative source for access control, ticket inventory, payment confirmation and ticket redemption.
-- M-Pesa and card payments will be integrated through selected providers with suitable APIs and supported test environments.
+- M-Pesa and card payments will be integrated through Pesapal, which provides suitable APIs and a supported test environment.
 - Email delivery will use an agreed transactional email provider.
 - Gate validation will require internet connectivity in the initial release.
 - Reserved seating will be an optional event configuration.
 - Attendee data requirements will be configurable per event.
-- Platform administrators, organizer staff and event owners have, or can create, a Google account to sign in. Guards without one use a guard password account.
+- Platform administrators, organizer staff and event owners have, or can create, a Google account to sign in. Guards use guard password accounts with their own email address.
 - The Client will supply or approve the required branding, content and policies.
 - Hosting, domains, third-party service subscriptions and transaction fees will be identified separately in the commercial agreement.
 - The initial release will be developed in one agreed language and currency configuration unless additional requirements are approved.
@@ -464,7 +471,8 @@ Unless expressly included in a signed change request, the following are excluded
 10. Third-party payment gateway fees, transaction charges, hosting charges and other recurring operating costs.
 11. Legal, tax or regulatory advisory services.
 12. Content creation, event promotion, advertising and ongoing operational staffing.
-13. Features not explicitly identified in the approved scope.
+13. SMS messaging.
+14. Features not explicitly identified in the approved scope.
 
 The parties may add any excluded capability through the formal change-control process.
 
@@ -486,7 +494,7 @@ These shall include:
 - Secure QR credentials and ticket retrieval tokens.
 - Audit logs for sensitive operations.
 - Database backups and an agreed recovery procedure.
-- Data minimization and appropriate access restrictions for attendee information.
+- Data minimization and appropriate access restrictions for attendee information, with personal data deleted on request.
 
 The Client shall approve the applicable privacy notices, retention policies, refund policies and other operational rules.
 

@@ -1,6 +1,6 @@
 # Business Rules and Limitations
 
-**Multi-Organizer Event Ticketing Platform · Version 1.0 · 13 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.1 · 15 October 2026**
 
 **Status:** Draft for stakeholder confirmation
 
@@ -10,7 +10,7 @@ This document sets out how the platform will behave: the business rules it follo
 
 1. **Read the business rules (Part A).** Each rule has a number, such as **5.3**. If a rule is wrong or missing something, reply with its number and the change you want.
 2. **Review the limitations (Part B).** Mark each one as accepted, or tell us why it isn't acceptable.
-3. **Answer the open decisions (Part C).** Each has our recommendation; agree with it or choose another option.
+3. **Confirm the decisions (Part C).** Most were settled on 15 October 2026; confirm each one, or answer the few still open.
 4. **Sign off (Part D)** once everything is agreed.
 
 ---
@@ -36,6 +36,7 @@ This document sets out how the platform will behave: the business rules it follo
 - **1.6** Platform admins are appointed by an existing platform admin or system command. No one can make themselves an admin.
 - **1.7** Platform admins have full operational authority across the platform.
 - **1.8** Suspending an organizer stops new sales for their events and blocks their staff, event owners and guards from signing in. Their published events stay visible but can't be bought.
+- **1.9** Before an organizer's first paid event can go on sale, a platform admin checks their business or ID details and the account they'll be paid into.
 
 ### 2. Signing in
 
@@ -45,10 +46,10 @@ This document sets out how the platform will behave: the business rules it follo
 - **2.4** A suspended user can't sign in, even with a valid Google account.
 - **2.5** Buyers never sign in. They buy as guests and reach their tickets through an emailed link.
 
-**Guards** can sign in in either of two ways:
+**Guards** sign in differently:
 
-- **2.6** With Google, after accepting an email invitation, the same way as staff.
-- **2.7** With an **email and password account** created for them by an organizer staff member or a platform admin.
+- **2.6** Guards sign in only with an **email and password account** created for them, using their own email address, by an organizer staff member or a platform admin. Guards never use Google.
+- **2.7** Only guard accounts can check tickets. A staff member who also works a gate uses a separate guard account, even with the same email address.
 
 Rules for guard password accounts:
 
@@ -66,8 +67,8 @@ Rules for guard password accounts:
 
 ### 3. Events
 
-- **3.1** An event goes through these stages: **draft** → **published** → **closed** or **cancelled** → **archived**. A published event closes automatically when its last gate closes. Only published events can be seen and bought by the public. A draft that was never published can be deleted; an event that was ever published is never deleted, only archived, so its sales and entry records are kept.
-- **3.2** Each event has: name, description, images, venue, date and time (with its timezone), ticket sales start and end, gate opening and closing times, total capacity, the attendee details required, ticket options, optional seating, gates and guards, and a cancellation and refund policy.
+- **3.1** An event goes through these stages: **draft** → **published** → **closed** or **cancelled** → **archived**. A published event closes automatically when its last gate closes, or at its end time if it has no gates. Only published events can be seen and bought by the public. A draft that was never published can be deleted; an event that was ever published is never deleted, only archived, so its sales and entry records are kept.
+- **3.2** Each event has: name, description, images, an event category from the platform's list, venue, date and time (with its timezone), ticket sales start and end, gate opening and closing times, total capacity, the attendee details required, ticket options, optional seating, gates and guards, the identity number buyers must give (rule 5.7), whether checkout needs a CAPTCHA, and a cancellation and refund policy.
 - **3.3** Three sets of times are separate and independent:
   - **Ticket sales:** when buying starts and stops.
   - **Gates:** when entry starts and stops.
@@ -76,6 +77,8 @@ Rules for guard password accounts:
   Gates can open before the event starts and stay open after it begins.
 - **3.4** An event can be published only when it has at least one ticket option on sale, sensible times, and enough capacity for all its allocations.
 - **3.5** Every change to a published event is recorded. Changes that would affect tickets already sold need explicit confirmation or are blocked: for example, reducing capacity below the number sold, changing the price of a ticket that has sales, or moving the event's dates.
+- **3.6** When an event is **cancelled**, every ticket is cancelled, every buyer is emailed, and a platform admin refunds each order.
+- **3.7** When an event is **postponed** to new dates, tickets stay valid. Every buyer is emailed a link to ask for a refund, which works until a date set from the event's refund policy.
 
 ### 4. Tickets, prices and capacity
 
@@ -83,10 +86,10 @@ Rules for guard password accounts:
 - **4.2** What a buyer actually purchases is a combination of type and category, for example "Early Bird VIP". Each combination has its own price, number available, sales period and minimum and maximum per order. Only combinations the organizer turns on can be bought.
 - **4.3** Early Bird tickets stop selling when their sales period ends or when they sell out, whichever comes first.
 - **4.4** Group tickets require a set number of tickets and use the group price.
-- **4.5** At the Gate tickets come from the same capacity as advance tickets.
-- **4.6** Media tickets can be set to need the organizer's approval, or can be issued manually by the organizer.
+- **4.5** At the Gate tickets come from the same capacity as advance tickets. Buyers buy them on their own phones through the public site, for example from a QR code poster at the gate. There are no cash sales.
+- **4.6** Media tickets can be set to need the organizer's approval: the buyer pays first, and the tickets are issued only when the organizer approves them. A rejected request is refunded by a platform admin. Organizers can also issue Media tickets manually.
 - **4.7** Promoted tickets need clear rules about who can buy them and at what price.
-- **4.8** **Delegations** are allocations set aside for sponsors, departments or invited groups. Each has its own number of tickets, allowed categories and prices.
+- **4.8** **Delegations** are allocations set aside for sponsors, departments or invited groups. Each has its own number of tickets (taken from the event's ticket options, never added on top), allowed categories and prices. Members claim their tickets through a private link or access code.
 - **4.9** Prices are in **Kenyan shillings** and are stored exactly, with no rounding errors.
 - **4.10** The price a buyer pays is fixed when they order. If the organizer changes prices later, existing orders don't change.
 - **4.11** The platform never sells more tickets than are available, even when many people try to buy the last tickets at the same moment.
@@ -96,10 +99,13 @@ Rules for guard password accounts:
 - **5.1** Buyers check out as guests with their name and email, plus any other details the organizer asks for.
 - **5.2** For each event, the organizer chooses whether to collect details only from the **person buying**, or from **each ticket holder**.
 - **5.3** The steps are: choose tickets → choose seats (seated events only) → enter details → apply a promo code (optional) → review the order → pay.
-- **5.4** Tickets are held for the buyer for a limited time while they pay. If time runs out, the tickets go back on sale and the order expires. (Hold length: see decision C11.)
+- **5.4** Tickets are held for the buyer for **15 minutes** while they pay. If time runs out, the tickets go back on sale and the order expires.
 - **5.5** One order can contain many tickets. Each ticket gets its own QR code and short code, and can be used by a different person.
 - **5.6** The platform calculates every price and total itself. It never relies on figures sent from the buyer's browser.
 - **5.7** When creating an event, the organizer chooses whether buyers must give a **phone number**, an **ID number**, or neither. Buyers can't choose: checkout asks for exactly what the event set, and never for both. With a phone or ID number, every ticket holder gives their name and that number; only the last 4 digits of an ID number are kept, and the guard checks the last 4 digits at the gate. The choice can be changed only while the event is still a draft.
+- **5.8** Any extra questions an organizer adds are pick-lists, checkboxes or dates. There are no free-text questions.
+- **5.9** Orders that cost nothing (free tickets, free sponsor tickets or a 100% discount) skip payment, and the tickets are issued straight away.
+- **5.10** For high-demand events, the organizer can require a CAPTCHA at checkout to stop bots.
 
 ### 6. Promotions and discount codes
 
@@ -115,27 +121,30 @@ Rules for guard password accounts:
 - **7.3** If Pesapal reports the same payment more than once, it's processed only once and tickets are issued only once.
 - **7.4** If no confirmation arrives, the platform checks with Pesapal automatically every few minutes.
 - **7.5** If a payment fails, the buyer can try again while their tickets are still held.
-- **7.6** If the amount paid doesn't match the order, the order isn't marked as paid and is flagged for review.
-- **7.7** If a payment arrives after the hold has expired, the late-payment policy applies (see decision C12).
-- **7.8** If Pesapal later reverses a completed payment, the order is flagged and its tickets are handled under the refund policy.
-- **7.9** Refunds are made through Pesapal where it supports them. A full refund cancels the order's tickets. (Who approves refunds: see decision C13.)
-- **7.10** All ticket money is paid into the platform's Pesapal account. Organizers are paid manually, outside the platform. (How payouts are tracked: see decision C1.)
+- **7.6** If the amount paid doesn't match the order, the order isn't marked as paid and the money is refunded automatically.
+- **7.7** If a payment arrives after the hold has expired, it's refunded automatically. The buyer can order again.
+- **7.8** If Pesapal later reverses a completed payment, the order is refunded and its unused tickets are cancelled.
+- **7.9** Only platform admins make refunds, ticket by ticket, through Pesapal where it supports them. A refunded ticket is cancelled, and its place goes back on sale if the event is still on.
+- **7.10** All ticket money is paid into the platform's Pesapal account. Organizers are paid manually, outside the platform, from a settlement report per organizer and event (sales, refunds, fees and amount owed). Admins record each payout.
+- **7.11** The platform's fee and Pesapal's fees are deducted from the organizer's settlement; buyers pay only the ticket price. How the platform fee is calculated is still to be decided (C2).
 
 ### 8. Tickets and delivery
 
 - **8.1** Tickets are issued only after payment is confirmed: one ticket for each place bought.
 - **8.2** Each ticket has a unique ticket number, a QR code and a **6-character short code**.
-- **8.3** The buyer receives an email with a secure link to their tickets, which they can view and download.
+- **8.3** The buyer receives an order confirmation email with a secure link to their tickets, which they can view and download, and a receipt for every paid order.
 - **8.4** A buyer who loses the link can ask for a new one by entering their email address. The platform doesn't reveal whether an email address has an order.
 - **8.5** Each ticket shows the event details, ticket category, attendee name (where collected), ticket number, short code, and seat or delegation where relevant.
 - **8.6** The QR code contains no personal information.
 - **8.7** Organizers and admins can cancel (revoke) a ticket, giving a reason. Cancelled tickets are refused at the gate, and every cancellation is recorded.
+- **8.8** A ticket holder can pass a ticket to someone else from their ticket link until the event starts, unless the event asks for ID numbers. The new holder gets a new QR code and short code, and the old ones stop working.
+- **8.9** Buyers get emails only: order confirmation, tickets, receipts, event changes and cancellations. There are no SMS messages.
 
 ### 9. Gate entry
 
 - **9.1** Guards see only the events and gates their organizer assigned to them, and can check only tickets for those events.
 - **9.2** Ticket checking needs an internet connection. If the scanner can't reach the platform, it shows **"Unable to verify — do not admit"**. It never shows a ticket as valid when it can't check.
-- **9.3** Entry is allowed only while the gate is open, based on the platform's clock rather than the guard's phone.
+- **9.3** Entry is allowed only while the gate is open (or, for an event without gates, between its start and end times), based on the platform's clock rather than the guard's phone.
 - **9.4** The scanner shows one of these results:
   - **Valid:** admit.
   - **Already used:** shows when and at which gate.
@@ -146,7 +155,8 @@ Rules for guard password accounts:
 - **9.7** Code typing is limited per guard. After **5 wrong codes in a row**, that guard's code entry is locked until the organizer unlocks it; QR scanning keeps working.
 - **9.8** Every check is recorded, whether it succeeded or not: the guard, the gate, the time, and whether the QR code was scanned or the code typed.
 - **9.9** Guards see only the details needed to check entry, not buyers' full information.
-- **9.10** Re-entry is not supported: once a ticket has been used, it can't be used again (see decision C6).
+- **9.10** Re-entry is not supported: once a ticket has been used, it can't be used again.
+- **9.11** An event can have several guards. Every check records the guard who made it.
 
 ### 10. Reserved seating (optional)
 
@@ -159,17 +169,17 @@ Rules for guard password accounts:
 
 ### 11. Reports and records
 
-- **11.1** Organizers see, for their own events only: ticket sales, payment status, tickets remaining, promotion performance, attendance and gate activity.
-- **11.2** Platform admins see platform-wide summaries, all transactions and the activity log.
+- **11.1** Organizers see, for their own events only: ticket sales, payment status, tickets remaining, promotion performance, attendance, gate activity and the activity log. They can download guest and sales lists as spreadsheets (CSV).
+- **11.2** Platform admins see platform-wide summaries, all transactions, the activity log, and each organizer's settlement and payouts.
 - **11.3** Report figures always match the underlying orders and payments.
 - **11.4** Sensitive actions are recorded with who did them and when: role changes, event cancellations, ticket cancellations, refunds, payment adjustments, and guard accounts and passwords.
-- **11.5** Event owners see only the guest list of the events they are assigned to. They can filter it and download it as a spreadsheet (CSV), but see no sales, payment or settlement figures.
+- **11.5** Event owners see only the guest list of the events they are assigned to: each ticket holder's name, ticket category, delegation and check-in status. They can filter it and download it as a spreadsheet (CSV), but see no contact details, ID numbers, sales, payment or settlement figures.
 
 ### 12. Personal data
 
 - **12.1** The platform collects only the attendee details each event needs.
 - **12.2** Organizers see attendee details only for their own events, and event owners only for the events they are assigned to. Guards see only what they need to check entry.
-- **12.3** When someone asks for their personal data to be deleted, their name, email and phone number are removed, but the financial records needed by law are kept without them. (Retention periods: see decision C10.)
+- **12.3** Personal data is kept until someone asks for it to be deleted. Then their name, email, phone number and ID digits are removed, but the financial and entry records needed by law are kept without them.
 
 ---
 
@@ -190,11 +200,14 @@ Please confirm that each of these is acceptable for launch.
 | B9    | No mobile apps                                   | Everything, including the guard scanner, works in a phone or computer web browser.                         | ☐         |
 | B10   | Simple seat setup                                | Seats are entered in forms; there's no visual drag-and-drop seating plan.                                   | ☐         |
 | B11   | Seating may come later                           | If the schedule slips, reserved seating moves to a release after launch.                                    | ☐         |
-| B12   | No re-entry                                      | Attendees who leave can't come back in on the same ticket (unless decision C6 changes this).                | ☐         |
-| B13   | No ticket transfers                              | Buyers can't pass a ticket to someone else or change the name on it (unless decision C17 changes this).     | ☐         |
-| B14   | No cash sales                                    | All sales are paid through Pesapal, including at the gate (unless decision C4 changes this).                | ☐         |
+| B12   | No re-entry                                      | Attendees who leave can't come back in on the same ticket.                                                  | ☐         |
+| B13   | Limited ticket transfers                         | Tickets can be passed on only until the event starts, and never for events that ask for ID numbers.        | ☐         |
+| B14   | No cash sales                                    | All sales are paid through Pesapal, including at the gate.                                                  | ☐         |
 | B15   | Capacity on big sale days                        | The first hosting setup may slow down under a very large rush of buyers; it will be load-tested before launch. | ☐       |
 | B16   | 12-week delivery                                 | Assumes a team of three to four developers and timely decisions; public holidays add one to two weeks.      | ☐         |
+| B17   | No SMS                                           | Buyers get emails only.                                                                                     | ☐         |
+| B18   | No free-text questions                           | Extra questions are pick-lists, checkboxes or dates.                                                        | ☐         |
+| B19   | Guards need an email address                     | Every guard account uses the guard's own email address, and guards can't sign in with Google.              | ☐         |
 
 **Not included in this project** (from the Statement of Work, §9). These can be added later through a change request:
 - Native Android and iOS apps.
@@ -212,38 +225,39 @@ Please confirm that each of these is acceptable for launch.
 
 ---
 
-## Part C — Decisions needed from you
+## Part C — Decisions
 
-Each decision has our recommendation. Please agree with it or choose another option.
+These were settled on 15 October 2026. Please confirm each one, or answer it where it's still open.
 
-| #   | Decision                                               | Our recommendation                                                                                          | Your decision |
-| --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ------------- |
+| #   | Decision                                               | Decision recorded                                                                                           | Confirmed? |
+| --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------- |
 | C1  | How do we track what each organizer is owed?           | A settlement report per organizer and event (sales, refunds, fees, amount owed), plus a log of each manual payout | |
-| C2  | Does the platform charge a fee, and who pays it?       | Your business decision; tell us the amount and whether the buyer or organizer pays it. Also decide who absorbs Pesapal's fees | |
-| C3  | How do we check organizers before they sell?           | Verify business or ID details and payout account before an organizer's first paid event goes live. Also confirm with Pesapal that one account can collect for many organizers | |
+| C2  | Does the platform charge a fee, and who pays it?       | Deducted from the organizer, and Pesapal's fees too. **Still open:** how the fee is calculated (a percentage, a fixed amount per ticket, or both) | |
+| C3  | How do we check organizers before they sell?           | A platform admin verifies business or ID details and the payout account before the organizer's first paid event. Pesapal must still confirm that one account can collect for many organizers | |
 | C4  | How are "At the Gate" tickets sold?                    | Buyers pay on their own phones through a QR code poster at the gate that links to the event page; no cash   | |
-| C5  | What happens when an event is cancelled or postponed?  | **Cancelled:** all tickets cancelled, refunds in bulk, every buyer emailed. **Postponed:** tickets stay valid, buyers emailed and offered a refund for a set period | |
+| C5  | What happens when an event is cancelled or postponed?  | **Cancelled:** all tickets cancelled, every buyer emailed, an admin refunds each order. **Postponed:** tickets stay valid, buyers emailed a refund-request link valid for a set period | |
 | C6  | Is re-entry allowed?                                   | No, for the first release                                                                                   | |
 | C7  | How do free and sponsor tickets work?                  | Orders that total zero skip payment and issue tickets directly; each delegation gets a private link or code to claim its tickets | |
-| C8  | Which messages do buyers get, and is SMS included?     | Emails for order confirmation, ticket delivery, event changes and cancellations. SMS only if you want it, chosen early | |
-| C9  | Receipts and tax                                       | Email a receipt for every paid order. Your accountant confirms whether VAT and KRA eTIMS invoicing apply    | |
-| C10 | How long do we keep attendee data?                     | Your policy; we suggest removing personal details a set time after each event, while keeping financial records | |
-| C11 | How long are tickets held while a buyer pays?          | 10–15 minutes                                                                                               | |
-| C12 | What if a payment arrives after the hold expired?      | Honor it if tickets are still available; otherwise refund it                                                | |
-| C13 | Who approves refunds?                                  | The organizer requests, a platform admin approves, following each event's policy                            | |
+| C8  | Which messages do buyers get, and is SMS included?     | Emails for order confirmation, ticket delivery, receipts, event changes and cancellations. No SMS            | |
+| C9  | Receipts and tax                                       | Email a receipt for every paid order. **Still open:** your accountant confirms whether VAT and KRA eTIMS invoicing apply | |
+| C10 | How long do we keep attendee data?                     | Until someone asks for it to be deleted                                                                     | |
+| C11 | How long are tickets held while a buyer pays?          | 15 minutes                                                                                                  | |
+| C12 | What if a payment arrives after the hold expired?      | Refund it automatically; the buyer orders again                                                             | |
+| C13 | Who approves refunds?                                  | Only platform admins make refunds                                                                           | |
 | C14 | Must guards change their temporary password?           | Yes, at first sign-in for each event, so only the guard knows it                                            | |
-| C15 | Should ticket prices be whole shillings?               | Yes, to avoid rounding problems with M-Pesa (we'll confirm with Pesapal)                                    | |
-| C16 | How do we protect popular sales from bots?             | Add a CAPTCHA at checkout for high-demand events; tell us your largest expected event so we can load-test   | |
-| C17 | Ticket transfers or name changes                       | Not in the first release                                                                                    | |
-| C18 | Can organizers download attendee and sales lists?      | Yes, as spreadsheet (CSV) files                                                                             | |
-| C19 | Can buyers browse events by type (music, sport and so on)? | Your choice; simple to add                                                                              | |
+| C15 | Should ticket prices be whole shillings?               | **Still open.** We recommend yes, to avoid rounding problems with M-Pesa (we'll confirm with Pesapal)      | |
+| C16 | How do we protect popular sales from bots?             | The organizer can require a CAPTCHA at checkout for each event. **Still open:** tell us your largest expected event so we can load-test | |
+| C17 | Ticket transfers or name changes                       | Allowed until the event starts, except for events that ask for ID numbers                                  | |
+| C18 | Can organizers download attendee and sales lists?      | Yes, as spreadsheet (CSV) files; event owners can download the guest list of their assigned events          | |
+| C19 | Can buyers browse events by type (music, sport and so on)? | Yes, from a category list the platform admins manage                                                    | |
 | C20 | Is a Swahili version of the public site needed?        | Not for the first release                                                                                   | |
+| C21 | Which email provider sends the tickets?                | **Still open:** your choice; it must support domain authentication (SPF, DKIM and DMARC)                    | |
 
 ---
 
 ## Part D — Sign-off
 
-By signing, you confirm that the business rules in Part A are correct (with any changes noted), the limitations in Part B are accepted, and the decisions in Part C are recorded as above.
+By signing, you confirm that the business rules in Part A are correct (with any changes noted), the limitations in Part B are accepted, and the decisions in Part C are confirmed as recorded above.
 
 **Changes requested** (by rule or item number):
 
