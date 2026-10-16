@@ -163,6 +163,7 @@ Nothing here has been changed. Each item needs a decision first.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | Added audit retention database role migration (`audit_retention`), retention purge service and daily scheduler (`platform:purge-retention`) for logs past retention periods (Decision #35); hardened AuditLogger against buyer/attendee PII (Decision #36); implemented multi-organizer tenancy, model policies, and authorization safeguards (P1.5) |
 | 2026-10-16 | Planned `intervention/image`, `league/flysystem-aws-s3-v3` and Supabase Storage for event images (decision #46) |
 | 2026-10-16 | Added `laravel/socialite` (v5.31.0) and `laravel/sanctum` (v4.3.3) for Google OAuth 2.0 social sign-in and SPA cookie sessions |
 | 2026-10-15 | Added GitHub Actions CI workflows, Supabase project pooler details (`qglaepourqlklgsfvkai`), Supabase MCP server, and Supabase agent skills (`supabase`, `supabase-postgres-best-practices`) |
