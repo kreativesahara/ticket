@@ -149,8 +149,8 @@ Table names follow v1.md §4, which lists every column.
 | **Events and access**                  | `events`, `event_categories`, `event_gates`, `event_staff`                                                       |
 | **Ticket configuration and inventory** | `ticket_types`, `ticket_categories`, `ticket_waves`, `event_ticket_offerings`, `delegations`, `inventory_reservations`, `seating_sections` and `seats` (optional) |
 | **Orders and tickets**                 | `orders`, `order_items`, `attendees`, `ticket_field_definitions`, `attendee_field_values`, `tickets`, `ticket_transfers`, `ticket_access_tokens`, `ticket_scans` |
-| **Payments and promotions**            | `payments`, `payment_webhook_events`, `refunds`, `refund_tickets`, `organizer_payouts`, `promotions`, `promotion_offerings`, `promotion_redemptions` |
-| **Audit and outbox**                   | `audit_logs`, `outbox_messages`                                                                                  |
+| **Payments and promotions**            | `payments`, `payment_webhook_events`, `reconciliation_runs`, `refunds`, `refund_tickets`, `organizer_payouts`, `promotions`, `promotion_offerings`, `promotion_redemptions` |
+| **Audit and outbox**                   | `audit_logs` (append-only; no foreign keys), `outbox_messages`                                                   |
 
 ### Key design decisions
 
@@ -234,7 +234,7 @@ cPanel is a reasonable initial deployment target if your hosting plan supports t
 | **Long-running workers** | Verify whether the host permits them; otherwise use a controlled cron-based worker strategy |
 | **Assets**               | Supabase Storage or another object-storage service                                          |
 | **Secrets**              | Environment configuration outside public access                                             |
-| **Monitoring**           | Laravel logs, payment/webhook audit records and external uptime monitoring                  |
+| **Monitoring**           | Laravel logs, payment/webhook audit records and external uptime monitoring, each kept for its period in v1.md §4.7 and free of personal data |
 
 For a shared host that does not allow persistent queue workers, a cron-triggered `queue:work --stop-when-empty` approach may work for lightweight workloads, subject to hosting limits. Time-sensitive work must not depend on a queue configuration you have not tested.
 

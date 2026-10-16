@@ -18,7 +18,7 @@ Mermaid has no use case or activity diagram type, so those are drawn as flowchar
 
 ## Database ERD
 
-The complete logical schema from [v1.md §4](../v1.md#4-database-design): all 36 tables. [v1.md §4.5](../v1.md#45-core-relationships) links here; it replaced the short diagram that section used to show ([hurdles.md §6](../hurdles.md#6-document-upkeep)). P1.3 updates it to match the final migrations.
+The complete logical schema from [v1.md §4](../v1.md#4-database-design): all 37 tables. [v1.md §4.5](../v1.md#45-core-relationships) links here; it replaced the short diagram that section used to show ([hurdles.md §6](../hurdles.md#6-document-upkeep)). P1.3 updates it to match the final migrations.
 
 | # | Diagram | Based on | Files |
 |---|---|---|---|

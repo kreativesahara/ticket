@@ -1,7 +1,7 @@
 # STATEMENT OF WORK (SOW)
 ## Event Ticketing, Management and Access Control Platform
 
-**Document Version:** 1.9  
+**Document Version:** 1.10  
 **Date:** 16 October 2026  
 **Project Name:** Multi-Organizer Event Ticketing Platform  
 **Client:** [Client / Organization Name]  
@@ -408,7 +408,7 @@ The project shall be considered functionally complete when the following criteri
 ### 5.6 Reporting and Handover
 
 - Organizer staff can view reports limited to the events they manage.
-- Administrative actions are auditable.
+- Administrative actions and sign-ins are recorded in an audit log that can't be changed, and logs are deleted automatically once their agreed retention periods end.
 - A platform administrator can delete a person's personal data on request, keeping the financial and entry records.
 - Agreed documentation and source code are delivered.
 - No unresolved critical or high-severity defects attributable to the agreed requirements remain at final acceptance, subject to the agreed defect classification and resolution procedure.
@@ -511,7 +511,7 @@ These shall include:
 - Payment webhook authentication and verification.
 - Rate limiting and abuse prevention on sensitive endpoints.
 - Secure QR credentials and ticket retrieval tokens.
-- Audit logs for sensitive operations.
+- Append-only audit logs for sensitive operations and sign-ins, kept for agreed retention periods and holding no buyer or attendee personal details.
 - Database backups and an agreed recovery procedure.
 - Data minimization and appropriate access restrictions for attendee information, with personal data deleted on request by a platform administrator.
 

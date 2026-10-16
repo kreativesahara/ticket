@@ -213,7 +213,7 @@ Recorded in v1.md (FR-09, FR-10 and §4.3), sow.md (Modules Six and Seven, §5.5
 
 **Recommendation:** Design anonymization in Phase 1 (replace names, emails and phone numbers while keeping amounts and references). The client confirms the retention periods before launch.
 
-**Decision (15 October 2026):** personal data is kept until someone asks for it to be deleted; there is no automatic retention period. On request, names, emails, phone numbers and ID digits are removed, while amounts, references and scan records are kept. A platform admin carries out each request (v1.md FR-15). Collection is minimized too: one identity field per event, no free-text questions, only the last 4 digits of ID numbers, and never the paying account Pesapal reports.
+**Decision (15 October 2026):** personal data is kept until someone asks for it to be deleted; there is no automatic retention period. On request, names, emails, phone numbers and ID digits are removed, while amounts, references and scan records are kept. A platform admin carries out each request (v1.md FR-15). Collection is minimized too: one identity field per event, no free-text questions, only the last 4 digits of ID numbers, and never the paying account Pesapal reports. Logs follow their own retention periods and never hold a buyer's or attendee's personal details (decisions #35 and #36 of 16 October 2026, v1.md §4.7).
 
 **Decide by:** Phase 1 (design), Phase 8 (policy) · **Owner:** Both
 

@@ -1,6 +1,6 @@
 # Business Rules and Limitations
 
-**Multi-Organizer Event Ticketing Platform · Version 1.5 · 16 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.6 · 16 October 2026**
 
 **Status:** Draft for stakeholder confirmation
 
@@ -180,14 +180,16 @@ Rules for guard password accounts:
 - **11.1** Organizer staff see, only for the events they manage: ticket sales, payment status, tickets remaining, promotion performance, attendance, gate activity and the activity log. They can download guest and sales lists as spreadsheets (CSV).
 - **11.2** Platform admins see platform-wide summaries, all transactions, the activity log, and each organizer's settlement and payouts.
 - **11.3** Report figures always match the underlying orders and payments.
-- **11.4** Sensitive actions are recorded with who did them and when: role changes, event cancellations, ticket cancellations, refunds, payment adjustments, and guard accounts and passwords.
+- **11.4** Sensitive actions are recorded with who did them and when: role changes, event cancellations, ticket cancellations, refunds, payment adjustments, and guard accounts and passwords, plus every sign-in, sign-out, failed sign-in and lockout. Nobody can change or delete these records; they are removed only when their retention period ends (12.4).
 - **11.5** Event owners see only the guest list of the events they are assigned to: each ticket holder's name, ticket category, delegation, check-in status and entry time (when their ticket was scanned in). They can filter it and download it as a spreadsheet (CSV), but see no contact details, ID numbers, sales, payment or settlement figures.
 
 ### 12. Personal data
 
 - **12.1** The platform collects only the attendee details each event needs.
 - **12.2** Organizer staff see attendee details only for the events they manage, and event owners only for the events they are assigned to. Guards see only what they need to check entry.
-- **12.3** Personal data is kept until someone asks for it to be deleted. Then their name, email, phone number and ID digits are removed, but the financial and entry records needed by law are kept without them. A platform admin carries out each request.
+- **12.3** Personal data is kept until someone asks for it to be deleted. Then their name, email, phone number and ID digits are removed, but the financial and entry records needed by law are kept without them. A platform admin carries out each request. The platform's logs never hold a buyer's or attendee's name, email, phone number or ID digits, so they need no cleaning.
+- **12.4** The platform's logs are kept for set periods, then deleted automatically: the activity log (including sign-ins) and payment records of Pesapal's notifications for 5 years, the gate scan history for 12 months after each event, and technical logs for 90 days. Orders, payments, refunds, tickets and payouts are kept, not deleted.
+- **12.5** Guards can see the tickets they have scanned at their current event (time, result and ticket category), but not the attendees' names.
 
 ---
 
@@ -273,6 +275,8 @@ These were settled on 15 and 16 October 2026. Please confirm each one, or answer
 | C30 | Who can see the list of people on the platform?        | Only platform admins see everyone; staff see their own organizer's staff; event owners see the staff who manage their events | |
 | C31 | Who can change an organizer's payout account?          | Only platform admins, who are also the only ones to see it; staff see only whether a verified payout account is on file. Until it's entered, events with paid tickets stay in draft | |
 | C32 | Can a platform admin set up an event for an organizer? | Yes: the admin creates it as a draft and chooses which of the organizer's staff manage it; the admin doesn't become one of its managers | |
+| C33 | How long are the platform's logs kept?                 | Activity log and payment notification records 5 years (the usual tax-record period; your accountant confirms), gate scans 12 months after the event, technical logs 90 days | |
+| C34 | Is a history of sign-ins kept?                         | Yes: every sign-in, sign-out, failed attempt and lockout, visible to platform admins, and to an event's managers for its guards | |
 
 ---
 

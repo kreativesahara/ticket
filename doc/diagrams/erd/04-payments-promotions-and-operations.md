@@ -4,7 +4,7 @@
 **Based on:** [v1.md §4.4 Payments and promotions](../../../v1.md#44-payments-and-promotions)  
 **Files:** [SVG](04-payments-promotions-and-operations.svg) · [PNG](04-payments-promotions-and-operations.png) · [Mermaid source](04-payments-promotions-and-operations.mmd)
 
-Payments and their refunds, Pesapal notifications, promotions and their redemptions, the audit log, manual payouts and the transactional outbox.
+Payments and their refunds, Pesapal notifications, payment reconciliation runs, promotions and their redemptions, the audit log, manual payouts and the transactional outbox.
 
 ```mermaid
 erDiagram
@@ -92,14 +92,14 @@ erDiagram
     }
     audit_logs {
         key id PK
-        key actor_user_id FK "optional: system actions"
-        key organizer_id FK "optional"
-        key event_id FK "optional"
+        key actor_user_id "no FK; optional: system actions"
+        key organizer_id "no FK; optional"
+        key event_id "no FK; optional"
         string action
         string resource_type
         key resource_id "polymorphic, no FK"
         json metadata
-        string ip_address
+        string ip_address "signed-in users only"
         string user_agent
         timestamp created_at
     }
@@ -113,10 +113,20 @@ erDiagram
         key recorded_by FK
         text notes "optional settlement notes"
     }
+    reconciliation_runs {
+        key id PK
+        timestamp started_at
+        timestamp finished_at
+        int checked_count
+        int resolved_count
+        int flagged_count
+        json flagged_payments "payment IDs and reasons"
+        string status
+    }
     outbox_messages {
         key id PK
         string type
-        json payload
+        json payload "record IDs only"
         timestamp available_at
         timestamp processed_at
         int attempts
@@ -134,9 +144,6 @@ erDiagram
     event_ticket_offerings ||--o{ promotion_offerings : "discounted by"
     promotions ||--o{ promotion_redemptions : "redeemed as"
     orders ||--o{ promotion_redemptions : "uses"
-    users |o--o{ audit_logs : "acts in"
-    organizers |o--o{ audit_logs : "scopes"
-    events |o--o{ audit_logs : "scopes"
     organizers ||--o{ organizer_payouts : "is paid by"
     users ||--o{ organizer_payouts : "recorded_by"
 ```
@@ -153,10 +160,14 @@ erDiagram
 
 - `payments.payment_method` records M-Pesa or card only, never the paying account Pesapal reports (v1.md FR-08).
 - `payment_webhook_events` has no unique key: Pesapal notifications carry no event ID, so idempotency comes from the payment and order checks (v1.md §4.4).
+- `audit_logs` is append-only and has no foreign keys: it keeps the IDs of the user, organizer and event, so deleting a record (such as a draft event) never changes an entry. Entries hold no buyer or attendee personal details (v1.md §4.7).
+- `payments` is also the payment attempt history: each attempt is its own row. `reconciliation_runs` records each run of the reconciliation job.
+- Retention periods for the audit log, notifications, reconciliation runs and outbox messages are in [v1.md §4.7](../../../v1.md#47-logs-and-retention).
 
 ## Assumptions to confirm in P1.3
 
 - `refunds.requested_by` is optional: postponement requests come from guest buyers with no user account, and system refunds have no requester.
 - `audit_logs.actor_user_id`, `organizer_id` and `event_id` are optional, for system actions and platform-level actions.
+- `reconciliation_runs.flagged_payments` is shown as JSON; P1.3 may use a child table instead.
 
 P1.3 writes the migrations from v1.md §4 and updates these diagrams to match the final schema (prompts.md P1.3).

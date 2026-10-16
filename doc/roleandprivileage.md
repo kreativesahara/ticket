@@ -1,7 +1,7 @@
 # Roles, Privileges & Authorization Overview
 
-**Multi-Organizer Event Ticketing Platform · Version 1.6 · 16 October 2026**  
-**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#34). If this document disagrees with v1.md, v1.md wins.
+**Multi-Organizer Event Ticketing Platform · Version 1.7 · 16 October 2026**  
+**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#40). If this document disagrees with v1.md, v1.md wins.
 
 ---
 
@@ -90,6 +90,7 @@ graph TD
   * Scan ticket QR codes at designated gates.
   * Manually enter short verification codes for entry fallback.
   * View real-time gate entry counts for active shifts.
+  * See their own scans at their current event (time, result, ticket category, gate and method), without attendee names, until their access ends.
 * **Restrictions:** No access to administrative tools, sales figures, financial data, or guest lists. A scan result shows only what the guard needs to check entry: the attendee's name (where collected), ticket category, seat or delegation, and the last 4 digits of their phone or ID number when the event collects one. Guard credentials work for one event only and automatically deactivate (password hash wiped and sessions terminated) when the event concludes.
 
 ### 2.5 Buyer / Attendee
@@ -351,7 +352,7 @@ class AttendeePolicy
 * **Organizer Scope Control:** Disabling or suspending an organizer account automatically revokes access for all linked Event Owners.
 
 #### 5.1.6 Auditability and Data Protection
-* **Audit Trail Logging:** All view, filter, and export requests initiated by Event Owners are logged with timestamps and user IDs for compliance monitoring.
+* **Audit Trail Logging:** All view, filter, and export requests initiated by Event Owners are logged with timestamps, user IDs and the filters used for compliance monitoring. A name search is logged as a name search, never with the text searched, so the audit log holds no guest's personal details.
 * **Privacy Compliance:** Personal guest details are rendered strictly for necessary event coordination, upholding platform tenant isolation policies.
 
 #### Expected Outcome
@@ -376,6 +377,7 @@ Event Owners gain necessary real-time attendee visibility to coordinate event ho
    * Temporary passwords are shown once upon creation and must be changed on first login before scanning endpoints unlock.
    * **Automatic Lifecycle Wipe:** When the event closes, is cancelled, or is archived, the guard password hash is wiped, active sessions are invalidated, and the guard is signed out immediately.
    * Lockout limits: 5 consecutive failed passwords lock the account; 5 invalid short codes lock code-entry fallback.
+   * Every guard sign-in, sign-out, failed attempt and lockout is recorded in the audit log, against the guard's event, so the event's managers and Platform Admins can see them.
 2. **Instant Session Revocation & Suspension Cascading:**
    * Suspending an organizer account instantly terminates sessions for all linked Organizer Staff and assigned Event Owners/Guards.
    * Suspending a user immediately deletes all matching rows in the `sessions` table.
@@ -457,17 +459,19 @@ CREATE TABLE guard_credentials (
     revoked_at TIMESTAMP WITH TIME ZONE DEFAULT NULL
 );
 
--- System Audit Logs
+-- System Audit Logs: append-only (a trigger refuses updates, and deletes except by the
+-- retention job's role for entries older than 5 years). IDs have no foreign keys, so
+-- deleting a record never changes an entry. No buyer or attendee personal details.
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-    organizer_id UUID REFERENCES organizers(id) ON DELETE SET NULL,
-    event_id UUID REFERENCES events(id) ON DELETE SET NULL,
+    actor_user_id UUID,  -- NULL for system actions
+    organizer_id UUID,
+    event_id UUID,
     action VARCHAR(100) NOT NULL,
     resource_type VARCHAR(100) NOT NULL,
     resource_id VARCHAR(255) NOT NULL,
     metadata JSONB DEFAULT '{}',
-    ip_address VARCHAR(45),
+    ip_address VARCHAR(45),  -- signed-in users' actions only
     user_agent TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

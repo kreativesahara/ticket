@@ -76,9 +76,6 @@ erDiagram
     event_ticket_offerings ||--o{ promotion_offerings : "discounted by"
     promotions ||--o{ promotion_redemptions : "redeemed as"
     orders ||--o{ promotion_redemptions : "uses"
-    users |o--o{ audit_logs : "acts in"
-    organizers |o--o{ audit_logs : "scopes"
-    events |o--o{ audit_logs : "scopes"
     organizers ||--o{ organizer_payouts : "is paid by"
 
     %% Standalone tables: no foreign keys
@@ -87,6 +84,12 @@ erDiagram
     }
     outbox_messages {
         string type "email and follow-up jobs"
+    }
+    reconciliation_runs {
+        int flagged_count "payment reconciliation"
+    }
+    audit_logs {
+        key actor_user_id "IDs only, append-only"
     }
 ```
 

@@ -83,14 +83,14 @@ erDiagram
     }
     audit_logs {
         key id PK
-        key actor_user_id FK "optional: system actions"
-        key organizer_id FK "optional"
-        key event_id FK "optional"
+        key actor_user_id "no FK; optional: system actions"
+        key organizer_id "no FK; optional"
+        key event_id "no FK; optional"
         string action
         string resource_type
         key resource_id "polymorphic, no FK"
         json metadata
-        string ip_address
+        string ip_address "signed-in users only"
         string user_agent
         timestamp created_at
     }
@@ -104,10 +104,20 @@ erDiagram
         key recorded_by FK
         text notes "optional settlement notes"
     }
+    reconciliation_runs {
+        key id PK
+        timestamp started_at
+        timestamp finished_at
+        int checked_count
+        int resolved_count
+        int flagged_count
+        json flagged_payments "payment IDs and reasons"
+        string status
+    }
     outbox_messages {
         key id PK
         string type
-        json payload
+        json payload "record IDs only"
         timestamp available_at
         timestamp processed_at
         int attempts
@@ -125,8 +135,5 @@ erDiagram
     event_ticket_offerings ||--o{ promotion_offerings : "discounted by"
     promotions ||--o{ promotion_redemptions : "redeemed as"
     orders ||--o{ promotion_redemptions : "uses"
-    users |o--o{ audit_logs : "acts in"
-    organizers |o--o{ audit_logs : "scopes"
-    events |o--o{ audit_logs : "scopes"
     organizers ||--o{ organizer_payouts : "is paid by"
     users ||--o{ organizer_payouts : "recorded_by"
