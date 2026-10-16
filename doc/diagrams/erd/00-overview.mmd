@@ -10,7 +10,7 @@ erDiagram
     events ||--o{ event_staff : "assigns"
     users ||--o{ event_staff : "is assigned"
     event_gates |o--o{ event_staff : "limits guard to"
-    organizers ||--o{ invitations : "sends"
+    organizers |o--o{ invitations : "sends"
     events |o--o{ invitations : "event owner invite for"
     users ||--o{ guard_credentials : "holds password"
     events ||--o{ guard_credentials : "valid only for"

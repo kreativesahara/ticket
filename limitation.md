@@ -1,6 +1,6 @@
 # Business Rules and Limitations
 
-**Multi-Organizer Event Ticketing Platform · Version 1.2 · 15 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.3 · 16 October 2026**
 
 **Status:** Draft for stakeholder confirmation
 
@@ -33,7 +33,7 @@ This document sets out how the platform will behave: the business rules it follo
 - **1.3** Every organizer must always have at least one active organizer staff member.
 - **1.4** Event owners have read-only access to attendee data for their assigned events, with privileges to view, filter, and export to CSV, but cannot alter event configurations, tickets, pricing, guards, or financials.
 - **1.5** New organizers sign in, apply for an organizer account, and wait for a platform admin to approve them before they can create events.
-- **1.6** Platform admins are appointed by an existing platform admin or system command. No one can make themselves an admin.
+- **1.6** Platform admins are invited by email by an existing platform admin, and accept by signing in with a Google account that uses the invited address. Any admin can remove another admin's rights, but the last admin can't be removed. The very first admin is set up once, with a setup command run by the technical team. No one can make themselves an admin.
 - **1.7** Platform admins have full operational authority across the platform.
 - **1.8** Suspending an organizer stops new sales for their events and blocks their staff, event owners and guards from signing in. Their published events stay visible but can't be bought.
 - **1.9** Before an organizer's first paid event can go on sale, a platform admin checks their business or ID details and the account they'll be paid into.
@@ -42,7 +42,7 @@ This document sets out how the platform will behave: the business rules it follo
 
 - **2.1** Platform admins, organizer staff and event owners sign in with their **Google account**. They have no separate password for the platform.
 - **2.2** Only Google accounts with a verified email address are accepted.
-- **2.3** Staff and event owners are invited by email and must accept by signing in with a Google account that uses that same email address. Invitations expire and can be used only once.
+- **2.3** Staff, event owners and platform admins are invited by email and must accept by signing in with a Google account that uses that same email address. Invitations expire and can be used only once.
 - **2.4** A suspended user can't sign in, even with a valid Google account.
 - **2.5** Buyers never sign in. They buy as guests and reach their tickets through an emailed link.
 
@@ -178,7 +178,7 @@ Rules for guard password accounts:
 - **11.2** Platform admins see platform-wide summaries, all transactions, the activity log, and each organizer's settlement and payouts.
 - **11.3** Report figures always match the underlying orders and payments.
 - **11.4** Sensitive actions are recorded with who did them and when: role changes, event cancellations, ticket cancellations, refunds, payment adjustments, and guard accounts and passwords.
-- **11.5** Event owners see only the guest list of the events they are assigned to: each ticket holder's name, ticket category, delegation and check-in status. They can filter it and download it as a spreadsheet (CSV), but see no contact details, ID numbers, sales, payment or settlement figures.
+- **11.5** Event owners see only the guest list of the events they are assigned to: each ticket holder's name, ticket category, delegation, check-in status and entry time (when their ticket was scanned in). They can filter it and download it as a spreadsheet (CSV), but see no contact details, ID numbers, sales, payment or settlement figures.
 
 ### 12. Personal data
 
@@ -234,7 +234,7 @@ Please confirm that each of these is acceptable for launch.
 
 ## Part C — Decisions
 
-These were settled on 15 October 2026. Please confirm each one, or answer it where it's still open.
+These were settled on 15 and 16 October 2026. Please confirm each one, or answer it where it's still open.
 
 | #   | Decision                                               | Decision recorded                                                                                           | Confirmed? |
 | --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------- |
@@ -264,6 +264,8 @@ These were settled on 15 October 2026. Please confirm each one, or answer it whe
 | C24 | Are sponsor tickets set aside?                         | Yes: each delegation's tickets are its own allocation, never sold to the public and outside the waves       | |
 | C25 | When is a promo code applied?                          | On the order review, after the tickets are held                                                             | |
 | C26 | What is the platform's public name?                    | **Still open:** used on the landing page, in emails and on the QR code posters                              | |
+| C27 | What do event owners see in the guest list?            | Each ticket holder's name, ticket category, delegation, check-in status and entry time; no contact details, ID numbers or money figures | |
+| C28 | Who can make someone a platform admin?                 | Only an existing platform admin, by email invitation; the last admin can't be removed; the very first admin is set up once with a setup command | |
 
 ---
 

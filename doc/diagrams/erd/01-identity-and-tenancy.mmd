@@ -79,12 +79,12 @@ erDiagram
     }
     invitations {
         key id PK
-        key organizer_id FK
+        key organizer_id FK "empty for platform_admin invitations"
         key event_id FK "event owner invitations only"
         string email
-        string role "staff or event_owner"
+        string role "staff, event_owner or platform_admin"
         string token_hash UK "hash only"
-        key invited_by FK
+        key invited_by FK "empty only for the first admin"
         timestamp expires_at
         timestamp accepted_at
     }
@@ -109,9 +109,9 @@ erDiagram
     events ||--o{ event_staff : "assigns"
     users ||--o{ event_staff : "is assigned"
     event_gates |o--o{ event_staff : "limits guard to"
-    organizers ||--o{ invitations : "sends"
+    organizers |o--o{ invitations : "sends"
     events |o--o{ invitations : "event owner invite for"
-    users ||--o{ invitations : "invited_by"
+    users |o--o{ invitations : "invited_by"
     users ||--o{ guard_credentials : "holds password"
     events ||--o{ guard_credentials : "valid only for"
     users ||--o{ guard_credentials : "issued_by"

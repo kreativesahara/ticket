@@ -1,8 +1,8 @@
 # STATEMENT OF WORK (SOW)
 ## Event Ticketing, Management and Access Control Platform
 
-**Document Version:** 1.6  
-**Date:** 15 October 2026  
+**Document Version:** 1.7  
+**Date:** 16 October 2026  
 **Project Name:** Multi-Organizer Event Ticketing Platform  
 **Client:** [Client / Organization Name]  
 **Service Provider:** [Developer / Software Development Company]  
@@ -62,6 +62,7 @@ Functional requirements include:
 - Organizer membership through the organizer staff role, with full control of the organizer account.
 - Event owners assigned to specific events, with access limited to viewing, filtering and exporting that event's guest data.
 - Staff and event owner invitations by email, accepted by signing in with a Google account that uses the invited email address, and guard password accounts created directly by organizer staff.
+- Platform administrator invitations by email, sent by an existing platform administrator and accepted the same way. Any platform administrator can remove another's rights, but never the last administrator's. The very first administrator is set up once with a setup command that stops working as soon as an administrator exists.
 - Event-specific and gate-specific guard assignments, and event-specific event owner assignments.
 - Enforcement of access restrictions through the backend API.
 
@@ -252,7 +253,7 @@ Reserved seating shall be optional and shall not be required for general-admissi
 
 The administrator interface shall provide authorized platform-wide management capabilities, including:
 
-- Organizer and user management.
+- Organizer and user management, including inviting and removing platform administrators.
 - Event oversight.
 - Account suspension and activation.
 - Platform-level transaction oversight.
@@ -274,7 +275,7 @@ Organizers shall be able to access:
 - Promotion management.
 - Guard and gate assignments.
 - Event owner assignments.
-- Guest lists with filters and CSV export, which event owners can also access for their assigned events (limited to each ticket holder's name, ticket category, delegation and check-in status).
+- Guest lists with filters and CSV export, which event owners can also access for their assigned events (limited to each ticket holder's name, ticket category, delegation, check-in status and entry time).
 - Sales list CSV export and the audit records of their own events.
 - Attendance reports.
 - Ticket revocation controls.
@@ -361,6 +362,7 @@ The project shall be considered functionally complete when the following criteri
 - Organizers cannot access another organizer's private resources.
 - Guards can access only assigned events and permitted gates.
 - Event owners can view, filter and export the guest list only for their assigned events, and every other organizer action rejects them.
+- Only an existing platform administrator can make someone an administrator, by invitation, and the last administrator can't be removed.
 - Unauthorized actions are rejected by the backend.
 
 ### 5.2 Event and Ticket Management

@@ -53,5 +53,5 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 
 ## Notes
 
-- The guest list shows each ticket holder's name, ticket category, delegation and check-in status only: no contact details, ID numbers, sales, payment or settlement figures.
+- The guest list shows each ticket holder's name, ticket category, delegation, check-in status and entry time only: no contact details, ID numbers, sales, payment or settlement figures.
 - Event owners never change anything, and never trigger a state transition ([state-machines.md](../../state-machines.md#conventions)).

@@ -8,19 +8,21 @@ SOURCE DOCUMENTS (they are the specification — read the relevant parts before 
 - sow.md — contractual scope. Never build anything listed in §9 "Out of scope".
 - hurdles.md — known gaps (H1–H14), each marked Open or Decided. An open hurdle is an undecided requirement: don't guess, ask me.
 - limitation.md — the client-facing business rules (Part A), accepted limitations (Part B) and client decisions (Part C). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
+- doc/roleandprivileage.md — roles, privileges and the authorization safeguards in detail, including the event owner boundaries (§5.1) and guard safeguards (§5.2). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
 
 STACK:
 - Two repositories. The backend repository (this one) holds /api and the specification; the frontend repository holds the Next.js app.
 - /api — Laravel (latest stable release), PostgreSQL on Supabase. Admins, organizer staff and event owners sign in with Google OAuth through Laravel Socialite. Guards sign in only with an email and password account created by their organizer, valid only for their assigned event; only guard accounts scan. Sanctum SPA cookie sessions after sign-in.
-- Frontend — one Next.js + TypeScript app with server-side rendering, on Vercel, for every role: the public event site, checkout and ticket retrieval, plus the organizer, event owner, admin and guard areas. shadcn/ui components and Tailwind CSS.
+- Frontend — one Next.js + TypeScript app with server-side rendering, for every role: the public event site, checkout and ticket retrieval, plus the organizer, event owner, admin and guard areas. shadcn/ui components and Tailwind CSS.
 - Payments — Pesapal API 3.0: buyers pay by M-Pesa or card on Pesapal's hosted checkout; Pesapal sends IPN notifications; results are confirmed with Pesapal's transaction status endpoint.
-- API hosted on cPanel: scheduler and queue run from cron.
+- Environments — until Phase 8 everything runs locally: the API on localhost:8000 (with the scheduler and queue worker), the Next.js app on localhost:3000, and the database on an online Supabase development project. Tests use a separate Supabase test project. Nothing is deployed before Phase 8; where implementation-plan.md says "staging" before Phase 8, it means local.
+- Hosting, from Phase 8 — the API on cPanel (scheduler and queue run from cron), the Next.js app on Vercel.
 
 NON-NEGOTIABLE RULES:
 1. Tenant isolation: every organizer-owned resource is authorized through a Laravel policy that checks the authenticated user's organizer membership, or, for event owners and guards, their event assignment. Event owners may only view, filter and export the guest list of their assigned events. Never trust role, organizer_id, event_id or gate_id from the request without checking it.
 2. Money is stored as integer minor units plus a currency code. Never floats.
 3. Inventory holds, payment confirmation, ticket issuance and ticket redemption use database transactions and atomic conditional updates. Never read-then-write checks.
-4. Tests run against PostgreSQL, never SQLite.
+4. Tests run against PostgreSQL (the Supabase test project locally, a PostgreSQL service in CI), never SQLite, and never against the Supabase development project.
 5. Every new resource gets a tenant-isolation test.
 6. Sensitive actions write to the audit log.
 7. Never store raw card data, plaintext passwords (guard passwords are hashed, and deleted when their event closes), Google access tokens, plaintext QR tokens or plaintext retrieval tokens. Never commit secrets.

@@ -51,6 +51,7 @@ SOURCE DOCUMENTS (they are the specification — read the relevant parts before 
 - sow.md — contractual scope. Never build anything listed in §9 "Out of scope".
 - hurdles.md — known gaps (H1–H14), each marked Open or Decided. An open hurdle is an undecided requirement: don't guess, ask me.
 - limitation.md — the client-facing business rules (Part A), accepted limitations (Part B) and client decisions (Part C). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
+- doc/roleandprivileage.md — roles, privileges and the authorization safeguards in detail, including the event owner boundaries (§5.1) and guard safeguards (§5.2). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
 
 STACK:
 - Two repositories. The backend repository (this one) holds /api and the specification; the frontend repository holds the Next.js app.
@@ -152,7 +153,7 @@ Requirements:
 - A foreign key for every ownership relationship. Choose delete behavior deliberately: never cascade-delete orders, payments, tickets or audit logs.
 - Unique constraints: user email; event slug (across the platform: it forms the event's link, /events/{slug}); ticket_number; qr_token_hash; (event_id, short_code_hash); (provider, provider_reference) on payments, where the reference is Pesapal's order tracking ID; idempotency_key; one active ticket per seat per event (a partial unique index); and one offering per ticket type in each wave, per type and category among an event's ordinary public offerings, and per type and category in each delegation (partial unique indexes).
 - An exclusion constraint so a category's waves never overlap (EXCLUDE USING gist, with the btree_gist extension), and a CHECK so an offering has at most one of wave_id and delegation_id. Pesapal notifications carry no unique event ID, so don't add a unique key on webhook events; idempotency comes from the payment and order checks in P4.2.
-- CHECK constraints where they're cheap: non-negative counts and amounts, and capacity - sold_count - reserved_count >= 0.
+- CHECK constraints where they're cheap: non-negative counts and amounts, capacity - sold_count - reserved_count >= 0, and an invitation has no organizer exactly when its role is platform_admin.
 - Money as bigint minor units plus a char(3) currency column.
 - Status columns as strings backed by PHP enums, one enum per state machine in doc/state-machines.md.
 
@@ -172,7 +173,7 @@ Implement sign-in with Google as described in implementation-plan.md Phase 1 ste
 - On callback: reject Google accounts with unverified emails. Find the user by users.google_id, looking only at Google users. Never link a Google sign-in to a guard password account: they are separate users even when the email is the same (users.email is unique per sign_in_method). If there's no Google user yet, create one with their Google ID, name and email, with no memberships. Reject suspended users. Log the user in, regenerate the session, and redirect to the Next.js app, accepting only an allowlisted return path (no open redirects).
 - API endpoints: POST /api/v1/auth/logout (invalidates the session) and GET /api/v1/auth/me (the user, platform role, organizer memberships with roles, and event assignments as guard or event owner).
 - Suspending a user ends their existing sessions.
-- An artisan command to grant or remove platform admin (users.platform_role) by email, because no one can become an admin through sign-in.
+- A one-time setup command for the very first platform admin (v1.md FR-01, decision #30): `php artisan platform:bootstrap-admin {email}` creates a platform_admin invitation for that email (no organizer, no inviting user) and prints its single-use link. It refuses to run once any platform admin exists. Every later admin is invited by an existing admin (P1.5); no one becomes an admin through sign-in. Audit its use.
 - Configure stateful domains, the session cookie domain, CORS (with credentials) and CSRF for the www and api subdomains through environment variables. Requests that the Next.js server makes during server-side rendering forward the user's session cookie and Origin header, and must be accepted as the same session. The Google client ID, secret and callback URL also come from environment variables. Document the values for local development, including the localhost callback URL to register in the Google OAuth client.
 - Rate-limit the callback route.
 - Feature tests with Socialite mocked: new user, returning user, unverified email, suspended user, tampered state and a disallowed return path.
@@ -207,7 +208,8 @@ Implement tenancy and authorization as described in implementation-plan.md Phase
 - A safeguard so no route can skip authorization, for example a test that fails if any /api/v1 route has no policy check.
 - An AuditLogger service recording the actor, organizer, event, action, resource type and ID, metadata and time.
 - Endpoints: apply to create an organizer (it stays pending until a platform admin approves it), list my organizers, invite a staff member or event owner, remove a member, and approve or reject organizer applications (platform admin only).
-- Invitations, for organizer staff and event owners only (guards get password accounts in P2.4, never invitations): the invitations table from v1.md §4.1, with the token stored hashed, an expiry date and single use. POST /api/v1/invitations/{token}/accept succeeds only when the signed-in user's verified Google email matches the invited email.
+- Invitations, for organizer staff, event owners and platform admins only (guards get password accounts in P2.4, never invitations): the invitations table from v1.md §4.1, with the token stored hashed, an expiry date and single use. POST /api/v1/invitations/{token}/accept succeeds only when the signed-in user's verified Google email matches the invited email.
+- Platform admins (v1.md FR-01, decision #30), for platform admins only: GET /api/v1/admin/admins lists them; POST /api/v1/admin/invitations invites a new admin by email; accepting that invitation sets users.platform_role; DELETE /api/v1/admin/admins/{userId} removes a user's admin rights, and refuses to remove the last admin (lock the admin rows so two admins removing each other at the same moment can't leave none). Audit every invitation, grant and removal. Tests: organizer staff, event owners and guards are refused; a non-matching Google email can't accept an admin invitation; the last admin can't be removed, even by two simultaneous requests; the setup command from P1.4a refuses once an admin exists.
 - A reusable tenant-isolation test helper: for a given endpoint, it asserts that a user from a different organizer is refused on read, update and delete, and that an event owner is refused on every endpoint except the guest list of their assigned events. Apply it to every endpoint built so far.
 ```
 
@@ -255,7 +257,7 @@ Make the whole system run end to end locally, as Phase 1's working skeleton. imp
 - A /api/v1/health endpoint that checks the database connection and reports when the scheduler and queue last ran. Add it to the OpenAPI contract.
 - One command in each repository starts what it needs: in the backend, the API server, the scheduler (`php artisan schedule:work`) and the queue worker; in the frontend, the Next.js dev server.
 - A tunnel with two HTTPS hostnames on one domain: one for the API and one for the Next.js app (for example, Cloudflare Tunnel). With the session cookie domain, Sanctum's stateful domains, CORS and the Google callback URL set for those hostnames, sign-in and the session must work across them as they will across www and api in production. Make it easy to switch between the localhost and tunnel settings. Before setting it up, tell me which tunnel you chose and what it needs from us (an account, a domain).
-- doc/local-development.md: every environment variable and where its value comes from (the Supabase development and test projects, the local Google OAuth client with its localhost and tunnel callback URLs, and the tunnel), how to start everything, and how to reset the development database.
+- doc/local-development.md: every environment variable and where its value comes from (the Supabase development and test projects, the local Google OAuth client with its localhost and tunnel callback URLs, and the tunnel), how to start everything, how to create the first local platform admin with the P1.4a setup command, and how to reset the development database.
 No real credentials in any file.
 ```
 
@@ -326,9 +328,9 @@ Implement gates and staff as described in implementation-plan.md Phase 2 step 8.
 - Guard password accounts (techstack.md §3): POST /api/v1/organizer/guards creates the account (name and the guard's own email) with managed_by_organizer_id set to the creating organizer. Guards never use Google; the email may match a Google user's, and the two stay separate users. A password account is assigned to one event at a time. POST /api/v1/organizer/guards/{id}/password issues a temporary password for the guard's current assignment: it creates a guard_credentials row, returns the password once in the response and never again, and revokes any earlier credential and its sessions. PATCH /api/v1/organizer/guards/{id} disables or re-enables the account. Only the owning organizer or a platform admin can assign, issue passwords for or disable a password guard.
 - Revocation when the event closes: a scheduled job runs every minute. For every event that has closed (entry ended, or cancelled or archived), it deletes the password hash of each of its guard credentials, sets revoked_at, deletes the guards' sessions, ends their assignments and writes an audit log entry. Cancelling or archiving an event triggers the same revocation immediately. Keep the guard's user record, so scan records still name them. Every guard assignment for the event ends.
 - Assignments link a guard to an event and, optionally, a gate. An event can have several guards. Organizers can remove assignments. Assignment changes are audited.
-- Event owner assignments: accepting an event_owner invitation creates an event_staff row with role event_owner and no gate. Organizers can list and remove an event's event owners; removal ends their access to that event immediately and is audited.
+- Event owner assignments: accepting an event_owner invitation creates an event_staff row with role event_owner and no gate. Organizers can list and remove an event's event owners; removal ends their access to that event immediately and is audited. Archiving an event ends every event owner assignment for it in the same way (doc/roleandprivileage.md §5.1.5); closing or cancelling it doesn't.
 - An endpoint for a guard to list only their current assignments.
-- Tests: a guard sees only their own assignments and can't reach any organizer endpoint; an event owner sees only their assigned events and is refused on every organizer endpoint except the guest list; an expired or reused event owner invitation fails; signing in with a different Google email doesn't accept it; another organizer can't assign or issue a password for a password guard; a temporary password can't be retrieved after it's issued; a password account can't be assigned to a second open event; once the last gate closes, the password hash is gone, the guard can't sign in and their session has ended; cancelling an event revokes its guard passwords immediately; and the guard's past scans still show their name.
+- Tests: a guard sees only their own assignments and can't reach any organizer endpoint; an event owner sees only their assigned events, is refused on every organizer endpoint except the guest list, and can't invite users or change any role; archiving an event ends its event owners' access; an expired or reused event owner invitation fails; signing in with a different Google email doesn't accept it; another organizer can't assign or issue a password for a password guard; a temporary password can't be retrieved after it's issued; a password account can't be assigned to a second open event; once the last gate closes, the password hash is gone, the guard can't sign in and their session has ended; cancelling an event revokes its guard passwords immediately; and the guard's past scans still show their name.
 ```
 
 **Done when:** guard account creation and assignment work end to end, event owner invitations work, and guards are confined to their assignments.
@@ -342,8 +344,8 @@ Implement publishing rules and admin controls as described in implementation-pla
 - After publishing: audit every change, and block or require explicit confirmation for changes that affect existing orders (lowering capacity below sold, changing the price of an offering that has sales, moving the event's dates).
 - Organizer verification (hurdles.md H2): organizers submit business or ID details and their payout account (stored encrypted); an admin verifies or rejects them.
 - Event categories: admins create, rename and disable categories; the public list endpoint returns active ones.
-- Admin endpoints: list organizers, suspend and reactivate organizers (suspension unpublishes nothing but blocks new sales and the sign-ins of its staff, event owners and guards), and view any event, with the access audited.
-- Tests for each rule.
+- Admin endpoints: list organizers, suspend and reactivate organizers (suspension unpublishes nothing but blocks new sales and the sign-ins of its staff, event owners and guards, and ends their current sessions at once; doc/roleandprivileage.md §5.2), and view any event, with the access audited.
+- Tests for each rule, including: suspending an organizer signs out its staff, event owners and guards immediately.
 ```
 
 **Done when:** publishing refuses incomplete events with clear reasons, and suspended organizers can't sell.
@@ -361,6 +363,7 @@ Organizer:
 
 Admin:
 - Organizer list with suspend and reactivate actions behind a confirmation dialog, the organizer verification queue, and the event category list.
+- Platform admin list, with an "Invite admin" form (email) and a remove action behind a confirmation dialog, disabled for the last admin.
 
 Forms validate in the browser for convenience, but always show the API's validation errors. Add component tests for the editor steps.
 ```
@@ -646,6 +649,7 @@ Redeem with one atomic update:
 - Log every attempt in ticket_scans, including rejected ones: result, gate, guard, time and method (qr or short_code).
 - The response contains only: the result, the reason, the category, the attendee name where collected, the last 4 digits of the holder's phone or ID number when the event has an identity field, the seat or delegation, and, for a ticket already used, the earlier time and gate.
 - Rate-limit by guard.
+- Gate entry counts for guards (v1.md §3, "gate session only"; doc/roleandprivileage.md §2.4): an endpoint next to the scan endpoint, under /api/v1/events/{id}/scans, that returns how many people have been admitted at the guard's assigned gate (or the whole event, if the assignment names no gate). Counts only, no names or ticket details. Add it to v1.md §5 and the OpenAPI contract, and test that a guard can't read another gate's or event's count.
 - Re-entry is not supported: a redeemed ticket never admits again (hurdles.md H7, limitation.md rule 9.10).
 ```
 
@@ -657,7 +661,7 @@ Redeem with one atomic update:
 Write tests for implementation-plan.md Phase 6 steps 9–10:
 - Simultaneous scans: 10 parallel requests from different guards for the same ticket. Exactly one is admitted and nine get "already redeemed". Run against PostgreSQL with real parallel processes.
 - Short codes: a valid short code admits once; a QR scan and a short code entry for the same ticket at the same moment admit exactly once; a short code from another event is rejected; 5 invalid codes in a row lock short code entry for that guard, while QR scanning still works.
-- One test for each rejection case: wrong event, wrong gate, revoked, unpaid, before the gate opens, after it closes, unknown token, a guard not assigned, a guard whose assignment was removed, a password guard scanning a ticket from a different event, a password guard whose event has closed (their session must already be gone), a Google-signed-in staff member or admin, and the old QR code or short code of a transferred ticket.
+- One test for each rejection case: wrong event, wrong gate, revoked, unpaid, before the gate opens, after it closes, unknown token, a guard not assigned, a guard whose assignment was removed, a password guard scanning a ticket from a different event, a password guard whose event has closed (their session must already be gone), a Google-signed-in staff member, event owner or admin, and the old QR code or short code of a transferred ticket.
 - Every attempt appears in ticket_scans.
 Show me the output.
 ```
@@ -673,6 +677,7 @@ Build the guard area of the Next.js app, designed for phones first:
 - Result screens: large and high-contrast, readable at arm's length, each with a distinct color and icon, plus a sound or vibration where the device supports it. The four states are VALID (admit), ALREADY USED (show the time and gate), INVALID (show the reason) and UNABLE TO VERIFY.
 - Fail closed: a timeout (about 5 seconds, configurable) or a network error shows "Unable to verify — do not admit". It must never show success.
 - After each result, the scanner returns to scanning with one tap.
+- The scanner shows the live admission count for the guard's gate, from the P6.1 count endpoint.
 - Organizer view: live gate activity and attendance counts for each gate.
 Add component tests for each result state, including the network-error state.
 ```
@@ -696,11 +701,11 @@ Implement implementation-plan.md Phase 7 steps 1–4a.
 - Admin report endpoints: platform-wide summaries, transaction oversight, and an audit log search filtered by actor, organizer, action and date.
 - Settlement (hurdles.md H1): a report per organizer and event (sales, refunds, Pesapal fees, platform fee and amount owed) for admins, and for organizer staff for their own organizer; and a payout log where admins record each manual payout. The platform fee calculation is still open (decision #2): ask me before building that column.
 - A read-only audit list for organizer staff, for their own events (GET /api/v1/organizer/events/{id}/audit-logs).
-- Guest list endpoints (v1.md §5): GET /api/v1/organizer/events/{id}/attendees with filters for ticket category, delegation, purchase date and check-in status, and GET /api/v1/organizer/events/{id}/attendees/export, which streams the same filtered list as CSV. Organizer staff can use them for their own events and event owners for their assigned events only (doc/roleandprivileage.md). For event owners, every row and CSV export contains only the holder's name, ticket category, delegation and check-in status. Event owners get no other report endpoint.
+- Guest list endpoints (v1.md §5): GET /api/v1/organizer/events/{id}/attendees with a search by holder name and filters for ticket category, delegation, purchase date and check-in status, and GET /api/v1/organizer/events/{id}/attendees/export, which streams the same filtered list as CSV. Organizer staff can use them for their own events and event owners for their assigned events only (doc/roleandprivileage.md §5.1). For event owners, every row and CSV export contains only the holder's name, ticket category, delegation, check-in status and entry time (the ticket's redeemed_at, empty until it's scanned in; decision #29): no ticket type, contact details, ID numbers, prices or order amounts. Event owners get no other report endpoint. Every guest list view, search, filter and export by an event owner writes an audit log entry with the event, the search and filters used and, for exports, the number of rows (doc/roleandprivileage.md §5.1.6).
 - A sales list CSV export for organizer staff (GET /api/v1/organizer/events/{id}/reports/sales/export).
 - Data deletion on request (implementation-plan.md Phase 7 step 4a, v1.md FR-15, hurdles.md H12): POST /api/v1/admin/data-deletions, for platform admins only. Given an email address or phone number, find the person across every organizer and remove their name, email, phone number and ID digits from orders, attendees, ticket transfers and promotion redemptions, keeping amounts, references, tickets and scan records. Audit it. Tests: the details are gone everywhere, report totals don't change, and organizer staff and event owners are refused.
 - Reports must match the order and payment records exactly. Write tests that compare report totals with direct sums.
-- Tenant-isolation tests for every report endpoint, including that an event owner can export only their assigned events' guest lists.
+- Tenant-isolation tests for every report endpoint, including that an event owner can export only their assigned events' guest lists, that their rows and CSV carry no other column, and that each of their guest list requests is audited.
 ```
 
 **Done when:** report figures match the records, and organizers only ever see their own events.
@@ -713,7 +718,7 @@ Build report screens in the Next.js app for organizers, event owners and admins,
 - An audit log viewer for admins, and a read-only audit list per event for organizer staff.
 - Settlement screens for admins and organizer staff, and a payout log form for admins.
 - A data deletion screen for admins: search by email address or phone number, review what will be removed, then confirm.
-- A guest list screen with the P7.1 filters and an "Export CSV" button, in the organizer area for each event and as the only screen in the event owner area.
+- A guest list screen with the P7.1 name search, filters and an "Export CSV" button, in the organizer area for each event and as the only screen in the event owner area, which shows no edit, revoke, refund or other write action.
 - Every number is labeled with its unit and time range.
 ```
 
@@ -780,6 +785,7 @@ Deploy staging, the first hosted environment, as described in implementation-pla
 - The Next.js app on Vercel (decision #5), on the www domain, with the API's URL and the allowed domains in its environment variables.
 - The staging Google OAuth settings: document the callback URL to register in the staging OAuth client.
 - Pesapal sandbox on staging: register the staging IPN URL with the P4.3 command.
+- Create the first staging platform admin with the P1.4a setup command, and document the step.
 - Email through the client's provider (decision #9), with the DNS records from doc/email-setup.md. If the client still hasn't chosen one, ask me.
 - doc/deployment.md listing every step and every environment variable.
 No real credentials in any file.
@@ -809,7 +815,7 @@ Add them to CI as a separate job.
 
 ```text
 Review the whole codebase for security, as described in implementation-plan.md Phase 8 step 3, then fix what you find.
-Check: authorization on every route (compare against v1.md §3); tenant isolation; the Google sign-in flow (state check, verified emails only, linking by Google account ID, session regeneration, no open redirects); guard password sign-in (hashing, rate limiting, lockout, identical errors, forced password change, guard-only scope, and deletion of the password when the event closes); that only guard accounts can scan; that the paying account from Pesapal is never stored or logged; mass assignment; input validation; SQL injection; XSS in both frontends; CSRF; CORS; session and cookie flags; rate limits on the sign-in callback, resend, scan and webhook endpoints; webhook forgery; secrets in the repository or logs; personal data in logs; security headers; and dependency vulnerabilities (composer audit, pnpm audit).
+Check: authorization on every route (compare against v1.md §3); tenant isolation; event owners' read-only scope, the columns they can see and the auditing of their guest list access (doc/roleandprivileage.md §5.1); the Google sign-in flow (state check, verified emails only, linking by Google account ID, session regeneration, no open redirects); platform admin rights granted only through admin invitations and the one-time setup command, and never the last admin removed; guard password sign-in (hashing, rate limiting, lockout, identical errors, forced password change, guard-only scope, and deletion of the password when the event closes); that only guard accounts can scan; that the paying account from Pesapal is never stored or logged; mass assignment; input validation; SQL injection; XSS in both frontends; CSRF; CORS; session and cookie flags; rate limits on the sign-in callback, resend, scan and webhook endpoints; webhook forgery; secrets in the repository or logs; personal data in logs; security headers; and dependency vulnerabilities (composer audit, pnpm audit).
 First report your findings ranked by severity, each with its location and the fix. Wait for my go-ahead, then fix them one by one, adding a test for each.
 ```
 
@@ -842,7 +848,7 @@ Set up production monitoring as described in implementation-plan.md Phase 8 step
 
 ```text
 Prepare the go-live and handover documents described in implementation-plan.md Phase 8 steps 7–11:
-- doc/go-live-checklist.md: production environment variables, cron, HTTPS on all subdomains, Sanctum production domains, the production Google OAuth client with its callback URL and published consent screen, production Pesapal keys and the production IPN registration, email DNS records, backups confirmed, monitoring active, the privacy notice and the deletion-on-request procedure in place (hurdles.md H12), every hurdle in hurdles.md Decided or accepted, limitation.md signed off, the smoke test, and one real low-value payment with each method followed by a refund.
+- doc/go-live-checklist.md: production environment variables, cron, HTTPS on all subdomains, Sanctum production domains, the production Google OAuth client with its callback URL and published consent screen, production Pesapal keys and the production IPN registration, the first production platform admin created with the one-time setup command, email DNS records, backups confirmed, monitoring active, the privacy notice and the deletion-on-request procedure in place (hurdles.md H12), every hurdle in hurdles.md Decided or accepted, limitation.md signed off, the smoke test, and one real low-value payment with each method followed by a refund.
 - Update doc/deployment.md and the OpenAPI contract so they match the final code.
 - A known issues list for the handover, starting from the known limitations in hurdles.md §5 and limitation.md Part B.
 - doc/admin-guide.md and doc/organizer-guide.md: plain-language guides with the main tasks step by step.

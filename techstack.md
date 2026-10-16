@@ -85,7 +85,7 @@ sequenceDiagram
 - **Identity scopes only.** Request `openid`, `email` and `profile`. Don't store Google's access or refresh tokens; the platform only needs to know who the user is.
 - **Verified emails only.** Reject Google accounts whose email address Google hasn't verified.
 - **Link by Google account ID.** Store Google's stable account ID in `users.google_id` and look users up by it, not by email.
-- **Invitations decide access.** Staff and event owners are invited by email and accept by signing in with a Google account that uses that address. A new user with no invitation can apply for an organizer account, which a platform admin approves. Platform admins are designated by an existing admin or system command, never through sign-in.
+- **Invitations decide access.** Staff, event owners and platform admins are invited by email and accept by signing in with a Google account that uses that address. A new user with no invitation can apply for an organizer account, which a platform admin approves. Only an existing platform admin can invite a new admin, and the last admin can't be removed; no one becomes an admin through sign-in. On a fresh installation, a one-time setup command creates the first admin's invitation, and refuses to run once any admin exists.
 - **Suspended users stay out.** A valid Google sign-in doesn't let a suspended user in.
 - **Browser routes, not API routes.** The redirect and callback are browser navigations that need the session for Google's `state` check, so they live in Laravel's web routes, not under `/api/v1`.
 - **No open redirects.** After sign-in, send users only to allowed frontend addresses.
@@ -125,7 +125,7 @@ Create a Google OAuth client for each environment (local, staging and production
 | ------------------- | ------------------------------------------------------------------------------------------------------------- |
 | **Platform admin**  | Full rights and privileges across the platform: manage platform users, organizer accounts, event oversight, dispute intervention, global configuration, and platform-wide reports |
 | **Organizer staff** | Full control of their organizer account: profile, members, events, pricing, offerings, ticket waves, delegations, guards, and settlement reports |
-| **Event owner**     | View, filter and export the names, ticket categories, delegations and check-in status of the ticket holders at their assigned events |
+| **Event owner**     | View, filter and export the names, ticket categories, delegations, check-in status and entry times of the ticket holders at their assigned events |
 | **Guard**           | Scan and redeem tickets only for assigned events and gates, signed in with a guard password account           |
 | **Attendee**        | Buy tickets as a guest and view their own orders and tickets through a secure retrieval link; accounts are not required for the initial release |
 
@@ -249,7 +249,7 @@ All endpoints are versioned under `/api/v1` and follow v1.md §5, which has the 
 | Module               | Example endpoints                                                                                          |
 | -------------------- | ---------------------------------------------------------------------------------------------------------- |
 | **Authentication**   | `GET /auth/google/redirect`, `GET /auth/google/callback`, `POST /api/v1/auth/guard/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me` |
-| **Invitations**      | `POST /api/v1/organizer/invitations`, `POST /api/v1/invitations/{token}/accept`                            |
+| **Invitations**      | `POST /api/v1/organizer/invitations`, `POST /api/v1/admin/invitations` (platform admins), `POST /api/v1/invitations/{token}/accept` |
 | **Guard accounts**   | `POST /api/v1/organizer/guards`, `POST /api/v1/organizer/guards/{id}/password`                             |
 | **Organizers**       | `POST /api/v1/organizers`, `GET /api/v1/organizers/me`                                                     |
 | **Events**           | `GET /api/v1/events`, `GET /api/v1/events/{slug}`, `POST /api/v1/organizer/events`, `PATCH /api/v1/organizer/events/{id}` |

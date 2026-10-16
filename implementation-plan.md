@@ -1,6 +1,6 @@
 # Implementation Plan: Multi-Organizer Event Ticketing Platform
 
-**Version 1.6 · 15 October 2026 · System design and analysis**
+**Version 1.7 · 16 October 2026 · System design and analysis**
 
 **Based on:** [v1.md](v1.md) (requirements specification), [sow.md](sow.md) (statement of work), [techstack.md](techstack.md) (architecture blueprint) and [v2.md](v2.md) (requirements review).
 
@@ -192,7 +192,7 @@ These items can delay launch no matter how fast development goes:
 
 7. **Continuous integration.** On every push, run linting, static analysis and the test suite against PostgreSQL.
 8. **Laravel foundation.** Install Laravel, connect to Supabase over SSL, and add migrations for the identity and tenancy tables. Use UUIDs for any record referenced from outside the system.
-9. **Google sign-in.** Sign users in through Google OAuth with Laravel Socialite, following the rules in techstack.md §3: verified Google emails only, users matched by Google account ID, and a Sanctum cookie session started after sign-in. Add logout, the `me` endpoint, account suspension, invitation acceptance (staff and event owners), organizer applications that a platform admin approves, and a command for granting platform admin. Passwords exist only for guard password accounts (techstack.md §3): add guard sign-in with email and password (the only way guards sign in), the forced password change at first sign-in, rate limiting with temporary lockout, and shorter guard sessions. Use the database session driver, so a specific guard's sessions can be ended. There is no self-registration, email verification or email-based password reset. Configure stateful domains, the session cookie domain, CORS and CSRF for the `www` and `api` subdomains, including requests made by the Next.js server during server-side rendering.
+9. **Google sign-in.** Sign users in through Google OAuth with Laravel Socialite, following the rules in techstack.md §3: verified Google emails only, users matched by Google account ID, and a Sanctum cookie session started after sign-in. Add logout, the `me` endpoint, account suspension, invitation acceptance (staff, event owners and platform admins), organizer applications that a platform admin approves, and a one-time setup command that creates the first platform admin's invitation and refuses to run once any admin exists (decision #30). Passwords exist only for guard password accounts (techstack.md §3): add guard sign-in with email and password (the only way guards sign in), the forced password change at first sign-in, rate limiting with temporary lockout, and shorter guard sessions. Use the database session driver, so a specific guard's sessions can be ended. There is no self-registration, email verification or email-based password reset. Configure stateful domains, the session cookie domain, CORS and CSRF for the `www` and `api` subdomains, including requests made by the Next.js server during server-side rendering.
 10. **Tenancy and authorization.** Build organizers, staff membership and event owner assignments, with a Laravel policy for every resource. Keep platform admin permissions separate from organizer permissions. Event owners pass only the guest-list policy (view, filter and export) for their assigned events.
 11. **Audit log.** A single service call records who acted, the organizer, the event, the action, the affected resource and details.
 12. **API conventions.** The `/api/v1` prefix, the standard error format, rate limits on the sign-in routes, and a correlation ID on every request.
@@ -246,12 +246,12 @@ These items can delay launch no matter how fast development goes:
 8. **Gates and staff.** Create gates (optional: an event without gates admits people between its start and end times). Add guards by creating a guard password account with the guard's own email and giving the guard its temporary password; assign each guard to an event and optionally a gate, and remove assignments. An event can have several guards. A guard password account works for one event at a time. When that event closes (entry ends, or it is cancelled or archived), the password is deleted, the guard's sessions end and the assignment ends. A job runs this every minute, and every request from a password guard also checks the event is still open (techstack.md §3). Assign event owners to an event by email invitation (role `event_owner`, with the event attached), and remove them; removal ends their access to that event immediately.
 9. **Publishing rules.** An event can be published only if it has at least one active offering, valid time windows, capacity that covers its allocations, and, if any offering is paid, a verified organizer. Changes after publishing are audited. Changes that would affect existing orders, such as lowering capacity below tickets already sold, are blocked or need explicit confirmation.
 9a. **Event link, QR code and poster** (v1.md FR-14). Each event's public link is `/events/{slug}`, so event slugs are unique across the platform. Organizer staff download its QR code as PNG or SVG, and as a printable A4 PDF poster with the event's name, date, venue, QR code and link.
-10. **Admin.** List organizers, verify them before their first paid event (business or ID details and payout account), suspend or reactivate them, manage the event category list, and oversee events.
+10. **Admin.** List organizers, verify them before their first paid event (business or ID details and payout account), suspend or reactivate them, manage the event category list, and oversee events. Invite new platform admins by email and remove admin rights, never the last admin's (decision #30); both are audited.
 
 ### Frontend
 
 11. **Organizer dashboard:** an event list and a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), an offerings grid with a wave editor for each category sold in waves, a "move unsold tickets" dialog, delegation management with claim links and set-aside allocations, a share panel with the event link, QR code downloads and the poster, staff and event owner invitations, and guard accounts.
-12. **Admin dashboard:** organizers, users, organizer verification, event categories and suspension controls.
+12. **Admin dashboard:** organizers, users, platform admins (invite and remove), organizer verification, event categories and suspension controls.
 13. **Public website:** a landing page listing every public ticket option across published events (search by event name or venue, event category and date filters, sold-out options marked, upcoming waves greyed out, delegation tickets never listed), and event pages at `/events/{slug}` that show published events only (v1.md FR-14).
 
 ### Exit criteria
@@ -476,7 +476,7 @@ Each part of this phase is built and tested on its own, and the core flow doesn'
 
 2. **Organizer reports**, for their own events only: sales by offering, payment status, remaining capacity, promotion performance, attendance and gate activity; a sales list CSV export; and a read-only list of the event's audit records.
 3. **Admin reports:** platform-wide summaries, transaction oversight, an audit log viewer, and a settlement report per organizer and event (sales, refunds, Pesapal fees, platform fee and amount owed) with a log for recording each manual payout (hurdles.md H1). Organizer staff see their own organizer's settlement report.
-4. **Guest list:** view the attendees of an event, filter them by ticket category, delegation, purchase date and check-in status, and export them as CSV. Available to organizer staff for their own events and to event owners for their assigned events only (doc/roleandprivileage.md). Event owners see only each holder's name, ticket category, delegation and check-in status.
+4. **Guest list:** view the attendees of an event, filter them by ticket category, delegation, purchase date and check-in status, and export them as CSV. Available to organizer staff for their own events and to event owners for their assigned events only (doc/roleandprivileage.md). Event owners see only each holder's name, ticket category, delegation, check-in status and entry time (decision #29).
 
 ### Personal data
 
@@ -573,6 +573,8 @@ These decisions affect the database, the integrations or the schedule. Each need
 | 26 | Sponsor (delegation) tickets          | Sub-quota of public offerings; set aside                    | **Decided:** set aside as each delegation's own offerings, never sold publicly and outside the waves; staff can return unclaimed tickets to public sale (hurdles.md H14) | Decided |
 | 27 | When a promo code applies             | Before the hold; after the hold                             | **Decided:** to the held order, at the review step (limitation.md 6.4) | Decided |
 | 28 | Platform public name                  | —                                                           | **Open:** the client chooses the name used on the landing page, in emails and on posters | Phase 1 (designs) |
+| 29 | Event owner guest list columns        | The four in v1.md 1.8; add ticket type and entry time; add entry time only | **Decided (16 October 2026):** each holder's name, ticket category, delegation, check-in status and entry time; filters unchanged, including purchase date (v1.md FR-13) | Decided |
+| 30 | Appointing platform admins            | System command; admin endpoint; both                        | **Decided (16 October 2026):** any platform admin invites a new admin by email, accepted through Google sign-in with the invited address; any admin can remove another admin's rights, never the last admin's; a one-time setup command creates only the first admin's invitation (v1.md FR-01) | Decided |
 
 ---
 

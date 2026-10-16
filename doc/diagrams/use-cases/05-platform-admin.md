@@ -18,7 +18,7 @@ flowchart LR
         subgraph P1["Platform"]
             A1(["Sign in with Google"]):::usecase
             A2(["Manage platform users and suspensions"]):::usecase
-            A3(["Designate platform admins"]):::usecase
+            A3(["Invite or remove platform admins"]):::usecase
             A4(["Manage event categories"]):::usecase
             A18(["Delete a person's data on request"]):::usecase
         end
@@ -90,5 +90,5 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 
 - Admins can do everything organizer staff can, for any organizer ([02 organizer staff](02-organizer-staff.md)), but they don't scan tickets.
 - Only admins start refunds, ticket by ticket. The automatic refunds of late or mismatched payments are system actions ([06 automated processes](06-automated-processes.md)).
-- Platform admins are designated by an existing admin or a system command, never through sign-in.
+- Any platform admin can invite a new admin by email and remove another admin's rights, never the last admin's. The invitee accepts by signing in with Google using the invited address. A one-time setup command creates only the very first admin's invitation. No one becomes an admin through sign-in ([v1.md FR-01](../../../v1.md#fr-01--accounts-and-authentication)).
 - Only platform admins delete a person's data on request: names, emails, phone numbers and ID digits are removed across every organizer, and amounts, references and scan records are kept ([v1.md FR-15](../../../v1.md#fr-15--personal-data-deletion)).

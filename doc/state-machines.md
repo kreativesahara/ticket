@@ -242,7 +242,7 @@ stateDiagram-v2
   - `none`: no phone number or ID number is collected from anyone in the order.
   - No event collects both. Organizer-defined questions are pick-lists, checkboxes or dates only (no free text), so a phone or ID number can't be collected any other way, and any submission containing a field the event didn't ask for is refused.
   - Tickets for `id_number` events can't be transferred.
-- Guards can't revoke, reinstate, transfer or issue tickets. Event owners only see a ticket's check-in status in the guest list.
+- Guards can't revoke, reinstate, transfer or issue tickets. Event owners only see a ticket's check-in status and entry time in the guest list.
 - A refund doesn't change a `redeemed` ticket.
 
 ### 4.1 Scan results (not states)

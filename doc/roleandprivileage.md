@@ -1,7 +1,7 @@
 # Roles, Privileges & Authorization Overview
 
-**Multi-Organizer Event Ticketing Platform · Version 1.2**  
-**References:** [limitation.md](file:///c:/Users/mwong/Projects/ticket/limitation.md) (§1, §2, §11), [v1.md](file:///c:/Users/mwong/Projects/ticket/v1.md) (§FR-01, §FR-02, §FR-04, §FR-14, §FR-15, §3, §4.1), [techstack.md](file:///c:/Users/mwong/Projects/ticket/techstack.md) (§3), [implementation-plan.md](file:///c:/Users/mwong/Projects/ticket/implementation-plan.md) (Phase 1, Phase 2).
+**Multi-Organizer Event Ticketing Platform · Version 1.4 · 16 October 2026**  
+**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#30). If this document disagrees with v1.md, v1.md wins.
 
 ---
 
@@ -43,13 +43,14 @@ graph TD
 ### 2.1 Platform Admin
 * **Description:** Executive platform managers who oversee all platform operations, organizer onboarding, compliance, and overall business performance.
 * **Scope:** Full, platform-wide administrative oversight.
-* **Log In Method:** Corporate Google Sign-In with mandatory work email verification.
+* **Log In Method:** Google Sign-In with a Google-verified email address, after accepting a platform admin invitation sent to that address.
 * **Key Capabilities:**
   * Approve, verify, or suspend event organizer accounts.
   * View platform-wide sales summary reports, financial transactions, and system activity logs.
   * Authorize ticket cancellations, event cancellations, and customer refunds.
   * Record manual financial settlements and payout records for event organizers.
-  * Appoint Platform Admins via CLI (`php artisan platform:admin {email}`) or delegation.
+  * Invite new Platform Admins by email, and remove another admin's rights (never the last admin's). Any admin can do both, and both are audited.
+  * The very first admin is created once, on a fresh installation, with a setup command (`php artisan platform:bootstrap-admin {email}`) that creates that admin's invitation and refuses to run once any admin exists.
 * **Restrictions:** Admins do not scan tickets at event gates during operational entry (gate checking is handled strictly by Guard accounts).
 
 ### 2.2 Organizer Staff
@@ -69,20 +70,20 @@ graph TD
 * **Scope:** Strictly limited to guest data for their explicitly assigned event(s).
 * **Log In Method:** Google Sign-In (via email invitation from Organizer Staff or Platform Admin).
 * **Key Capabilities:**
-  * **View Guest Information:** See attendee names, ticket types, check-in status, entry timestamps, and delegation groups for assigned events.
-  * **Filter Guest Data:** Filter attendee lists by entry status, category, or group.
+  * **View Guest Information:** See each ticket holder's name, ticket category, delegation, check-in status and entry time for assigned events.
+  * **Filter Guest Data:** Search by name, and filter by ticket category, delegation, purchase date or check-in status.
   * **Export Guest Data:** Download guest rosters as spreadsheet (CSV) files.
 * **Restrictions:** Read-only guest access. Cannot edit event settings, ticket quantities, pricing, guard assignments, or view revenue figures and bank details.
 
 ### 2.4 Guard
 * **Description:** On-site venue personnel working entry turnstiles, gates, or doors to scan tickets or handle entry checks.
 * **Scope:** Restricted solely to scanning functions for assigned gates during an active event.
-* **Log In Method:** Dedicated temporary account username (email) and password provided by Organizer Staff.
+* **Log In Method:** Guard authentication is an isolated, temporary, single-event credential system: an email and password account created by Organizer Staff (or a Platform Admin), signed in through Laravel Sanctum SPA cookie sessions, never Google OAuth.
 * **Key Capabilities:**
   * Scan ticket QR codes at designated gates.
   * Manually enter short verification codes for entry fallback.
   * View real-time gate entry counts for active shifts.
-* **Restrictions:** No access to administrative tools, sales figures, customer personal details, or financial data. Guard credentials work for one event only and automatically deactivate (password hash wiped and sessions terminated) when the event concludes.
+* **Restrictions:** No access to administrative tools, sales figures, financial data, or guest lists. A scan result shows only what the guard needs to check entry: the attendee's name (where collected), ticket category, seat or delegation, and the last 4 digits of their phone or ID number when the event collects one. Guard credentials work for one event only and automatically deactivate (password hash wiped and sessions terminated) when the event concludes.
 
 ### 2.5 Buyer / Attendee
 * **Description:** Customers purchasing ticket offerings or claiming event passes online.
@@ -105,7 +106,7 @@ graph TD
 | **Platform Management** | View platform audit logs | Full | No | No | No | No |
 | | View event audit records | Full | Limited (Own events, read-only) | No | No | No |
 | | Verify organizers & categories | Full | No | No | No | No |
-| | Appoint Platform Admins | Full | No | No | No | No |
+| | Invite or remove Platform Admins | Full | No | No | No | No |
 | | Approve or suspend organizers | Full | No | No | No | No |
 | | View platform financial totals | Full | No | No | No | No |
 | **Account & Staffing** | Edit profile & payout bank details | Full | Full (Own org) | No | No | No |
@@ -117,9 +118,9 @@ graph TD
 | | Configure reserved seating layouts | Full | Full (Own org) | No | No | No |
 | | Manage partner & sponsor allocations | Full | Full (Own org) | No | No | No |
 | | Issue complimentary / VIP tickets | Full | Full (Own org) | No | No | No |
-| **Guest Data** | View attendee rosters | Full | Full (Own events) | Limited (Names & status, assigned event) | No | Own Order Only |
-| | Filter attendee lists | Full | Full (Own events) | Limited (Names & status, assigned event) | No | No |
-| | Export guest lists (CSV) | Full | Full (Own events) | Limited (Names & status, assigned event) | No | No |
+| **Guest Data** | View attendee rosters | Full | Full (Own events) | Limited (Names, status & entry time, assigned event) | No | Own Order Only |
+| | Filter attendee lists | Full | Full (Own events) | Limited (Names, status & entry time, assigned event) | No | No |
+| | Export guest lists (CSV) | Full | Full (Own events) | Limited (Names, status & entry time, assigned event) | No | No |
 | **Customer Orders** | Revoke or cancel tickets | Full | Full (Own events) | No | No | No |
 | | Authorize and execute refunds | Full | No | No | No | Request after a postponement |
 | | Transfer ticket to another person | No | No | No | No | Own tickets, before the event starts |
@@ -138,7 +139,7 @@ graph TD
 ### 4.1 Step-by-Step Access Verification Flow
 
 1. **User Request:** A staff member, event owner, or guard performs an action in the system (e.g., viewing an attendee roster or clicking to export guest data).
-2. **Identity Verification:** The system confirms the user is logged in with valid active credentials (Sanctum SPA cookie session for web users, or guard session token).
+2. **Identity Verification:** The system confirms the user is logged in with valid active credentials (a Sanctum SPA cookie session, for Google users and guard password accounts alike).
 3. **Role & Ownership Check:** The system checks the user's assigned role and verifies whether they belong to the organization hosting that specific event or are explicitly assigned to it.
 4. **Permission Decision:**
    * **Platform Admin:** Request approved automatically across all operational resources.
@@ -311,7 +312,7 @@ class AttendeePolicy
 * **Strict Event Isolation:** Access is confined solely to explicitly assigned events. Event Owners cannot view or discover other events hosted by the same organizer.
 
 #### 5.1.2 Permitted Guest Information
-* **Visible Fields:** Event Owners can view attendee full names, ticket tier/category, check-in status (checked-in vs. pending), entry timestamp, and delegation group tags.
+* **Visible Fields:** Event Owners can view each ticket holder's full name, ticket category, delegation, check-in status (checked in or not yet) and entry time (when the ticket was scanned in). Nothing else: no ticket type, contact details, ID numbers, prices or order amounts.
 * **Roster Operations:** Permitted actions are limited strictly to searching, filtering, and exporting attendee rosters as CSV files.
 
 #### 5.1.3 Prohibited Operational and Administrative Access
@@ -347,6 +348,7 @@ Event Owners gain necessary real-time attendee visibility to coordinate event ho
 3. **Fail-Closed Default & No Role Escalation:**
    * The backend validates ownership and role assignments from the database on every authenticated request.
    * Event Owners have zero ability to invite users, change roles, or grant permissions.
+   * Platform admin rights come only from accepting a platform admin invitation sent by an existing admin, or, for the very first admin, from the one-time setup command. The last admin can't be removed.
 
 ---
 
