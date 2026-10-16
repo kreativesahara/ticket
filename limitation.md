@@ -270,8 +270,8 @@ These were settled on 15 and 16 October 2026. Please confirm each one, or answer
 | C27 | What do event owners see in the guest list?            | Each ticket holder's name, ticket category, delegation, check-in status and entry time; no contact details, ID numbers or money figures | |
 | C28 | Who can make someone a platform admin?                 | Only an existing platform admin, by email invitation; the last admin can't be removed; the very first admin is set up once with a setup command | |
 | C29 | Can every staff member manage every event of their organizer? | No. Staff manage the events they create; a platform admin grants access to any other event. Other events show a read-only summary without sales or guest data | |
-| C31 | Who can change an organizer's payout account?          | Only platform admins, who are also the only ones to see it; staff see only whether a verified payout account is on file | |
 | C30 | Who can see the list of people on the platform?        | Only platform admins see everyone; staff see their own organizer's staff; event owners see the staff who manage their events | |
+| C31 | Who can change an organizer's payout account?          | Only platform admins, who are also the only ones to see it; staff see only whether a verified payout account is on file | |
 
 ---
 
