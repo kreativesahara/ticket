@@ -1,23 +1,23 @@
-# Roles, Privileges & Authorization Architecture
+# Roles, Privileges & Authorization Overview
 
-**Multi-Organizer Event Ticketing Platform · Version 1.3 · 15 October 2026**  
-**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2).
-
----
-
-## 1. Architectural Principles
-
-The platform is a multi-tenant event ticketing system where multiple organizers coexist on shared infrastructure while maintaining absolute isolation. The authorization and security framework is designed around five core principles:
-
-1. **Platform Admin Full Authority:** System-level Platform Admins have full rights and privileges across the platform, including tenant management, event oversight, dispute intervention, refund execution, and aggregate analytics.
-2. **Tenant Operations Managed by Organizer Staff:** Organizer Staff have full operational and administrative authority over their organizer account, including profile settings, event creation, offerings, pricing, inventory, guard accounts, and financial settlement reports.
-3. **Dedicated, Scoped Event Owner Role:** An Event Owner role is scoped strictly to specific events, with privileges restricted solely to **viewing**, **filtering**, and **exporting** guest/attendee data. Event Owners cannot modify event details, alter pricing, manage guards, or process transactions.
-4. **Multi-Tenant Isolation:** An organizer or staff member must never be able to access, view, or alter another organizer’s events, sales, financial settlement reports, attendee details, or staff assignments through parameter tampering, URL guessing, or IDOR (Insecure Direct Object Reference).
-5. **Zero Trust in Client Context & Fail-Closed:** The backend never trusts client-supplied identifiers (`organizer_id`, `event_id`, `gate_id`, or `role`) in request bodies. Ownership is always verified against authenticated session state in the database. Any unauthorized call defaults immediately to `401 Unauthorized` or `403 Forbidden`.
+**Multi-Organizer Event Ticketing Platform · Version 1.2**  
+**References:** [limitation.md](file:///c:/Users/mwong/Projects/ticket/limitation.md) (§1, §2, §11), [v1.md](file:///c:/Users/mwong/Projects/ticket/v1.md) (§FR-01, §FR-02, §FR-04, §FR-14, §FR-15, §3, §4.1), [techstack.md](file:///c:/Users/mwong/Projects/ticket/techstack.md) (§3), [implementation-plan.md](file:///c:/Users/mwong/Projects/ticket/implementation-plan.md) (Phase 1, Phase 2).
 
 ---
 
-## 2. The Five System Roles
+## 1. Core Operating Principles
+
+The ticketing platform operates as a shared system supporting multiple event organizers simultaneously while ensuring total privacy and data separation. The access and security framework is built around five core operational principles:
+
+1. **Platform Administration & Oversight:** System Administrators hold overall operational authority, managing event organizer accounts, supervising platform activity, resolving cross-organizer issues, executing refunds, and reviewing overall business reporting.
+2. **Organizer Self-Management:** Organizer Teams independently manage their own organization profile, create and manage events, set pricing and ticket inventories, create gate control accounts, and view financial settlement statements.
+3. **Restricted Event Host Access:** External event owners or promoters are granted access strictly to monitor guest activity for their assigned events. They can view, filter, and export attendee lists, but cannot modify event details, ticket prices, or financial settings.
+4. **Tenant Privacy & Data Isolation:** Strict boundaries ensure that no event organizer or team member can view, access, or modify another organizer's events, sales figures, guest lists, or financial payouts.
+5. **Fail-Safe Security Default:** Access rights are continuously verified on every system action based on the logged-in user’s current role and verified organization permissions. Any unauthorized request is automatically blocked by default.
+
+---
+
+## 2. Summary of System Roles
 
 ```mermaid
 graph TD
@@ -41,114 +41,113 @@ graph TD
 ```
 
 ### 2.1 Platform Admin
-* **Description:** System superuser who holds **full, unrestricted rights and privileges** across the entire platform.
-* **Scope:** Platform-wide unrestricted authority.
-* **Authentication:** Google OAuth only (verified email).
-* **Appointment:** Appointed strictly by an existing Platform Admin or via secure server CLI command (`php artisan admin:grant {email}`).
+* **Description:** Executive platform managers who oversee all platform operations, organizer onboarding, compliance, and overall business performance.
+* **Scope:** Full, platform-wide administrative oversight.
+* **Log In Method:** Corporate Google Sign-In with mandatory work email verification.
 * **Key Capabilities:**
-  * Full administrative control over all organizers, events, ticket offerings, pricing, and delegations.
-  * Direct ability to view, filter, and export all customer orders and attendee data platform-wide.
-  * Sole authority to start and approve refunds; can cancel events and revoke tickets.
-  * Verifies organizers before their first paid event, manages the event category list, sees every settlement report, and records manual payouts.
-  * Full access to platform audit logs and security telemetry.
-  * Real-time gate diagnostics. Admins don't scan tickets: only guard accounts do.
+  * Approve, verify, or suspend event organizer accounts.
+  * View platform-wide sales summary reports, financial transactions, and system activity logs.
+  * Authorize ticket cancellations, event cancellations, and customer refunds.
+  * Record manual financial settlements and payout records for event organizers.
+  * Appoint Platform Admins via CLI (`php artisan platform:admin {email}`) or delegation.
+* **Restrictions:** Admins do not scan tickets at event gates during operational entry (gate checking is handled strictly by Guard accounts).
 
 ### 2.2 Organizer Staff
-* **Description:** Organization manager holding **full operational and administrative authority** over their organizer account.
-* **Scope:** Scoped strictly to their own Organizer account and all associated child entities (events, offerings, sales, delegations, guards, settlement reports).
-* **Authentication:** Google OAuth only.
-* **Rules:**
-  * Every organizer account must have at least **one active organizer staff member**.
-  * Organizer staff can invite and manage other organizer staff members and assign event owners.
-  * Full control over organizer profile, legal details, branding, and payout banking information.
-  * Create, edit, publish, cancel, and archive events (closing is automatic).
-  * Configure ticket types, categories, prices, seating layouts, and delegations.
-  * Issue complimentary, sponsor, or media tickets directly.
-  * Create and manage guard password accounts and gate assignments.
-  * Access comprehensive financial reports, ticket sales summaries, and settlement calculations.
-  * Cannot start refunds (platform admins only) and cannot scan tickets with their Google sign-in; a staff member who works a gate uses a guard account.
+* **Description:** Operational managers for an event management company or organizer entity.
+* **Scope:** Restricted strictly to their own organization's profile, events, sales data, staff accounts, and financial summaries.
+* **Log In Method:** Google Sign-In.
+* **Key Capabilities:**
+  * Manage organization contact profile, public branding, and bank payout details.
+  * Create, update, publish, or cancel events, ticket categories, and pricing schedules.
+  * Issue complimentary, VIP, sponsor, or promotional tickets.
+  * Invite team members, assign Event Owners, and manage entry Guard credentials.
+  * View organizational sales reports, attendance figures, and financial payout reports.
+* **Restrictions:** Cannot initiate customer refunds (handled by Platform Admins) and cannot scan tickets directly using standard staff logins (must use an assigned guard account to work a gate).
 
 ### 2.3 Event Owner
-* **Description:** An event-level role assigned to external event hosts, clients, or promoters who need visibility into who is attending their specific event.
-* **Scope:** Scoped strictly to the specific event(s) assigned to them.
-* **Authentication:** Google OAuth only (invited by Organizer Staff or Platform Admin).
-* **Sole Privileges:**
-  1. **View Guest Data:** View each ticket holder's name, ticket category, delegation and check-in status for their assigned event(s). No contact details, identity numbers or order amounts.
-  2. **Filter Guest Data:** Filter attendees by ticket category, delegation, purchase date, or check-in status.
-  3. **Export Guest Data:** Download the same columns as a CSV spreadsheet.
-* **Strict Restrictions:**
-  * Event Owners **cannot** edit event details, dates, venue, or descriptions.
-  * Event Owners **cannot** modify ticket offerings, change prices, or alter inventory allocations.
-  * Event Owners **cannot** invite team members, create guard accounts, or assign staff.
-  * Event Owners **cannot** initiate refunds, revoke tickets, or access organizer banking and settlement reports.
+* **Description:** External event hosts, client representatives, or guest artists who require real-time visibility into attendance for specific assigned events.
+* **Scope:** Strictly limited to guest data for their explicitly assigned event(s).
+* **Log In Method:** Google Sign-In (via email invitation from Organizer Staff or Platform Admin).
+* **Key Capabilities:**
+  * **View Guest Information:** See attendee names, ticket types, check-in status, entry timestamps, and delegation groups for assigned events.
+  * **Filter Guest Data:** Filter attendee lists by entry status, category, or group.
+  * **Export Guest Data:** Download guest rosters as spreadsheet (CSV) files.
+* **Restrictions:** Read-only guest access. Cannot edit event settings, ticket quantities, pricing, guard assignments, or view revenue figures and bank details.
 
 ### 2.4 Guard
-* **Description:** Field operational personnel stationed at venue gates to scan QR codes or type 6-character short codes for entry verification.
-* **Scope:** Scoped strictly to assigned events and designated gates.
-* **Authentication:** Guard password account only: the guard's own email address and a password, created by Organizer Staff or a Platform Admin. Guards never sign in with Google, and only guard accounts can scan.
-* **Strict Rules for Guard Password Accounts ([limitation.md §2](../limitation.md)):**
-  * Password accounts belong strictly to the creating organizer (`managed_by_organizer_id`).
-  * Account can **never** become an Organizer Staff, Event Owner, or Platform Admin.
-  * Credentials work for **one event only**.
-  * Temporary password shown once on screen; must be changed on first sign-in before scanning endpoints are unlocked.
-  * **Automatic Deletion:** When the event closes (or is cancelled/archived), the guard credential password hash is wiped, active sessions are terminated, and the guard is signed out immediately.
-  * Max session lifetime of 12 hours. Lockout after 5 consecutive failed passwords; code-entry lockout after 5 invalid short codes.
+* **Description:** On-site venue personnel working entry turnstiles, gates, or doors to scan tickets or handle entry checks.
+* **Scope:** Restricted solely to scanning functions for assigned gates during an active event.
+* **Log In Method:** Dedicated temporary account username (email) and password provided by Organizer Staff.
+* **Key Capabilities:**
+  * Scan ticket QR codes at designated gates.
+  * Manually enter short verification codes for entry fallback.
+  * View real-time gate entry counts for active shifts.
+* **Restrictions:** No access to administrative tools, sales figures, customer personal details, or financial data. Guard credentials work for one event only and automatically deactivate (password hash wiped and sessions terminated) when the event concludes.
 
 ### 2.5 Buyer / Attendee
-* **Description:** Public consumer purchasing or claiming tickets.
-* **Scope:** Access restricted to their own purchased orders and tickets.
-* **Authentication:** **Guest checkout** (no account or password required).
-* **Credential Access:** Orders and tickets are accessed exclusively via cryptographically secure, tokenized retrieval links (`/t/{access_token}`) delivered to the buyer's email, plus a checkout token during checkout. A holder can transfer a ticket from its link until the event starts, unless the event collects ID numbers.
+* **Description:** Customers purchasing ticket offerings or claiming event passes online.
+* **Scope:** Limited exclusively to their own ticket purchases and order receipts.
+* **Log In Method:** Guest checkout (no account password creation needed).
+* **Key Capabilities & Access:** Access passes via secure digital ticket links (`/t/{access_token}`) delivered to their email, plus a checkout token during checkout. Ticket holders can view their pass, present entry codes, or transfer eligible passes to friends prior to event start (unless the event collects national ID numbers).
 
 ---
 
-## 3. Comprehensive Permissions Matrix
+## 3. Key Operations & Permissions Matrix
 
-**Legend:**
-* **Full:** Unrestricted authority within the role's scope.
-* **Scoped:** Permitted, but strictly scoped to assigned events/gates.
-* **Limited:** Restricted strictly to viewing, filtering, or exporting guest data.
-* **No:** Prohibited (`403 Forbidden`).
+### Access Level Definitions:
+* **Full:** Complete management authority within scope.
+* **Scoped:** Permitted for specific assigned events or gates.
+* **Limited:** Restricted strictly to viewing or exporting guest data.
+* **No:** Access not allowed (`403 Forbidden`).
 
-| Functional Area | Capability | Platform Admin | Organizer Staff | Event Owner | Guard | Buyer / Guest |
+| Operational Area | Capability | Platform Admin | Organizer Staff | Event Owner | Guard | Buyer / Guest |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Platform Ops** | View system audit logs | Full | No | No | No | No |
-| | View audit records for own events | Full | Limited (Own events, read-only) | No | No | No |
-| | Verify organizers & manage event categories | Full | No | No | No | No |
-| | Create/appoint Platform Admins | Full | No | No | No | No |
-| | Approve/Suspend Organizers | Full | No | No | No | No |
-| | View platform-wide financial aggregates | Full | No | No | No | No |
-| | Delete a person's data on request | Full | No | No | No | No |
-| **Tenant Admin** | Edit Organizer profile & payout bank details | Full | Full (Own org) | No | No | No |
+| **Platform Management** | View platform audit logs | Full | No | No | No | No |
+| | View event audit records | Full | Limited (Own events, read-only) | No | No | No |
+| | Verify organizers & categories | Full | No | No | No | No |
+| | Appoint Platform Admins | Full | No | No | No | No |
+| | Approve or suspend organizers | Full | No | No | No | No |
+| | View platform financial totals | Full | No | No | No | No |
+| **Account & Staffing** | Edit profile & payout bank details | Full | Full (Own org) | No | No | No |
 | | Invite & manage Organizer Staff | Full | Full (Own org) | No | No | No |
 | | Assign Event Owners to events | Full | Full (Own org) | No | No | No |
-| **Event Ops** | Create, edit, and publish events | Full | Full (Own org) | No | No | No |
+| **Event Management** | Create, edit, and publish events | Full | Full (Own org) | No | No | No |
 | | Cancel or archive events | Full | Full (Own org) | No | No | No |
-| | Configure ticket offerings, prices, and capacity | Full | Full (Own org) | No | No | No |
-| | Set up ticket waves and move unsold tickets | Full | Full (Own org) | No | No | No |
-| | Configure reserved seating sections & seats | Full | Full (Own org) | No | No | No |
-| | Create & manage delegations and their set-aside tickets | Full | Full (Own org) | No | No | No |
-| | Share event link, QR code & poster | Full | Full (Own org) | No | No | No |
-| | Issue sponsor/media tickets directly | Full | Full (Own org) | No | No | No |
-| **Guest Data** | **View attendee & order lists** | **Full** | **Full (Own events)** | **Limited (Names & status, assigned event)** | **No** | **Own Order Only** |
-| | **Filter attendee lists (category/status)** | **Full** | **Full (Own events)** | **Limited (Names & status, assigned event)** | **No** | **No** |
-| | **Export guest lists (CSV)** | **Full** | **Full (Own events)** | **Limited (Names & status, assigned event)** | **No** | **No** |
-| **Orders & Sales** | Revoke or cancel individual tickets | Full | Full (Own events) | No | No | No |
-| | Start or approve refunds | Full | No | No | No | Request after a postponement |
-| | Transfer a ticket | No | No | No | No | Own tickets, before the event starts |
-| **Gate & Scanning** | Create guard password accounts & issue credentials | Full | Full (Own org) | No | No | No |
-| | Assign guards to specific events and gates | Full | Full (Own events) | No | No | No |
-| | Scan QR codes and redeem tickets | No | No | No | Scoped (Assigned gates) | No |
-| | Enter short code for manual entry fallback | No | No | No | Scoped (Assigned gates) | No |
-| | View real-time gate attendance counts | Full | Full (Own events) | No | Scoped (Assigned gate) | No |
-| **Financials** | View settlement reports & payout calculations | Full | Full (Own organizer) | No | No | View own receipt |
-| | Record manual payouts | Full | No | No | No | No |
+| | Configure ticket types & pricing | Full | Full (Own org) | No | No | No |
+| | Configure reserved seating layouts | Full | Full (Own org) | No | No | No |
+| | Manage partner & sponsor allocations | Full | Full (Own org) | No | No | No |
+| | Issue complimentary / VIP tickets | Full | Full (Own org) | No | No | No |
+| **Guest Data** | View attendee rosters | Full | Full (Own events) | Limited (Names & status, assigned event) | No | Own Order Only |
+| | Filter attendee lists | Full | Full (Own events) | Limited (Names & status, assigned event) | No | No |
+| | Export guest lists (CSV) | Full | Full (Own events) | Limited (Names & status, assigned event) | No | No |
+| **Customer Orders** | Revoke or cancel tickets | Full | Full (Own events) | No | No | No |
+| | Authorize and execute refunds | Full | No | No | No | Request after a postponement |
+| | Transfer ticket to another person | No | No | No | No | Own tickets, before the event starts |
+| **Scanning & Entry** | Create guard entry credentials | Full | Full (Own org) | No | No | No |
+| | Assign guards to specific gates | Full | Full (Own events) | No | No | No |
+| | Scan tickets & check in guests | No | No | No | Scoped (Assigned gates) | No |
+| | Manual entry code verification | No | No | No | Scoped (Assigned gates) | No |
+| | View real-time gate entry counts | Full | Full (Own events) | No | Scoped (Assigned gate) | No |
+| **Financials** | View settlement statements | Full | Full (Own organizer) | No | No | View own receipt |
+| | Record manual payout details | Full | No | No | No | No |
 
 ---
 
-## 4. Technical Implementation & Enforcement
+## 4. Operational Workflows & How Access Works
 
-### 4.1 Enforcement Pipeline Flow
+### 4.1 Step-by-Step Access Verification Flow
+
+1. **User Request:** A staff member, event owner, or guard performs an action in the system (e.g., viewing an attendee roster or clicking to export guest data).
+2. **Identity Verification:** The system confirms the user is logged in with valid active credentials (Sanctum SPA cookie session for web users, or guard session token).
+3. **Role & Ownership Check:** The system checks the user's assigned role and verifies whether they belong to the organization hosting that specific event or are explicitly assigned to it.
+4. **Permission Decision:**
+   * **Platform Admin:** Request approved automatically across all operational resources.
+   * **Organizer Staff:** Request approved if the event belongs to their active organizer organization.
+   * **Event Owner:** Request approved only if the user is assigned directly to that specific event and the request is read-only guest management.
+   * **Guard:** Request approved only for scanning and gate check functions at their assigned gate.
+5. **Execution or Block:** Authorized requests display the relevant data or complete the task. Unauthorized requests are immediately blocked with an access denied message (`401 Unauthorized` or `403 Forbidden`).
+
+### 4.2 Enforcement Sequence Diagram
 
 ```mermaid
 sequenceDiagram
@@ -160,7 +159,7 @@ sequenceDiagram
     participant DB as Supabase PostgreSQL
 
     Client->>HTTP: Request (e.g. GET /api/v1/organizer/events/123/attendees/export)
-    HTTP->>Sanctum: Authenticate session cookie / token
+    HTTP->>Sanctum: Authenticate session cookie
     alt Unauthenticated
         Sanctum-->>Client: 401 Unauthorized
     end
@@ -172,7 +171,7 @@ sequenceDiagram
         alt Platform Admin
             Policy-->>HTTP: Approved (Full Rights)
         else Organizer Staff
-            Policy->>DB: Check user is staff for event's organizer
+            Policy->>DB: Check user is active staff for event organizer
             alt Is Active Staff
                 Policy-->>HTTP: Approved (Full Tenant Scope)
             else Not Staff
@@ -194,14 +193,14 @@ sequenceDiagram
     HTTP-->>Client: 200 OK (Stream CSV or Return JSON)
 ```
 
-### 4.2 Laravel Policy Implementation Pattern
+### 4.3 Laravel Policy Implementation Patterns
 
 #### Event Management Policy (`EventPolicy.php`)
 ```php
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\Event;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class EventPolicy
@@ -211,11 +210,13 @@ class EventPolicy
     /**
      * Platform Admin has full rights over all resources.
      */
-    public function before(User $user, $ability)
+    public function before(User $user, $ability): ?bool
     {
         if ($user->isPlatformAdmin()) {
             return true;
         }
+
+        return null;
     }
 
     /**
@@ -245,19 +246,21 @@ class EventPolicy
 ```php
 namespace App\Policies;
 
-use App\Models\User;
 use App\Models\Event;
+use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class AttendeePolicy
 {
     use HandlesAuthorization;
 
-    public function before(User $user, $ability)
+    public function before(User $user, $ability): ?bool
     {
         if ($user->isPlatformAdmin()) {
             return true;
         }
+
+        return null;
     }
 
     /**
@@ -280,7 +283,7 @@ class AttendeePolicy
         }
 
         // 2. Check if user is an assigned Event Owner for this specific event
-        return $user->eventStaffAssignments()
+        return $user->staffAssignments()
             ->where('event_id', $event->id)
             ->where('role', 'event_owner')
             ->where('status', 'active')
@@ -299,7 +302,55 @@ class AttendeePolicy
 
 ---
 
-## 5. Database Schema Supporting Updated RBAC
+## 5. Key Operational Safeguards & Security Rules
+
+### 5.1 Strict Boundaries for Event Owners
+
+#### 5.1.1 Event-Specific Access Authorization
+* **Explicit Assignment Required:** Event Owners gain access to event data strictly through explicit assignment by authorized Organizer Staff or Platform Admins.
+* **Strict Event Isolation:** Access is confined solely to explicitly assigned events. Event Owners cannot view or discover other events hosted by the same organizer.
+
+#### 5.1.2 Permitted Guest Information
+* **Visible Fields:** Event Owners can view attendee full names, ticket tier/category, check-in status (checked-in vs. pending), entry timestamp, and delegation group tags.
+* **Roster Operations:** Permitted actions are limited strictly to searching, filtering, and exporting attendee rosters as CSV files.
+
+#### 5.1.3 Prohibited Operational and Administrative Access
+* **Financial Data Shielding:** Revenue figures, payout summaries, ticket prices, and settlement details are completely hidden from Event Owners.
+* **Operational Restrictions:** Event Owners cannot modify ticket capacities, adjust pricing, create discount codes, manage guard credentials, or trigger ticket cancellations and refunds.
+
+#### 5.1.4 Read-Only Enforcement
+* **UI and API Blocking:** Administrative options are hidden in the interface, and write API attempts are rejected with explicit permission errors (`403 Forbidden`).
+* **Scanning Restrictions:** Event Owner credentials cannot be used to perform ticket entry checks or operate gate turnstiles.
+
+#### 5.1.5 Assignment Management and Revocation
+* **Dynamic Revocation:** Access permissions terminate immediately when an Event Owner is removed from an event or when the assigned event is archived.
+* **Organizer Scope Control:** Disabling or suspending an organizer account automatically revokes access for all linked Event Owners.
+
+#### 5.1.6 Auditability and Data Protection
+* **Audit Trail Logging:** All view, filter, and export requests initiated by Event Owners are logged with timestamps and user IDs for compliance monitoring.
+* **Privacy Compliance:** Personal guest details are rendered strictly for necessary event coordination, upholding platform tenant isolation policies.
+
+#### Expected Outcome
+Event Owners gain necessary real-time attendee visibility to coordinate event hospitality while maintaining comprehensive isolation from financial, administrative, and cross-event data.
+
+### 5.2 Multi-Tenant Isolation & Guard Safeguards
+
+1. **Guard Password Account Containment:**
+   * Password accounts belong strictly to the creating organizer (`managed_by_organizer_id`) and work for **one event only**.
+   * A guard account can never be assigned as Organizer Staff, Event Owner, or Platform Admin.
+   * Temporary passwords are shown once upon creation and must be changed on first login before scanning endpoints unlock.
+   * **Automatic Lifecycle Wipe:** When the event closes, is cancelled, or is archived, the guard password hash is wiped, active sessions are invalidated, and the guard is signed out immediately.
+   * Lockout limits: 5 consecutive failed passwords lock the account; 5 invalid short codes lock code-entry fallback.
+2. **Instant Session Revocation & Suspension Cascading:**
+   * Suspending an organizer account instantly terminates sessions for all linked Organizer Staff and assigned Event Owners/Guards.
+   * Suspending a user immediately deletes all matching rows in the `sessions` table.
+3. **Fail-Closed Default & No Role Escalation:**
+   * The backend validates ownership and role assignments from the database on every authenticated request.
+   * Event Owners have zero ability to invite users, change roles, or grant permissions.
+
+---
+
+## 6. Database Schema Supporting RBAC
 
 ```sql
 -- Users Table
@@ -380,16 +431,3 @@ CREATE TABLE audit_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ```
-
----
-
-## 6. Security & Isolation Safeguards
-
-1. **Strict Event Owner Enclosure:**
-   * API endpoints for event configuration (`PATCH /api/v1/organizer/events/{id}`), ticket offerings, ticket waves, pricing, seat maps, delegations, event sharing (link, QR code and poster), and refunds will immediately reject any user authenticated as an `Event Owner`.
-   * Event Owners can only query `GET /api/v1/organizer/events/{id}/attendees` and `GET /api/v1/organizer/events/{id}/attendees/export` (v1.md §5) for the exact `event_id` where an active `event_staff` record with `role = 'event_owner'` exists.
-2. **Suspension Cascading:**
-   * Suspending an organizer account instantly terminates sessions for all its Organizer Staff and assigned Event Owners/Guards, prevents ticket sales, and revokes active guard passwords.
-3. **No Role Escalation:**
-   * Event Owners have zero access to invite users, change roles, or grant permissions.
-   * Guard password accounts are constrained by database checks preventing assignment to `organizer_members` or `event_staff` as an `event_owner`.
