@@ -58,6 +58,7 @@ Last checked: 2026-10-16.
 | `fakerphp/faker` | ^1.23 → v1.24.1 | Fake names, emails and other data for model factories and seeders |
 | `larastan/larastan` | ^3.13 → v3.13.0 | Static analysis: PHPStan with Laravel support, configured in `phpstan.neon`. This is the backend type check |
 | `laravel/pint` | ^1.27 → v1.32.1 | Code formatter and style linter |
+| `symfony/yaml` | ^8.1 → v8.1.9 | YAML parser used by tests to parse and validate openapi.yaml against registered routes |
 | `nunomaduro/collision` | ^8.6 → v8.9.5 | Readable error output in the console and test runner |
 | `laravel/pail` | ^1.2.5 → v1.2.7 | Follows the application log from the terminal (`php artisan pail`) |
 | `laravel/pao` | ^1.0.6 → v1.1.5 | Compact, agent-friendly output for the test and analysis tools. Ships with the Laravel 13 skeleton |
@@ -163,6 +164,7 @@ Nothing here has been changed. Each item needs a decision first.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | Added OpenAPI 3.1.0 contract (`/api/docs/openapi.yaml` and `ticketbackend/docs/openapi.yaml`) covering all MVP endpoints (v1.md §5); implemented unified JSON error format (`ApiResponse::error`), standard pagination envelope (`ApiResponse::paginated`), request correlation ID (`CorrelationIdMiddleware` accepting/returning `X-Request-Id` and logging safely without PII per Decisions #35, #36); implemented guest order checkout token protection (Hurdle H11); added `HealthController` (`/api/v1/health`); added `OpenApiContractTest` and `ApiConventionsTest` (P1.6) |
 | 2026-10-16 | Added audit retention database role migration (`audit_retention`), retention purge service and daily scheduler (`platform:purge-retention`) for logs past retention periods (Decision #35); hardened AuditLogger against buyer/attendee PII (Decision #36); implemented multi-organizer tenancy, model policies, and authorization safeguards (P1.5) |
 | 2026-10-16 | Planned `intervention/image`, `league/flysystem-aws-s3-v3` and Supabase Storage for event images (decision #46) |
 | 2026-10-16 | Added `laravel/socialite` (v5.31.0) and `laravel/sanctum` (v4.3.3) for Google OAuth 2.0 social sign-in and SPA cookie sessions |
