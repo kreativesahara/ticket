@@ -85,7 +85,7 @@ sequenceDiagram
 - **Identity scopes only.** Request `openid`, `email` and `profile`. Don't store Google's access or refresh tokens; the platform only needs to know who the user is.
 - **Verified emails only.** Reject Google accounts whose email address Google hasn't verified.
 - **Link by Google account ID.** Store Google's stable account ID in `users.google_id` and look users up by it, not by email.
-- **Invitations decide access.** Staff, event owners and platform admins are invited by email and accept by signing in with a Google account that uses that address. A new user with no invitation can apply for an organizer account, which a platform admin approves. Only an existing platform admin can invite a new admin, and the last admin can't be removed; no one becomes an admin through sign-in. On a fresh installation, a one-time setup command creates the first admin's invitation, and refuses to run once any admin exists.
+- **Invitations decide access.** Staff, event owners and platform admins are invited by email and accept by signing in with a Google account that uses that address. Only platform admins create organizers, and an admin invites each organizer's first staff member, who then invites colleagues and event owners. A Google sign-in from someone who holds no role (platform admin, active staff or active event owner) and has no pending invitation is refused, and no account is created. Only an existing platform admin can invite a new admin, and the last admin can't be removed; no one becomes an admin through sign-in. On a fresh installation, a one-time setup command creates the first admin's invitation, and refuses to run once any admin exists.
 - **Suspended users stay out.** A valid Google sign-in doesn't let a suspended user in.
 - **Browser routes, not API routes.** The redirect and callback are browser navigations that need the session for Google's `state` check, so they live in Laravel's web routes, not under `/api/v1`.
 - **No open redirects.** After sign-in, send users only to allowed frontend addresses.
@@ -269,7 +269,7 @@ All endpoints are versioned under `/api/v1` and follow v1.md §5, which has the 
 | **Authentication**   | `GET /auth/google/redirect`, `GET /auth/google/callback`, `POST /api/v1/auth/guard/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me` |
 | **Invitations**      | `POST /api/v1/organizer/invitations`, `POST /api/v1/admin/invitations` (platform admins), `POST /api/v1/invitations/{token}/accept` |
 | **Guard accounts**   | `POST /api/v1/organizer/guards`, `POST /api/v1/organizer/guards/{id}/password`                             |
-| **Organizers**       | `POST /api/v1/organizers`, `GET /api/v1/organizers/me`                                                     |
+| **Organizers**       | `POST /api/v1/admin/organizers` (platform admins only), `GET /api/v1/organizers/me`                        |
 | **Events**           | `GET /api/v1/events`, `GET /api/v1/events/{slug}`, `POST /api/v1/organizer/events`, `PATCH /api/v1/organizer/events/{id}`, `POST /api/v1/organizer/events/{id}/image` |
 | **Landing page**     | `GET /api/v1/tickets` (every public ticket option, with search and filters)                                |
 | **Ticket offerings** | `GET /api/v1/events/{id}/tickets`, `POST /api/v1/organizer/events/{id}/offerings`, `POST /api/v1/organizer/offerings/{id}/move-unsold` |

@@ -1,6 +1,6 @@
 # Roles, Privileges & Authorization Overview
 
-**Multi-Organizer Event Ticketing Platform · Version 1.8 · 16 October 2026**  
+**Multi-Organizer Event Ticketing Platform · Version 1.9 · 16 October 2026**  
 **References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#45). If this document disagrees with v1.md, v1.md wins.
 
 ---
@@ -46,7 +46,7 @@ graph TD
 * **Scope:** Full, platform-wide administrative oversight.
 * **Log In Method:** Google Sign-In with a Google-verified email address, after accepting a platform admin invitation sent to that address.
 * **Key Capabilities:**
-  * Approve, verify, or suspend event organizer accounts.
+  * Create organizers, each with an invitation for its first staff member (`POST /api/v1/admin/organizers`); verify or suspend them. No one can sign up as an organizer.
   * View platform-wide sales summary reports, financial transactions, and system activity logs.
   * Authorize ticket cancellations, event cancellations, and customer refunds.
   * Record manual financial settlements and payout records for event organizers.
@@ -62,7 +62,7 @@ graph TD
 ### 2.2 Organizer Staff
 * **Description:** Operational managers for an event management company or organizer entity.
 * **Scope:** Their own organization's profile, staff and guard accounts, plus the events they manage: the ones they created, and any a Platform Admin gave them access to (an `event_staff` row with role `manager`). A read-only summary of their organization's other events.
-* **Log In Method:** Google Sign-In.
+* **Log In Method:** Google Sign-In, after accepting a staff invitation: from a Platform Admin for an organizer's first staff member, and from the organizer's staff after that.
 * **Key Capabilities:**
   * Manage organization contact profile and public branding. They see only whether a verified payout account is on file: a Platform Admin enters or changes it.
   * Invite and remove team members, and create or disable guard accounts.
@@ -119,7 +119,7 @@ graph TD
 | | View event audit records | Full | Limited (Managed events, read-only) | No | No | No |
 | | Verify organizers & categories | Full | No | No | No | No |
 | | Invite or remove Platform Admins | Full | No | No | No | No |
-| | Approve or suspend organizers | Full | No | No | No | No |
+| | Create or suspend organizers | Full | No | No | No | No |
 | | View platform financial totals | Full | No | No | No | No |
 | **Account & Staffing** | Edit organization profile | Full | Full (Own org) | No | No | No |
 | | Enter, change or view the payout account | Full | No (sees only whether one is on file) | No | No | No |
@@ -388,6 +388,7 @@ Event Owners gain necessary real-time attendee visibility to coordinate event ho
    * Event Owners have zero ability to invite users, change roles, or grant permissions.
    * Organizer Staff can't give themselves or anyone else access to an event; only Platform Admins grant or remove event access, apart from the access an event's creator gets automatically.
    * Platform admin rights come only from accepting a platform admin invitation sent by an existing admin, or, for the very first admin, from the one-time setup command. The last admin can't be removed.
+   * No one signs up. A Google sign-in is accepted only from a Platform Admin, active Organizer Staff, an active Event Owner, or someone with a pending invitation; anyone else is refused and no account is created. Only Platform Admins create organizers.
 4. **Payout Account Protection:**
    * Only Platform Admins enter, change or read an organizer's payout account (`PUT /api/v1/admin/organizers/{id}/payout-account`), stored encrypted. Every change is audited.
    * Organizer endpoints return only whether a verified payout account is on file, never its details, so a compromised staff login can't redirect an organizer's payouts.

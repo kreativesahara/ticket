@@ -1,6 +1,6 @@
 # Business Rules and Limitations
 
-**Multi-Organizer Event Ticketing Platform · Version 1.8 · 16 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.9 · 16 October 2026**
 
 **Status:** Draft for stakeholder confirmation
 
@@ -34,7 +34,7 @@ This document sets out how the platform will behave: the business rules it follo
 - **1.3a** A staff member automatically manages the events they create. Only a platform admin can give a staff member access to another event, or take it away. A platform admin can also create an event for an organizer and choose which of its staff manage it. For their organizer's other events, staff see a read-only summary (details and ticket setup) without sales, orders, guest lists or reports, and can't change anything. A published event always keeps at least one manager: its only manager can't be removed until a platform admin has given someone else access.
 - **1.3b** Only platform admins see the list of everyone on the platform. Staff see their own organizer's staff and guard accounts, and the people assigned to the events they manage. Event owners see only the names and email addresses of the staff who manage their events.
 - **1.4** Event owners have read-only access to attendee data for their assigned events, with privileges to view, filter, and export to CSV, but cannot alter event configurations, tickets, pricing, guards, or financials.
-- **1.5** New organizers sign in, apply for an organizer account, and wait for a platform admin to approve them before they can create events.
+- **1.5** Organizers can't sign up on the website. A platform admin creates each organizer and invites its first staff member by email. That person then invites the rest of their team and their event owners, and creates guard accounts.
 - **1.6** Platform admins are invited by email by an existing platform admin, and accept by signing in with a Google account that uses the invited address. Any admin can remove another admin's rights, but the last admin can't be removed. The very first admin is set up once, with a setup command run by the technical team. No one can make themselves an admin.
 - **1.7** Platform admins have full operational authority across the platform.
 - **1.8** Suspending an organizer stops new sales for their events and blocks their staff, event owners and guards from signing in. Their published events stay visible but can't be bought.
@@ -47,6 +47,7 @@ This document sets out how the platform will behave: the business rules it follo
 - **2.2** Only Google accounts with a verified email address are accepted.
 - **2.3** Staff, event owners and platform admins are invited by email and must accept by signing in with a Google account that uses that same email address. Invitations expire and can be used only once.
 - **2.4** A suspended user can't sign in, even with a valid Google account.
+- **2.4a** Anyone else who signs in with Google without an invitation or a role is turned away, and no account is made for them. Someone whose roles have all ended is turned away too, until they're invited again.
 - **2.5** Buyers never sign in. They buy as guests and reach their tickets through an emailed link.
 
 **Guards** sign in differently:
@@ -226,6 +227,7 @@ Please confirm that each of these is acceptable for launch.
 | B23   | Payout account changes rely on admins            | Organizers send bank details to a platform admin outside the platform. How the admin checks a request is genuine is left to them, so a convincing fake request could redirect a payout. | ☐ |
 | B24   | Suspension signs people out everywhere           | Suspending an organizer signs out its staff even if they also work for another organizer; they sign back in to continue there. | ☐ |
 | B25   | Admins are needed to go on sale                  | Paid events stay in draft until a platform admin enters the payout account, and staff wait for an admin to give them access to events they didn't create. | ☐ |
+| B26   | Organizers are added by admins                   | Organizers can't sign up on the website: a platform admin creates each one and invites its first staff member. | ☐ |
 
 **Not included in this project** (from the Statement of Work, §9). These can be added later through a change request:
 - Native Android and iOS apps.
@@ -288,6 +290,7 @@ These were settled on 15 and 16 October 2026. Please confirm each one, or answer
 | C37 | Can an event lose its last manager?                    | No. While an event is on sale, its only manager can't be removed until a platform admin gives another staff member access | |
 | C38 | Can admins watch payments as they happen?             | Yes: a live table of every payment, with its status and the status of its order and tickets, updating every few seconds | |
 | C39 | How large can event images be?                         | Each image is shrunk to under 500 KB and at most 1,920 pixels on its longest side when it's uploaded, and each visitor gets a copy sized for their screen | |
+| C40 | Can anyone sign up as an organizer?                    | No. A platform admin creates each organizer and invites its first staff member, who then invites the rest of the team. Anyone who signs in with Google without an invitation or a role is turned away | |
 
 ---
 

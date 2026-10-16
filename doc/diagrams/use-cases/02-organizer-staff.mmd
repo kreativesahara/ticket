@@ -9,7 +9,6 @@ flowchart LR
         subgraph P1["Account and team"]
             S1(["Sign in with Google"]):::usecase
             S2(["Accept a staff invitation"]):::usecase
-            S3(["Apply for an organizer account"]):::usecase
             S4(["Manage organizer profile and verification details"]):::usecase
             S5(["Invite and manage staff"]):::usecase
             S6(["Invite and assign event owners"]):::usecase
@@ -51,7 +50,6 @@ flowchart LR
 
     Staff --- S1
     Staff --- S2
-    Staff --- S3
     Staff --- S4
     Staff --- S5
     Staff --- S6
@@ -80,7 +78,6 @@ flowchart LR
     Staff ---|"read-only"| R5
 
     S2 -.->|"«include»"| S1
-    S3 -.->|"«include»"| S1
     G2 -.->|"«include»"| G3
 
     S1 --- Google

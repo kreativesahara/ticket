@@ -18,7 +18,6 @@ flowchart LR
         subgraph P1["Account and team"]
             S1(["Sign in with Google"]):::usecase
             S2(["Accept a staff invitation"]):::usecase
-            S3(["Apply for an organizer account"]):::usecase
             S4(["Manage organizer profile and verification details"]):::usecase
             S5(["Invite and manage staff"]):::usecase
             S6(["Invite and assign event owners"]):::usecase
@@ -60,7 +59,6 @@ flowchart LR
 
     Staff --- S1
     Staff --- S2
-    Staff --- S3
     Staff --- S4
     Staff --- S5
     Staff --- S6
@@ -89,7 +87,6 @@ flowchart LR
     Staff ---|"read-only"| R5
 
     S2 -.->|"«include»"| S1
-    S3 -.->|"«include»"| S1
     G2 -.->|"«include»"| G3
 
     S1 --- Google
@@ -119,6 +116,7 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 - Staff see only their own organizer's staff and guard accounts, and the people assigned to the events they manage.
 - Staff can't start refunds or scan tickets (v1.md §3). A staff member who works a gate uses a guard account.
 - Every organizer must keep at least one active staff member.
+- Staff join only by invitation: a platform admin creates the organizer and invites its first staff member, and staff invite the rest. There is no organizer application ([v1.md FR-01](../../../v1.md#fr-01--accounts-and-authentication)).
 - **Ticket waves:** for each category, staff choose whether it sells in waves. Each wave has its own dates and its own ticket options (type, number of tickets, price), and a category's waves never overlap. Staff move a wave's unsold tickets by hand ([v1.md FR-04](../../../v1.md#fr-04--ticket-types-and-categories), [activity 08](../activity/08-set-up-ticket-waves.md)).
 - **Event link, QR code and poster:** staff copy the event's link and download its QR code as PNG or SVG, or as a printable A4 poster for the gate ([v1.md FR-14](../../../v1.md#fr-14--landing-page-and-event-links)).
 - **Delegations:** each delegation's tickets are set aside as its own offerings; staff can return unclaimed ones to public sale with the same move action.

@@ -23,7 +23,7 @@ flowchart LR
             A18(["Delete a person's data on request"]):::usecase
         end
         subgraph P2["Organizers"]
-            A5(["Approve organizer applications"]):::usecase
+            A5(["Create an organizer and invite its first staff member"]):::usecase
             A6(["Verify organizers and set their payout accounts"]):::usecase
             A7(["Suspend organizers"]):::usecase
             A8(["Act on any organizer's events and team"]):::usecase
@@ -94,6 +94,7 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 ## Notes
 
 - Admins can do everything organizer staff can, for any organizer ([02 organizer staff](02-organizer-staff.md)), but they don't scan tickets.
+- No one signs up as an organizer. Only admins create organizers, each with an invitation for its first staff member, who then invites the rest of the team ([v1.md FR-02](../../../v1.md#fr-02--multi-organizer-tenancy)).
 - Only admins see the list of every user, and only admins give an organizer staff member access to an event they didn't create, or take it away. An admin can also create an event for an organizer and choose its managers from that organizer's staff in one step; the admin doesn't become a manager ([v1.md FR-02](../../../v1.md#fr-02--multi-organizer-tenancy)).
 - Only admins enter, change or see an organizer's payout account; staff see only whether a verified one is on file ([v1.md FR-02](../../../v1.md#fr-02--multi-organizer-tenancy)).
 - Only admins see the live payment table: every payment on the platform, with its status and its order's and tickets' status, refreshed every few seconds ([v1.md FR-08](../../../v1.md#fr-08--payments)).
