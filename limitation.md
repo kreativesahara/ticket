@@ -1,6 +1,6 @@
 # Business Rules and Limitations
 
-**Multi-Organizer Event Ticketing Platform · Version 1.6 · 16 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.7 · 16 October 2026**
 
 **Status:** Draft for stakeholder confirmation
 
@@ -31,7 +31,7 @@ This document sets out how the platform will behave: the business rules it follo
   | **Buyer**           | Buys tickets as a guest and receives them by email; no account needed                          |
 
 - **1.3** Every organizer must always have at least one active organizer staff member.
-- **1.3a** A staff member automatically manages the events they create. Only a platform admin can give a staff member access to another event, or take it away. A platform admin can also create an event for an organizer and choose which of its staff manage it. For their organizer's other events, staff see a read-only summary (details and ticket setup) without sales, orders, guest lists or reports, and can't change anything.
+- **1.3a** A staff member automatically manages the events they create. Only a platform admin can give a staff member access to another event, or take it away. A platform admin can also create an event for an organizer and choose which of its staff manage it. For their organizer's other events, staff see a read-only summary (details and ticket setup) without sales, orders, guest lists or reports, and can't change anything. A published event always keeps at least one manager: its only manager can't be removed until a platform admin has given someone else access.
 - **1.3b** Only platform admins see the list of everyone on the platform. Staff see their own organizer's staff and guard accounts, and the people assigned to the events they manage. Event owners see only the names and email addresses of the staff who manage their events.
 - **1.4** Event owners have read-only access to attendee data for their assigned events, with privileges to view, filter, and export to CSV, but cannot alter event configurations, tickets, pricing, guards, or financials.
 - **1.5** New organizers sign in, apply for an organizer account, and wait for a platform admin to approve them before they can create events.
@@ -93,7 +93,7 @@ Rules for guard password accounts:
 - **4.6** Media tickets can be set to need the organizer's approval: the buyer pays first, and the tickets are issued only when the organizer approves them. A rejected request is refunded by a platform admin. Organizers can also issue Media tickets manually.
 - **4.7** Promoted tickets need clear rules about who can buy them and at what price.
 - **4.8** **Delegations** are allocations set aside for sponsors, departments or invited groups. For each delegation, staff set aside a number of tickets in each category it may claim, with their price (often free). These tickets are never sold to the public, don't follow the ticket waves, and count towards the event's total capacity like any other ticket. Members claim them through a private link or access code. Staff can return unclaimed tickets to public sale (rule 4.14).
-- **4.9** Prices are in **Kenyan shillings** and are stored exactly, with no rounding errors.
+- **4.9** Prices are in **whole Kenyan shillings** (no cents) and are stored exactly. A percentage discount is rounded to the nearest shilling.
 - **4.10** The price a buyer pays is fixed when they order. If the organizer changes prices later, existing orders don't change.
 - **4.11** The platform never sells more tickets than are available, even when many people try to buy the last tickets at the same moment.
 - **4.12** **Ticket waves (optional).** When setting up an event, organizer staff choose for each ticket category whether it sells in **waves**, such as Wave 1, Wave 2 and Wave 3. Each wave has its own dates, and in each wave staff choose the ticket type, the number of tickets and the price. Categories that don't use waves sell as in rule 4.2.
@@ -133,16 +133,17 @@ Rules for guard password accounts:
 - **7.7** If a payment arrives after the hold has expired, it's refunded automatically. The buyer can order again.
 - **7.8** If Pesapal later reverses a completed payment, the order is refunded and its unused tickets are cancelled.
 - **7.9** Only platform admins make refunds, ticket by ticket, through Pesapal where it supports them. A refunded ticket is cancelled, and its place goes back on sale if the event is still on.
-- **7.10** All ticket money is paid into the platform's Pesapal account. Organizers are paid manually, outside the platform, from a settlement report per organizer and event (sales, refunds, fees and amount owed). Admins record each payout.
+- **7.10** The platform is the seller of every ticket: all ticket money is paid into the platform's Pesapal account. Organizers are paid manually, outside the platform, from a settlement report per organizer and event (sales, refunds, fees and amount owed). Admins record each payout.
 - **7.11** The platform's fee and Pesapal's fees are deducted from the organizer's settlement; buyers pay only the ticket price. How the platform fee is calculated is still to be decided (C2).
+- **7.12** Platform admins see every payment as it happens, in a live table showing each payment's status and the status of its order and tickets.
 
 ### 8. Tickets and delivery
 
 - **8.1** Tickets are issued only after payment is confirmed: one ticket for each place bought.
 - **8.2** Each ticket has a unique ticket number, a QR code and a **6-character short code**.
-- **8.3** The buyer receives an order confirmation email with a secure link to their tickets, which they can view and download, and a receipt for every paid order.
+- **8.3** The buyer receives an order confirmation email with a secure link to their tickets, which they can view and download, and a receipt for every paid order. Receipts show the event name, the organizer's name and the event's "Presented by" name if it has one.
 - **8.4** A buyer who loses the link can ask for a new one by entering their email address. The platform doesn't reveal whether an email address has an order.
-- **8.5** Each ticket shows the event details, ticket category, attendee name (where collected), ticket number, short code, and seat or delegation where relevant.
+- **8.5** Each ticket shows the event details, the organizer's name and the event's "Presented by" name if it has one (for example a sponsor), ticket category, attendee name (where collected), ticket number, short code, and seat or delegation where relevant.
 - **8.6** The QR code contains no personal information.
 - **8.7** Organizers and admins can cancel (revoke) a ticket, giving a reason. Cancelled tickets are refused at the gate, and every cancellation is recorded.
 - **8.8** A ticket holder can pass a ticket to someone else from their ticket link until the event starts, unless the event asks for ID numbers. The new holder gets a new QR code and short code, and the old ones stop working.
@@ -220,6 +221,10 @@ Please confirm that each of these is acceptable for launch.
 | B19   | Guards need an email address                     | Every guard account uses the guard's own email address, and guards can't sign in with Google.              | ☐         |
 | B20   | Waves open on their dates                        | If a wave sells out early, its category has nothing on sale until the next wave's start date; the next wave doesn't open early. | ☐ |
 | B21   | Unsold wave tickets move by hand                 | Tickets a wave doesn't sell stay unsold until organizer staff move them to a later wave.                   | ☐         |
+| B22   | Emails through the hosting's mail server         | On a very busy sale day, ticket emails may be delayed by the hosting's hourly sending limit, and there is no record of whether each email was delivered. | ☐ |
+| B23   | Payout account changes rely on admins            | Organizers send bank details to a platform admin outside the platform. How the admin checks a request is genuine is left to them, so a convincing fake request could redirect a payout. | ☐ |
+| B24   | Suspension signs people out everywhere           | Suspending an organizer signs out its staff even if they also work for another organizer; they sign back in to continue there. | ☐ |
+| B25   | Admins are needed to go on sale                  | Paid events stay in draft until a platform admin enters the payout account, and staff wait for an admin to give them access to events they didn't create. | ☐ |
 
 **Not included in this project** (from the Statement of Work, §9). These can be added later through a change request:
 - Native Android and iOS apps.
@@ -245,25 +250,25 @@ These were settled on 15 and 16 October 2026. Please confirm each one, or answer
 | --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------- |
 | C1  | How do we track what each organizer is owed?           | A settlement report per organizer and event (sales, refunds, fees, amount owed), plus a log of each manual payout | |
 | C2  | Does the platform charge a fee, and who pays it?       | Deducted from the organizer, and Pesapal's fees too. **Still open:** how the fee is calculated (a percentage, a fixed amount per ticket, or both) | |
-| C3  | How do we check organizers before they sell?           | A platform admin verifies business or ID details and the payout account before the organizer's first paid event. Pesapal must still confirm that one account can collect for many organizers | |
+| C3  | How do we check organizers before they sell?           | A platform admin verifies business or ID details and enters the payout account before the organizer's first paid event. Pesapal declined to collect money on behalf of other businesses, so the platform sells the tickets itself (C35) | |
 | C4  | How are "At the Gate" tickets sold?                    | Buyers pay on their own phones through a QR code poster at the gate that links to the event page; the platform gives each event its link, QR code and a printable poster; no cash | |
 | C5  | What happens when an event is cancelled or postponed?  | **Cancelled:** all tickets cancelled, every buyer emailed, an admin refunds each order. **Postponed:** tickets stay valid, buyers emailed a refund-request link valid for a set period | |
 | C6  | Is re-entry allowed?                                   | No, for the first release                                                                                   | |
 | C7  | How do free and sponsor tickets work?                  | Orders that total zero skip payment and issue tickets directly; each delegation gets a private link or code to claim its tickets, which are set aside from public sale | |
 | C8  | Which messages do buyers get, and is SMS included?     | Emails for order confirmation, ticket delivery, receipts, event changes and cancellations. No SMS            | |
-| C9  | Receipts and tax                                       | Email a receipt for every paid order. **Still open:** your accountant confirms whether VAT and KRA eTIMS invoicing apply | |
+| C9  | Receipts and tax                                       | Email a receipt for every paid order. Your accountant confirmed that VAT and KRA eTIMS invoicing don't apply. **Please confirm** that this still holds now that the platform is the seller of every ticket (C35) | |
 | C10 | How long do we keep attendee data?                     | Until someone asks for it to be deleted; a platform admin carries out each request                         | |
 | C11 | How long are tickets held while a buyer pays?          | 15 minutes                                                                                                  | |
 | C12 | What if a payment arrives after the hold expired?      | Refund it automatically; the buyer orders again                                                             | |
 | C13 | Who approves refunds?                                  | Only platform admins make refunds                                                                           | |
 | C14 | Must guards change their temporary password?           | Yes, at first sign-in for each event, so only the guard knows it                                            | |
-| C15 | Should ticket prices be whole shillings?               | **Still open.** We recommend yes, to avoid rounding problems with M-Pesa (we'll confirm with Pesapal)      | |
-| C16 | How do we protect popular sales from bots?             | The organizer can require a CAPTCHA at checkout for each event. **Still open:** tell us your largest expected event so we can load-test | |
+| C15 | Should ticket prices be whole shillings?               | Yes: whole shillings only, with no cents; percentage discounts round to the nearest shilling | |
+| C16 | How do we protect popular sales from bots?             | The organizer can require a CAPTCHA at checkout for each event. Your largest expected event is 1,000 to 5,000 tickets, and we load-test for 5,000. **Still open:** how many buyers arrive in the first minutes of a big sale | |
 | C17 | Ticket transfers or name changes                       | Allowed until the event starts, except for events that ask for ID numbers                                  | |
 | C18 | Can organizers download attendee and sales lists?      | Yes, as spreadsheet (CSV) files; event owners can download the guest list of their assigned events          | |
 | C19 | Can buyers browse events by type (music, sport and so on)? | Yes, from a category list the platform admins manage                                                    | |
 | C20 | Is a Swahili version of the public site needed?        | Not for the first release                                                                                   | |
-| C21 | Which email provider sends the tickets?                | **Still open:** your choice; it must support domain authentication (SPF, DKIM and DMARC)                    | |
+| C21 | Which email provider sends the tickets?                | Your hosting's own (cPanel) mail server. Before launch we need its hourly sending limit, and the SPF, DKIM and DMARC records set up for your domain (B22) | |
 | C22 | Can organizers sell tickets in waves?                  | Yes, as an option for each ticket category: each wave has its own dates, ticket type, number of tickets and price; waves open on their start dates only; staff move unsold tickets by hand | |
 | C23 | What does the landing page show?                       | Every public ticket option across all events, with search by event name or venue, event category and date filters, sold-out options marked and upcoming waves shown | |
 | C24 | Are sponsor tickets set aside?                         | Yes: each delegation's tickets are its own allocation, never sold to the public and outside the waves       | |
@@ -277,6 +282,10 @@ These were settled on 15 and 16 October 2026. Please confirm each one, or answer
 | C32 | Can a platform admin set up an event for an organizer? | Yes: the admin creates it as a draft and chooses which of the organizer's staff manage it; the admin doesn't become one of its managers | |
 | C33 | How long are the platform's logs kept?                 | Activity log and payment notification records 5 years (the usual tax-record period; your accountant confirms), gate scans 12 months after the event, technical logs 90 days | |
 | C34 | Is a history of sign-ins kept?                         | Yes: every sign-in, sign-out, failed attempt and lockout, visible to platform admins, and to an event's managers for its guards | |
+| C35 | Who sells the tickets to buyers?                       | The platform sells every ticket and pays each organizer as its supplier, under a contract with each organizer that your lawyer prepares. **Still open:** Pesapal must confirm this arrangement in writing | |
+| C36 | What do tickets and receipts show about who runs the event? | The event name, the organizer's name and an optional "Presented by" name for each event, such as a sponsor. No organizer agreement or terms-of-sale checkbox is built in | |
+| C37 | Can an event lose its last manager?                    | No. While an event is on sale, its only manager can't be removed until a platform admin gives another staff member access | |
+| C38 | Can admins watch payments as they happen?             | Yes: a live table of every payment, with its status and the status of its order and tickets, updating every few seconds | |
 
 ---
 

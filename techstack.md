@@ -155,7 +155,7 @@ Table names follow v1.md §4, which lists every column.
 ### Key design decisions
 
 - Use UUIDs for externally referenced records where appropriate.
-- Store monetary amounts as integer minor units (for example, cents), with an explicit currency code.
+- Store monetary amounts as integer minor units (for example, cents), with an explicit currency code. KES amounts are always whole shillings, so they are multiples of 100 (implementation-plan.md §11, #41).
 - Keep orders, payments and tickets as separate entities. One order may contain multiple tickets, and each ticket must have its own QR credential. Store the QR token as a hash (to find the ticket at the gate) and as an encrypted copy (to show the QR code again), never in plain text.
 - Store payment-provider references and idempotency keys with appropriate uniqueness constraints.
 - Model reserved seating separately from general admission; only events that use seating need seat inventory.
@@ -230,6 +230,8 @@ cPanel is a reasonable initial deployment target if your hosting plan supports t
 | **Laravel API**          | Deploy the application with the public web root pointing to Laravel's `public` directory    |
 | **Database**             | Supabase PostgreSQL over a secured connection                                               |
 | **Scheduler**            | cPanel cron invoking Laravel's scheduler every minute                                       |
+| **Email**                | The host's own mail server through SMTP, with SPF, DKIM and DMARC set up for the sending domain; the email queue is throttled below the host's hourly sending limit (decision #9) |
+| **Live screens**         | Polling: the admin payment table asks the API for changes every few seconds, because shared hosting can't run a WebSocket server (decision #45) |
 | **Queues**               | Laravel database queue initially, if supported by your plan                                 |
 | **Long-running workers** | Verify whether the host permits them; otherwise use a controlled cron-based worker strategy |
 | **Assets**               | Supabase Storage or another object-storage service                                          |

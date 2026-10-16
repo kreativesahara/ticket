@@ -50,6 +50,7 @@ erDiagram
         string name
         string slug UK "unique across platform"
         text description
+        string presented_by "optional, printed on tickets"
         string image_path
         string venue
         string timezone

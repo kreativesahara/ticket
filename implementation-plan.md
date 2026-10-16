@@ -1,8 +1,8 @@
 # Implementation Plan: Multi-Organizer Event Ticketing Platform
 
-**Version 1.10 · 16 October 2026 · System design and analysis**
+**Version 1.11 · 16 October 2026 · System design and analysis**
 
-**Based on:** [v1.md](v1.md) (requirements specification), [sow.md](sow.md) (statement of work), [techstack.md](techstack.md) (architecture blueprint) and [v2.md](v2.md) (requirements review).
+**Based on:** [v1.md](v1.md) (requirements specification), [sow.md](sow.md) (statement of work) and [techstack.md](techstack.md) (architecture blueprint). v2.md, an earlier requirements review, has been removed; v1.md replaced it.
 
 This plan turns the requirements and architecture into phases that the team can carry out and the client can approve one at a time. For each phase it gives the goal, what the phase needs from the client, the steps in order, what it delivers, and the tests that must pass before later work depends on it.
 
@@ -136,7 +136,7 @@ These items can delay launch no matter how fast development goes:
 6. **Set measurable performance targets.** v1.md requires these before launch. Proposed starting values for the client to confirm:
    - Scan validation: 95% of scans answered within 1 second over mobile data.
    - Checkout API, excluding the payment provider's own time: 95% of requests within 500 ms.
-   - Peak load: ask the client for the largest expected event and how many buyers arrive in the first minutes of a sale.
+   - Peak load: ask the client for the largest expected event and how many buyers arrive in the first minutes of a sale. Answered 16 October 2026: 1,000 to 5,000 tickets; buyers per minute still to confirm (hurdles.md H13).
 
 7. **Fix the baseline schedule and risk register.** Confirm the team, the dates and the milestone review windows.
 
@@ -342,7 +342,7 @@ Pesapal is the single payment gateway. Buyers pay on Pesapal's hosted checkout, 
 5. **Payment after the hold expired.** Refund it automatically (decision #11); the buyer can order again.
 6. **Reconciliation job.** Every few minutes, ask Pesapal for the status of payments that have been pending longer than a set time, then resolve them or flag them. Record each run in `reconciliation_runs`, with its counts and flagged payments (decision #39).
 7. **Refunds and reversals.** Only platform admins start refunds (decision #12), naming the tickets each covers; the system starts them only for rejected payments, and buyers can request one only through a postponement email. Request refunds through Pesapal's refund API where Pesapal supports refunds for the payment method, and track their status. Move the order to partially refunded or refunded, and decide ticket eligibility explicitly, for example by revoking tickets after a full refund. If Pesapal reports a completed payment as reversed, handle it the same way.
-8. **Payment history and reconciliation screens:** staff see the events they manage, and platform admins see the whole platform. Store the payment method and confirmation code, never the paying account Pesapal reports.
+8. **Payment history and reconciliation screens:** staff see the events they manage, and platform admins see the whole platform in a live payment table that refreshes every few seconds, showing each payment's status with its order's and tickets' status, and flagging stuck and rejected payments (decision #45). Store the payment method and confirmation code, never the paying account Pesapal reports.
 
 ### Frontend
 
@@ -381,7 +381,7 @@ Run each scenario with both an M-Pesa test payment and a card test payment where
 
 **Goal:** Every confirmed purchase produces the right number of unique tickets that the buyer can retrieve, and an email with the link.
 
-**Needed from the client:** an account with the email provider, and DNS access for the sending domain (SPF, DKIM and DMARC records).
+**Needed from the client:** the cPanel host's hourly email sending limit, and DNS access for the sending domain (SPF, DKIM and DMARC records; decision #9).
 
 ### Backend
 
@@ -550,12 +550,12 @@ These decisions affect the database, the integrations or the schedule. Each need
 | 1  | Naming baseline                       | —                                                           | **Decided:** v1.md names; platform admin (full rights), organizer staff (organizer account, and the events they manage; decision #31), event owner (guest data read-only), guard, and attendee roles; `/api/v1` paths; applied to v1.md and techstack.md | Decided   |
 | 2  | Booking or platform fees              | None; added to the buyer's total; deducted from the organizer | **Decided:** deducted from the organizer's settlement, never added to the buyer's total; Pesapal's fees are also deducted from the organizer. **Open:** how the platform fee is calculated (client) | Phase 7 |
 | 3  | Payment gateway                       | —                                                           | **Decided: Pesapal**, for both M-Pesa and card payments through its hosted checkout  | Decided   |
-| 4  | Paying organizers                     | Manual payouts outside the platform; automated payouts      | **Decided:** all buyer payments land in the platform's Pesapal merchant account; admins pay organizers manually from a settlement report per organizer and event, recording each payout in a payout log (hurdles.md H1). Automated payouts are out of scope (SOW §9) | Decided |
+| 4  | Paying organizers                     | Manual payouts outside the platform; automated payouts      | **Decided:** all buyer payments land in the platform's Pesapal merchant account; admins pay organizers manually from a settlement report per organizer and event, recording each payout in a payout log (hurdles.md H1). Automated payouts are out of scope (SOW §9). Since 16 October 2026 the platform is the legal seller of every ticket, because Pesapal declined to collect on behalf of other businesses (decision #42) | Decided |
 | 5  | Frontend hosting                      | Vercel, cPanel Node.js support, or static files             | **Decided:** one Next.js app for every role, server-rendered, on Vercel           | Decided   |
 | 6  | Attendee accounts at launch           | Guest checkout only, or optional accounts                   | **Decided:** guest checkout; buyers reach their order only through a checkout token and their retrieval link (hurdles.md H11) | Decided |
 | 7  | Organizer onboarding                  | Self sign-up with admin approval, or created by admins      | **Decided:** self sign-up with admin approval, plus verification (business or ID details and payout account) before the first paid event (hurdles.md H2) | Decided |
 | 8  | Repository structure                  | One repository or several                                   | **Decided:** two repositories: the backend (Laravel and the specification, this repository) and the frontend (the Next.js app) | Decided |
-| 9  | Email provider                        | Client's choice                                             | Any provider that supports domain authentication; the client chooses. Development uses a local mail catcher | Phase 5 |
+| 9  | Email provider                        | Client's choice; the cPanel host's mail server            | **Decided (16 October 2026):** the cPanel host's own mail server, through SMTP. Before Phase 8: get the host's hourly sending limit, set up SPF and DKIM in cPanel and add a DMARC record, and throttle the email queue below the limit. Emails may be delayed on big sale days, and there is no delivery tracking (limitation.md B22). Development uses a local mail catcher | Decided |
 | 10 | Hold duration                         | 5–20 minutes                                                | **Decided:** 15 minutes, configurable                                            | Decided   |
 | 11 | Payment that arrives after the hold expired | Honor it if tickets remain; always refund; handle manually | **Decided:** always refund automatically; the buyer orders again             | Decided   |
 | 12 | Refund policy and who can approve     | Organizer only; admin only; organizer requests and admin approves | **Decided:** only platform admins start refunds, ticket by ticket; the system refunds rejected payments automatically; buyers can request a refund only after a postponement | Decided |
@@ -567,7 +567,7 @@ These decisions affect the database, the integrations or the schedule. Each need
 | 18 | Identity field                        | —                                                           | **Decided:** staff choose none, phone number or ID number per event; every ticket holder gives that field; no event collects both; no free-text questions | Decided |
 | 19 | CSV exports                           | —                                                           | **Decided:** guest list export (staff and assigned event owners) and sales list export (staff) | Decided |
 | 20 | Event categories                      | —                                                           | **Decided:** a platform list managed by admins; organizers pick one per event; the public site filters by it | Decided |
-| 21 | Bot protection                        | None; CAPTCHA per event; CAPTCHA always                     | **Decided:** staff or admins can require a CAPTCHA at checkout per event; load-test against the client's largest event (hurdles.md H13) | Decided |
+| 21 | Bot protection                        | None; CAPTCHA per event; CAPTCHA always                     | **Decided:** staff or admins can require a CAPTCHA at checkout per event; load-test against the client's largest event, up to 5,000 tickets (hurdles.md H13) | Decided |
 | 22 | Personal data retention               | Fixed period; delete on request                             | **Decided:** kept until someone asks for deletion; then names, emails, phone numbers and ID digits are removed and financial and scan records kept; platform admins carry out each request (hurdles.md H12, v1.md FR-15) | Decided |
 | 23 | Ticket waves                          | None; event-wide waves; per-category waves                  | **Decided:** optional for each ticket category; each wave has its own dates and one or more offerings (type, number of tickets, price); a category's waves never overlap; each opens on its start date only, even if the previous one sells out; staff move unsold tickets by hand (v1.md FR-04) | Decided |
 | 24 | Landing page                          | Event cards; every ticket option                            | **Decided:** every public ticket option across published events, with search by event name or venue, event category and date filters, sold-out options kept and marked, and upcoming waves greyed out; delegation tickets never listed (v1.md FR-14) | Decided |
@@ -587,6 +587,11 @@ These decisions affect the database, the integrations or the schedule. Each need
 | 38 | Sign-in history                       | All sign-ins; failures only; none                           | **Decided (16 October 2026):** record successful sign-ins, sign-outs, failed attempts and lockouts for Google users and guard accounts (time, method, IP, browser) in the audit log; admins see all, and an event's managers see its guards' sign-ins (v1.md FR-01) | Decided |
 | 39 | Reconciliation records                | New table; audit entries; none                              | **Decided (16 October 2026):** a `reconciliation_runs` table, one row per run with its counts and flagged payments; the `payments` table is the payment attempt history, one row per attempt (v1.md §4.4) | Decided |
 | 40 | Guard activity view                   | Own scans without names; count only; own scans with names   | **Decided (16 October 2026):** guards see their own scans at their current event (time, result, ticket category, gate and method), without attendee names, until their access ends (v1.md §3, §5) | Decided |
+| 41 | Whole-shilling prices                 | Whole shillings; cents allowed                              | **Decided (16 October 2026):** prices, discounts, fees and totals are whole Kenyan shillings, stored as minor units that are multiples of 100; a percentage discount rounds to the nearest shilling, halves up (v1.md FR-08; limitation.md C15) | Decided |
+| 42 | Who sells the tickets                 | Collect on organizers' behalf; each organizer's own Pesapal account; platform as legal seller; split payments | **Decided (16 October 2026):** Pesapal declined to let one account collect for other businesses, so the platform is the legal seller of every ticket and pays each organizer as its supplier, from the settlement report and payout log (#4). **Open:** Pesapal's written confirmation of this arrangement, and the organizer contract, which the client's lawyer prepares (hurdles.md H2) | Phase 4 |
+| 43 | What tickets and receipts show        | Platform as seller; organizer; "Presented by" name        | **Decided (16 October 2026):** the event name, the organizer's name and an optional "Presented by" name that staff set for each event (`events.presented_by`), on tickets, receipts and ticket emails. No organizer agreement or terms-of-sale checkbox is built (v1.md FR-03, FR-09) | Decided |
+| 44 | An event's last manager               | Admins alerted; block removal; keep as is                   | **Decided (16 October 2026):** a published event always keeps at least one manager. Its only manager can't be removed from the organizer, or lose access to it, until a platform admin has given another staff member access (v1.md FR-02) | Decided |
+| 45 | Live payment table for admins         | —                                                           | **Decided (16 October 2026):** platform admins see every payment attempt in a table that refreshes every few seconds, with its payment, order and ticket status, filters and search, and stuck or rejected payments flagged. It polls the API, because the cPanel host can't run a WebSocket server (v1.md FR-08, §5) | Decided |
 
 ---
 

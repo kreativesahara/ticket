@@ -1,12 +1,12 @@
 # Hurdles: Gaps, Risks and Limitations
 
-**Version 1.3 · 15 October 2026**
+**Version 1.4 · 16 October 2026**
 
-**Based on:** [v1.md](v1.md) (version 1.8), [sow.md](sow.md) (version 1.6), [techstack.md](techstack.md) and [implementation-plan.md](implementation-plan.md) (version 1.6).
+**Based on:** [v1.md](v1.md) (version 1.13), [sow.md](sow.md) (version 1.11), [techstack.md](techstack.md) and [implementation-plan.md](implementation-plan.md) (version 1.11).
 
 This document lists what the current specification doesn't yet cover, and the limitations that come with decisions already made. The specification handles the core flow well: publishing events, buying and paying, issuing tickets and scanning them at the gate. The gaps are mostly in what happens to the money after a sale, unusual situations at the gate, and messages to buyers.
 
-Most hurdles need a decision, not extra code. Once a hurdle is decided, record the decision in the decision log (implementation-plan.md §11) and update v1.md, which is the source of truth. Every hurdle below was decided on 15 October 2026; three still wait on an outside confirmation, noted in its section.
+Most hurdles need a decision, not extra code. Once a hurdle is decided, record the decision in the decision log (implementation-plan.md §11) and update v1.md, which is the source of truth. Every hurdle below was decided on 15 October 2026, and three were updated on 16 October 2026 with the answers received. Two items still wait on someone outside the team: Pesapal's written confirmation of the platform-as-seller arrangement (H2), and the accountant's confirmation that the tax answer still holds under it (H10).
 
 ---
 
@@ -61,7 +61,9 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 
 **Recommendation:** Raise the marketplace question with Pesapal during onboarding in Phase 0. Add a verification step before an organizer's first paid event can be published: business or ID details, and the account they'll be paid into.
 
-**Decision (15 October 2026):** as recommended: a platform admin verifies business or ID details and the payout account before an organizer's first paid event can be published. Since 16 October 2026, only platform admins enter, change or see the payout account, and an organizer's events with paid tickets stay in draft until they have entered it (implementation-plan.md §11, #33). Still open: Pesapal's confirmation that one merchant account may collect for many organizers.
+**Decision (15 October 2026):** as recommended: a platform admin verifies business or ID details and the payout account before an organizer's first paid event can be published. Since 16 October 2026, only platform admins enter, change or see the payout account, and an organizer's events with paid tickets stay in draft until they have entered it (implementation-plan.md §11, #33). 
+
+**Update (16 October 2026):** Pesapal declined to let one merchant account collect money on behalf of other businesses. The platform therefore becomes the **legal seller of every ticket**: buyers pay the platform's own Pesapal account, and the platform pays each organizer as its supplier, from the settlement report and payout log (H1; implementation-plan.md §11, #42). Still open: Pesapal's written confirmation that it accepts this arrangement, and the contract with each organizer, which the client's lawyer prepares (legal advice is outside this project, SOW §9).
 
 **Decide by:** Phase 0 · **Owner:** Client
 
@@ -191,6 +193,8 @@ Recorded in v1.md (FR-09, FR-10 and §4.3), sow.md (Modules Six and Seven, §5.5
 
 **Decision (15 October 2026):** email a receipt for every paid order. Still open: the client's accountant confirms whether VAT and eTIMS apply; if they do, it becomes a change request.
 
+**Update (16 October 2026):** the accountant confirmed that VAT and eTIMS don't apply. Because the platform is now the seller of every ticket (H2), its turnover includes the full value of ticket sales, not just its fee: the accountant should confirm that the answer still holds.
+
 **Decide by:** Phase 0 · **Owner:** Client
 
 ### H11. Guest buyers have no defined way to view their order — Decided
@@ -226,6 +230,8 @@ Recorded in v1.md (FR-09, FR-10 and §4.3), sow.md (Modules Six and Seven, §5.5
 **Recommendation:** Get the client's largest expected event and peak buyer numbers in Phase 0, and test against them in Phase 8. Decide whether to add a CAPTCHA at checkout, and plan the move to a VPS if the load test shows cPanel can't cope.
 
 **Decision (15 October 2026):** staff or admins can require a CAPTCHA at checkout for each event. Still open: the client's largest expected event and peak buyer numbers, for the Phase 8 load test.
+
+**Update (16 October 2026):** the largest expected event is 1,000 to 5,000 tickets, so the load tests are sized for 5,000. Still open: how many buyers arrive in the first minutes of a big sale.
 
 **Decide by:** Phase 0 (estimate), Phase 3 (bot protection) · **Owner:** Both
 
@@ -269,6 +275,10 @@ These come from decisions already made. They're accepted for the first release, 
 | Reserved seating may be deferred             | If the schedule slips, seating moves to a release after launch (SOW §4.1).                      | At the Phase 7 checkpoint                              |
 | 12-week timeline                             | Assumes three to four developers; holidays inside the window add one to two weeks.              | When the team and start date are confirmed in Phase 0  |
 | Waves open on their dates                    | If a wave sells out early, its category has nothing on sale until the next wave's start date.   | If organizers want the next wave to open on sell-out (a change request) |
+| Emails through the cPanel host's mail server | On a big sale day, ticket emails can be delayed by the host's hourly sending limit, and nothing records whether each email was delivered (decision #9). | If buyers report missing emails; move to a dedicated email provider (a settings change) |
+| Payout account checks left to admins         | Organizers send bank details to an admin outside the platform; how the admin confirms a request is genuine isn't fixed (decision #33). | After any disputed payout |
+| Suspension signs staff out everywhere         | A staff member who also works for another organizer is signed out of both when one organizer is suspended. | If shared staff are common |
+| Admins are needed to go on sale               | Paid events stay in draft until an admin enters the payout account, and staff wait for an admin to get access to events they didn't create (decisions #31, #33). | If admin response time delays organizers |
 | Unsold wave tickets move by hand             | Tickets a wave doesn't sell stay unsold until organizer staff move them to a later wave.        | If organizers want automatic rollover (a change request) |
 
 ---
@@ -279,7 +289,7 @@ These are corrections to the documents themselves, not decisions.
 
 - ~~**The database diagram in v1.md (§4.5) is out of date.**~~ **Done (15 October 2026):** the complete ERD is in doc/diagrams/erd/, and v1.md 1.8 §4.5 links to it. P1.3 updates it to match the final migrations.
 - ~~**The event lifecycle needs a "closed" state.**~~ **Done (13 October 2026):** v1.md 1.5 adds "closed" to the event state model (§4.6), entered automatically when the last gate closes.
-- ~~**v2.md is out of date.**~~ **Done (15 October 2026):** v2.md is marked as replaced by v1.md.
+- ~~**v2.md is out of date.**~~ **Done (16 October 2026):** v2.md has been removed, and implementation-plan.md no longer links to it.
 - **The SOW still has commercial blanks:** the project fee, intellectual property ownership, and support and maintenance after the 30-day warranty.
 
 ---
@@ -287,6 +297,7 @@ These are corrections to the documents themselves, not decisions.
 ## Next steps
 
 1. The client confirms the recorded decisions in limitation.md Part C.
-2. Close the outside confirmations: Pesapal on collecting for many organizers (H2), the accountant on VAT and eTIMS (H10), and the largest expected event for load testing (H13).
-3. The client decides how the platform fee is calculated (decision #2) and chooses the email provider (decision #9).
-4. The client chooses the platform's public name (decision #28).
+2. Close the outside confirmations: Pesapal confirms the platform-as-seller arrangement in writing (H2); the accountant confirms the tax answer still holds with the platform as seller (H10); the client says how many buyers arrive in the first minutes of a big sale (H13).
+3. The client's lawyer prepares the contract between the platform and each organizer (H2).
+4. The client decides how the platform fee is calculated (decision #2) and chooses the platform's public name (decision #28).
+5. Before Phase 8, the client gets the cPanel host's hourly email sending limit (decision #9).

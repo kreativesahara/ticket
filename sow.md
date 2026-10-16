@@ -1,7 +1,7 @@
 # STATEMENT OF WORK (SOW)
 ## Event Ticketing, Management and Access Control Platform
 
-**Document Version:** 1.10  
+**Document Version:** 1.11  
 **Date:** 16 October 2026  
 **Project Name:** Multi-Organizer Event Ticketing Platform  
 **Client:** [Client / Organization Name]  
@@ -154,6 +154,8 @@ The system shall maintain order records, pricing snapshots, payment references, 
 
 The platform shall integrate Pesapal (API 3.0) for M-Pesa and card payments through Pesapal's hosted checkout.
 
+The platform shall be the legal seller of every ticket: buyers pay the platform's Pesapal account, and the platform pays each organizer as its supplier. The contract between the platform and each organizer is prepared by the Client's lawyer, and the arrangement is subject to Pesapal's written confirmation.
+
 The implementation shall include payment initiation, gateway response handling, server-side payment verification, webhook processing, transaction references and payment status tracking.
 
 The system shall support appropriate handling of pending, successful, failed, cancelled, expired and refunded transactions.
@@ -165,7 +167,9 @@ Additional requirements include:
 - Payment reconciliation records.
 - Secure handling of payment credentials.
 - Refund initiation by platform administrators, and automatic refunds of payments that can't be accepted, with status tracking where supported by Pesapal.
-- An emailed receipt for every paid order.
+- An emailed receipt for every paid order, showing the event name, the organizer's name and the event's optional "Presented by" name.
+- Prices, discounts and totals in whole Kenyan shillings.
+- A live payment table for platform administrators, showing every payment's status with the status of its order and tickets.
 - A settlement report per organizer and event, and a log of manual payouts recorded by platform administrators.
 - No storage of the paying account (M-Pesa number or card number) that Pesapal reports.
 
@@ -185,7 +189,7 @@ The system shall provide:
 - A secure ticket retrieval page.
 - Ticket display and download functionality.
 - A 6-character short code on every ticket, unique within its event, for entry when the QR code can't be scanned.
-- Display of event information, ticket category, ticket number, short code, attendee details where collected, and seat details where applicable.
+- Display of event information (including the organizer's name and the event's optional "Presented by" name), ticket category, ticket number, short code, attendee details where collected, and seat details where applicable.
 - Ticket revocation controls for authorized users.
 - Secure access-token management.
 
@@ -257,7 +261,7 @@ The administrator interface shall provide authorized platform-wide management ca
 - Organizer and user management, including inviting and removing platform administrators, creating events for an organizer, and granting organizer staff access to events.
 - Event oversight.
 - Account suspension and activation.
-- Platform-level transaction oversight.
+- Platform-level transaction oversight, including a live payment table.
 - Audit log access.
 - Organizer verification, organizers' payout accounts and the event category list.
 - Refunds, settlement reports and the manual payout log.
@@ -387,6 +391,7 @@ The project shall be considered functionally complete when the following criteri
 - Tickets are not issued solely because of a client-side payment success message.
 - Duplicate callbacks do not create duplicate ticket issuance.
 - Failed or expired transactions are handled according to the approved business rules, and payments that can't be accepted are refunded automatically.
+- Platform administrators see each payment's current status, with its order's and tickets' status, in a table that updates without reloading the page.
 
 ### 5.4 Digital Tickets
 
@@ -460,7 +465,7 @@ This SOW is based on the following assumptions:
 - The platform will support multiple organizers on a shared application.
 - The backend will be the authoritative source for access control, ticket inventory, payment confirmation and ticket redemption.
 - M-Pesa and card payments will be integrated through Pesapal, which provides suitable APIs and a supported test environment.
-- Email delivery will use an agreed transactional email provider.
+- Email delivery will use the hosting provider's (cPanel) mail server, subject to its sending limits. The Client provides DNS access for the SPF, DKIM and DMARC records.
 - Gate validation will require internet connectivity in the initial release.
 - Reserved seating will be an optional event configuration.
 - Attendee data requirements will be configurable per event.

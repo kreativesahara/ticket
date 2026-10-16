@@ -1,7 +1,7 @@
 # Roles, Privileges & Authorization Overview
 
-**Multi-Organizer Event Ticketing Platform · Version 1.7 · 16 October 2026**  
-**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#40). If this document disagrees with v1.md, v1.md wins.
+**Multi-Organizer Event Ticketing Platform · Version 1.8 · 16 October 2026**  
+**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#45). If this document disagrees with v1.md, v1.md wins.
 
 ---
 
@@ -50,6 +50,7 @@ graph TD
   * View platform-wide sales summary reports, financial transactions, and system activity logs.
   * Authorize ticket cancellations, event cancellations, and customer refunds.
   * Record manual financial settlements and payout records for event organizers.
+  * Watch every payment on the platform in a live payment table (`GET /api/v1/admin/payments`), with each payment's status and the status of its order and tickets. Only admins see it; staff see the payment history of the events they manage.
   * Enter, change and view each organizer's payout account. Only admins can, and every change is audited.
   * See the list of every user on the platform (only admins can).
   * Grant or remove an organizer staff member's access to an individual event (`POST` and `DELETE /api/v1/admin/events/{id}/managers`). Only admins can; both are audited.
@@ -146,6 +147,7 @@ graph TD
 | | View real-time gate entry counts | Full | Scoped (Managed events) | No | Scoped (Assigned gate) | No |
 | **Financials** | View settlement statements | Full | Scoped (Managed events) | No | No | View own receipt |
 | | Record manual payout details | Full | No | No | No | No |
+| | View the live payment table (every payment) | Full | No (payment history of managed events only) | No | No | No |
 
 ---
 
@@ -362,7 +364,7 @@ Event Owners gain necessary real-time attendee visibility to coordinate event ho
 
 1. **Managed events only:** A staff member manages an event only through an active `event_staff` row with role `manager`. A staff member who creates an event gets that row automatically; any other row is created or removed only by a Platform Admin, including the managers an admin chooses when creating an event for an organizer, and both are audited. Removing a staff member from the organizer ends all their event access.
 2. **Read-only summary:** For their organization's other events, staff see the event's details and ticket setup (name, category, venue, dates, status, ticket types, categories, waves, prices and capacity). They see no sold counts, orders, payments, guest data, reports, audit records, delegations, promotions, or guard and event owner assignments, and every write request returns `403 Forbidden`.
-3. **Events nobody manages:** If an event has no active manager, only Platform Admins can change it until they grant someone access.
+3. **Last manager and unmanaged events:** A published event always keeps at least one manager. Its only manager can't be removed from the organization, or lose access to the event, until a Platform Admin has given another staff member access; the request returns `409 Conflict`. Any other event with no active manager, such as a draft a Platform Admin created without managers, can be changed only by Platform Admins until they grant someone access.
 4. **Who sees whom:**
    * Platform Admins see every user.
    * Organizer Staff see their own organization's staff (name, email and status) and guard accounts, plus the managers, event owners and guards of the events they manage. They never see users of another organization.
