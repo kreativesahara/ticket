@@ -1,7 +1,7 @@
 # Roles, Privileges & Authorization Overview
 
-**Multi-Organizer Event Ticketing Platform · Version 1.5 · 16 October 2026**  
-**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#33). If this document disagrees with v1.md, v1.md wins.
+**Multi-Organizer Event Ticketing Platform · Version 1.6 · 16 October 2026**  
+**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#34). If this document disagrees with v1.md, v1.md wins.
 
 ---
 
@@ -53,6 +53,7 @@ graph TD
   * Enter, change and view each organizer's payout account. Only admins can, and every change is audited.
   * See the list of every user on the platform (only admins can).
   * Grant or remove an organizer staff member's access to an individual event (`POST` and `DELETE /api/v1/admin/events/{id}/managers`). Only admins can; both are audited.
+  * Create an event for any active organizer and, in the same step, choose which of its staff manage it, from the user list (`POST /api/v1/admin/organizers/{id}/events` with `manager_user_ids`). The admin doesn't become a manager.
   * Invite new Platform Admins by email, and remove another admin's rights (never the last admin's). Any admin can do both, and both are audited.
   * The very first admin is created once, on a fresh installation, with a setup command (`php artisan platform:bootstrap-admin {email}`) that creates that admin's invitation and refuses to run once any admin exists.
 * **Restrictions:** Admins do not scan tickets at event gates during operational entry (gate checking is handled strictly by Guard accounts).
@@ -358,7 +359,7 @@ Event Owners gain necessary real-time attendee visibility to coordinate event ho
 
 ### 5.2 Event Access for Organizer Staff and Who Sees Whom
 
-1. **Managed events only:** A staff member manages an event only through an active `event_staff` row with role `manager`. Creating an event creates that row for its creator; any other row is created or removed only by a Platform Admin, and both are audited. Removing a staff member from the organizer ends all their event access.
+1. **Managed events only:** A staff member manages an event only through an active `event_staff` row with role `manager`. A staff member who creates an event gets that row automatically; any other row is created or removed only by a Platform Admin, including the managers an admin chooses when creating an event for an organizer, and both are audited. Removing a staff member from the organizer ends all their event access.
 2. **Read-only summary:** For their organization's other events, staff see the event's details and ticket setup (name, category, venue, dates, status, ticket types, categories, waves, prices and capacity). They see no sold counts, orders, payments, guest data, reports, audit records, delegations, promotions, or guard and event owner assignments, and every write request returns `403 Forbidden`.
 3. **Events nobody manages:** If an event has no active manager, only Platform Admins can change it until they grant someone access.
 4. **Who sees whom:**

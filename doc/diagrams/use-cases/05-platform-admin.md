@@ -27,6 +27,7 @@ flowchart LR
             A6(["Verify organizers and set their payout accounts"]):::usecase
             A7(["Suspend organizers"]):::usecase
             A8(["Act on any organizer's events and team"]):::usecase
+            A20(["Create an event for an organizer and choose its managers"]):::usecase
             A19(["Grant or remove staff access to events"]):::usecase
         end
         subgraph P3["Money"]
@@ -57,6 +58,8 @@ flowchart LR
     Admin --- A7
     Admin ---|"every organizer staff use case"| A8
     Admin --- A19
+    Admin --- A20
+    A20 -.->|"«include»"| A19
     Admin --- A9
     Admin --- A10
     Admin --- A11
@@ -91,7 +94,7 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 ## Notes
 
 - Admins can do everything organizer staff can, for any organizer ([02 organizer staff](02-organizer-staff.md)), but they don't scan tickets.
-- Only admins see the list of every user, and only admins give an organizer staff member access to an event they didn't create, or take it away ([v1.md FR-02](../../../v1.md#fr-02--multi-organizer-tenancy)).
+- Only admins see the list of every user, and only admins give an organizer staff member access to an event they didn't create, or take it away. An admin can also create an event for an organizer and choose its managers from that organizer's staff in one step; the admin doesn't become a manager ([v1.md FR-02](../../../v1.md#fr-02--multi-organizer-tenancy)).
 - Only admins enter, change or see an organizer's payout account; staff see only whether a verified one is on file ([v1.md FR-02](../../../v1.md#fr-02--multi-organizer-tenancy)).
 - Only admins start refunds, ticket by ticket. The automatic refunds of late or mismatched payments are system actions ([06 automated processes](06-automated-processes.md)).
 - Any platform admin can invite a new admin by email and remove another admin's rights, never the last admin's. The invitee accepts by signing in with Google using the invited address. A one-time setup command creates only the very first admin's invitation. No one becomes an admin through sign-in ([v1.md FR-01](../../../v1.md#fr-01--accounts-and-authentication)).

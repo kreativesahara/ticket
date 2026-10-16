@@ -1,6 +1,6 @@
 # Business Rules and Limitations
 
-**Multi-Organizer Event Ticketing Platform · Version 1.4 · 16 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.5 · 16 October 2026**
 
 **Status:** Draft for stakeholder confirmation
 
@@ -31,7 +31,7 @@ This document sets out how the platform will behave: the business rules it follo
   | **Buyer**           | Buys tickets as a guest and receives them by email; no account needed                          |
 
 - **1.3** Every organizer must always have at least one active organizer staff member.
-- **1.3a** A staff member automatically manages the events they create. Only a platform admin can give a staff member access to another event, or take it away. For their organizer's other events, staff see a read-only summary (details and ticket setup) without sales, orders, guest lists or reports, and can't change anything.
+- **1.3a** A staff member automatically manages the events they create. Only a platform admin can give a staff member access to another event, or take it away. A platform admin can also create an event for an organizer and choose which of its staff manage it. For their organizer's other events, staff see a read-only summary (details and ticket setup) without sales, orders, guest lists or reports, and can't change anything.
 - **1.3b** Only platform admins see the list of everyone on the platform. Staff see their own organizer's staff and guard accounts, and the people assigned to the events they manage. Event owners see only the names and email addresses of the staff who manage their events.
 - **1.4** Event owners have read-only access to attendee data for their assigned events, with privileges to view, filter, and export to CSV, but cannot alter event configurations, tickets, pricing, guards, or financials.
 - **1.5** New organizers sign in, apply for an organizer account, and wait for a platform admin to approve them before they can create events.
@@ -272,6 +272,7 @@ These were settled on 15 and 16 October 2026. Please confirm each one, or answer
 | C29 | Can every staff member manage every event of their organizer? | No. Staff manage the events they create; a platform admin grants access to any other event. Other events show a read-only summary without sales or guest data | |
 | C30 | Who can see the list of people on the platform?        | Only platform admins see everyone; staff see their own organizer's staff; event owners see the staff who manage their events | |
 | C31 | Who can change an organizer's payout account?          | Only platform admins, who are also the only ones to see it; staff see only whether a verified payout account is on file. Until it's entered, events with paid tickets stay in draft | |
+| C32 | Can a platform admin set up an event for an organizer? | Yes: the admin creates it as a draft and chooses which of the organizer's staff manage it; the admin doesn't become one of its managers | |
 
 ---
 

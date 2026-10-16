@@ -1,7 +1,7 @@
 # STATEMENT OF WORK (SOW)
 ## Event Ticketing, Management and Access Control Platform
 
-**Document Version:** 1.8  
+**Document Version:** 1.9  
 **Date:** 16 October 2026  
 **Project Name:** Multi-Organizer Event Ticketing Platform  
 **Client:** [Client / Organization Name]  
@@ -254,7 +254,7 @@ Reserved seating shall be optional and shall not be required for general-admissi
 
 The administrator interface shall provide authorized platform-wide management capabilities, including:
 
-- Organizer and user management, including inviting and removing platform administrators and granting organizer staff access to events.
+- Organizer and user management, including inviting and removing platform administrators, creating events for an organizer, and granting organizer staff access to events.
 - Event oversight.
 - Account suspension and activation.
 - Platform-level transaction oversight.

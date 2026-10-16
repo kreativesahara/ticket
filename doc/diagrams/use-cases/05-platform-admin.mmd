@@ -18,6 +18,7 @@ flowchart LR
             A6(["Verify organizers and set their payout accounts"]):::usecase
             A7(["Suspend organizers"]):::usecase
             A8(["Act on any organizer's events and team"]):::usecase
+            A20(["Create an event for an organizer and choose its managers"]):::usecase
             A19(["Grant or remove staff access to events"]):::usecase
         end
         subgraph P3["Money"]
@@ -48,6 +49,8 @@ flowchart LR
     Admin --- A7
     Admin ---|"every organizer staff use case"| A8
     Admin --- A19
+    Admin --- A20
+    A20 -.->|"«include»"| A19
     Admin --- A9
     Admin --- A10
     Admin --- A11
