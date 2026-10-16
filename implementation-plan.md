@@ -1,6 +1,6 @@
 # Implementation Plan: Multi-Organizer Event Ticketing Platform
 
-**Version 1.11 · 16 October 2026 · System design and analysis**
+**Version 1.12 · 16 October 2026 · System design and analysis**
 
 **Based on:** [v1.md](v1.md) (requirements specification), [sow.md](sow.md) (statement of work) and [techstack.md](techstack.md) (architecture blueprint). v2.md, an earlier requirements review, has been removed; v1.md replaced it.
 
@@ -237,7 +237,7 @@ These items can delay launch no matter how fast development goes:
 ### Backend
 
 1. **Event lifecycle.** Draft → published → closed (set automatically when the last gate closes, or at the event's end time if it has no gates) or cancelled → archived, as in v1.md §4.6, enforced by the backend. A scheduled job moves published events to closed. Unpublished drafts can be deleted; events that were ever published are only archived, never deleted. Store times in UTC alongside the event's own timezone.
-2. **Event details and media.** Name, description, venue, category (from the admins' list), capacity, refund policy, the optional checkout CAPTCHA and images, with images stored in Supabase Storage. Cancelling revokes every ticket, cancels pending orders, ends guard access and emails every buyer; changing a published event's dates (postponement) emails buyers a refund-request link (v1.md FR-03).
+2. **Event details and media.** Name, description, venue, category (from the admins' list), capacity, refund policy, the optional checkout CAPTCHA and the event image (decision #46). The backend never stores an uploaded image as sent: it decodes the file (JPEG, PNG or WebP, at most 10 MB and 25 megapixels), scales it down to at most 1,920 pixels on its longest side, strips its metadata and saves it as a JPEG under 500 KB in a public Supabase Storage bucket, under a new name for each upload (techstack.md §6). Cancelling revokes every ticket, cancels pending orders, ends guard access and emails every buyer; changing a published event's dates (postponement) emails buyers a refund-request link (v1.md FR-03).
 3. **Time windows.** Store and validate each window separately: sales start and end, gate opening and closing, and event start and end.
 4. **Ticket types and categories.** Seed the defaults (Early Bird, Normal, At the Gate, Group and Promoted; VVIP, VIP and Media) and let organizers add their own. Each category can be set to sell in waves (decision #23).
 5. **Offerings.** Each allowed type × category combination, with a price in minor units of KES, capacity, sales window, and minimum and maximum per order. Include group quantity rules, and an approval or manual-issue flag for Media tickets.
@@ -251,9 +251,9 @@ These items can delay launch no matter how fast development goes:
 
 ### Frontend
 
-11. **Organizer dashboard:** an event list (every event of the organizer, with a read-only summary for the ones the user doesn't manage) and, for managed events, a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), an offerings grid with a wave editor for each category sold in waves, a "move unsold tickets" dialog, delegation management with claim links and set-aside allocations, a share panel with the event link, QR code downloads and the poster, staff and event owner invitations, and guard accounts.
+11. **Organizer dashboard:** an event list (every event of the organizer, with a read-only summary for the ones the user doesn't manage) and, for managed events, a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), whose details step compresses the event image in the browser before uploading it, an offerings grid with a wave editor for each category sold in waves, a "move unsold tickets" dialog, delegation management with claim links and set-aside allocations, a share panel with the event link, QR code downloads and the poster, staff and event owner invitations, and guard accounts.
 12. **Admin dashboard:** organizers, every user, platform admins (invite and remove), new events for an organizer with their managers chosen from its staff, staff event access (grant and remove for each event), organizer verification, event categories and suspension controls.
-13. **Public website:** a landing page listing every public ticket option across published events (search by event name or venue, event category and date filters, sold-out options marked, upcoming waves greyed out, delegation tickets never listed), and event pages at `/events/{slug}` that show published events only (v1.md FR-14).
+13. **Public website:** a landing page listing every public ticket option across published events (search by event name or venue, event category and date filters, sold-out options marked, upcoming waves greyed out, delegation tickets never listed), and event pages at `/events/{slug}` that show published events only (v1.md FR-14). Event images go through `next/image`, which resizes them on the fly for each screen (decision #46).
 
 ### Exit criteria
 
@@ -262,6 +262,7 @@ These items can delay launch no matter how fast development goes:
 - [ ] A category's waves can't overlap, each wave's offerings sell only between its dates, and moving unsold tickets keeps every offering at or above what it has sold and holds.
 - [ ] The landing page lists every public ticket option of published events, and never a delegation's set-aside tickets.
 - [ ] Each event's QR code opens its event page, and the poster downloads.
+- [ ] An uploaded event image is stored as a JPEG under 500 KB and at most 1,920 pixels on its longest side, without metadata, and event pages serve it resized for the screen.
 - [ ] Guard account creation and assignment work, and guards see only the events assigned to them.
 - [ ] Event owner invitation and assignment work, and event owners see only the events assigned to them.
 - [ ] When an event closes, its guard passwords are deleted and those guards are signed out immediately; their past scans still show their names.
@@ -592,6 +593,7 @@ These decisions affect the database, the integrations or the schedule. Each need
 | 43 | What tickets and receipts show        | Platform as seller; organizer; "Presented by" name        | **Decided (16 October 2026):** the event name, the organizer's name and an optional "Presented by" name that staff set for each event (`events.presented_by`), on tickets, receipts and ticket emails. No organizer agreement or terms-of-sale checkbox is built (v1.md FR-03, FR-09) | Decided |
 | 44 | An event's last manager               | Admins alerted; block removal; keep as is                   | **Decided (16 October 2026):** a published event always keeps at least one manager. Its only manager can't be removed from the organizer, or lose access to it, until a platform admin has given another staff member access (v1.md FR-02) | Decided |
 | 45 | Live payment table for admins         | —                                                           | **Decided (16 October 2026):** platform admins see every payment attempt in a table that refreshes every few seconds, with its payment, order and ticket status, filters and search, and stuck or rejected payments flagged. It polls the API, because the cPanel host can't run a WebSocket server (v1.md FR-08, §5) | Decided |
+| 46 | Event image size and delivery         | Store uploads as sent; compress once at upload; resize on every request | **Decided (16 October 2026):** compress once at upload, resize when viewed. The backend stores every uploaded image (JPEG, PNG or WebP, at most 10 MB and 25 megapixels) as a new JPEG under 500 KB, at most 1,920 pixels on its longest side and without metadata, in a public Supabase Storage bucket. The browser compresses first to save upload time, but the backend enforces the limits. Pages resize the image on the fly with `next/image` on Vercel, as AVIF or WebP where the browser supports them. Vercel bills image transformations beyond its plan's allowance (v1.md FR-03, techstack.md §6) | Decided |
 
 ---
 

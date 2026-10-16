@@ -130,6 +130,9 @@ These are not packages. The shadcn CLI copies each component's source into the r
 | OpenAPI client generator and mock server | frontend | A typed API client and a mock server generated from `/api/docs/openapi.yaml` | Phase 1, frontend track step 16. Tool not chosen yet |
 | k6 | tooling | Concurrent-request tests (no overselling, no double redemption) and performance tests | Phase 3 and Phase 8 (implementation-plan.md §12) |
 | Playwright | frontend | End-to-end tests in a real browser | Phase 5 (implementation-plan.md §12) |
+| `intervention/image` | backend | Decodes, resizes and re-encodes event images as JPEGs under 500 KB, on PHP's GD extension | Phase 2, P2.1 (decision #46) |
+| `league/flysystem-aws-s3-v3` | backend | Laravel's `s3` disk, pointed at Supabase Storage's S3-compatible endpoint, for event images | Phase 2, P2.1 (decision #46) |
+| Supabase Storage | infrastructure | Public bucket for event images; Vercel's image optimizer resizes them for each screen | Phase 2, P2.1 and P2.7 (decision #46) |
 
 Packages for QR code images, guest-list export and the guard scanner's camera haven't been chosen. They'll be logged here when they're added.
 
@@ -160,6 +163,7 @@ Nothing here has been changed. Each item needs a decision first.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | Planned `intervention/image`, `league/flysystem-aws-s3-v3` and Supabase Storage for event images (decision #46) |
 | 2026-10-16 | Added `laravel/socialite` (v5.31.0) and `laravel/sanctum` (v4.3.3) for Google OAuth 2.0 social sign-in and SPA cookie sessions |
 | 2026-10-15 | Added GitHub Actions CI workflows, Supabase project pooler details (`qglaepourqlklgsfvkai`), Supabase MCP server, and Supabase agent skills (`supabase`, `supabase-postgres-best-practices`) |
 | 2026-10-15 | Log created from `composer.json`, `composer.lock`, both `package.json` files, `pnpm-lock.yaml` and `docker-compose.yml` |

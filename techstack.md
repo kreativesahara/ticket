@@ -234,13 +234,29 @@ cPanel is a reasonable initial deployment target if your hosting plan supports t
 | **Live screens**         | Polling: the admin payment table asks the API for changes every few seconds, because shared hosting can't run a WebSocket server (decision #45) |
 | **Queues**               | Laravel database queue initially, if supported by your plan                                 |
 | **Long-running workers** | Verify whether the host permits them; otherwise use a controlled cron-based worker strategy |
-| **Assets**               | Supabase Storage or another object-storage service                                          |
+| **Assets**               | Event images in a public Supabase Storage bucket, written through Laravel's `s3` disk on Supabase's S3-compatible endpoint (see [Event images](#event-images)) |
 | **Secrets**              | Environment configuration outside public access                                             |
 | **Monitoring**           | Laravel logs, payment/webhook audit records and external uptime monitoring, each kept for its period in v1.md §4.7 and free of personal data |
 
 For a shared host that does not allow persistent queue workers, a cron-triggered `queue:work --stop-when-empty` approach may work for lightweight workloads, subject to hosting limits. Time-sensitive work must not depend on a queue configuration you have not tested.
 
 > **Warning:** Do not process lengthy payment reconciliation or email batches inside the user's checkout request. Keep the HTTP request fast and move appropriate work to queues.
+
+### Event images
+
+Event images are compressed once, when they are uploaded, and resized for each screen when they are viewed (v1.md FR-03, decision #46).
+
+1. **In the browser.** The event editor scales the chosen image down to at most 1,920 pixels on its longest side and compresses it to under 500 KB before uploading it, so staff on mobile data send less. This only saves time; Laravel repeats every check.
+2. **In Laravel.** The API never stores the uploaded file. It decodes it with Intervention Image on PHP's GD extension, accepting JPEG, PNG or WebP of at most 10 MB and 25 megapixels; the pixel limit keeps GD within a 256 MB PHP memory limit. It then:
+   - turns the image upright from its EXIF orientation, converts it to sRGB and flattens any transparency onto white;
+   - scales it down, never up, to at most 1,920 pixels on its longest side;
+   - strips all metadata, including GPS location;
+   - encodes a progressive JPEG at quality 82, lowering the quality in steps to 60 and then shrinking the dimensions by 20% at a time until the file is under 500 KB (512,000 bytes), and refuses the image if it still doesn't fit.
+
+   Re-encoding also drops anything hidden in the original file. The result goes to the public bucket as `events/{event_id}/{uuid}.jpg`, with `Cache-Control: public, max-age=31536000, immutable`, and the previous image is deleted. The work runs inside the upload request: the browser has usually shrunk the image already, and only an event's managers and platform admins upload.
+3. **In Next.js.** Pages render the image with `next/image`. Vercel's image optimizer resizes it on the fly to the widths the `sizes` attribute asks for, serves AVIF or WebP to browsers that accept them, and caches each variant. `images.remotePatterns` allows only the bucket's public path. Every upload has a new name, so cached variants never go stale.
+
+The stored file stays a JPEG because link previews (WhatsApp, Facebook) and email clients that fetch the original all display JPEG; browsers get the smaller formats from the optimizer.
 
 ---
 
@@ -254,7 +270,7 @@ All endpoints are versioned under `/api/v1` and follow v1.md §5, which has the 
 | **Invitations**      | `POST /api/v1/organizer/invitations`, `POST /api/v1/admin/invitations` (platform admins), `POST /api/v1/invitations/{token}/accept` |
 | **Guard accounts**   | `POST /api/v1/organizer/guards`, `POST /api/v1/organizer/guards/{id}/password`                             |
 | **Organizers**       | `POST /api/v1/organizers`, `GET /api/v1/organizers/me`                                                     |
-| **Events**           | `GET /api/v1/events`, `GET /api/v1/events/{slug}`, `POST /api/v1/organizer/events`, `PATCH /api/v1/organizer/events/{id}` |
+| **Events**           | `GET /api/v1/events`, `GET /api/v1/events/{slug}`, `POST /api/v1/organizer/events`, `PATCH /api/v1/organizer/events/{id}`, `POST /api/v1/organizer/events/{id}/image` |
 | **Landing page**     | `GET /api/v1/tickets` (every public ticket option, with search and filters)                                |
 | **Ticket offerings** | `GET /api/v1/events/{id}/tickets`, `POST /api/v1/organizer/events/{id}/offerings`, `POST /api/v1/organizer/offerings/{id}/move-unsold` |
 | **Ticket waves**     | `POST /api/v1/organizer/events/{id}/waves`, `PATCH /api/v1/organizer/waves/{id}`                           |

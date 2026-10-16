@@ -1,6 +1,6 @@
 # Business Rules and Limitations
 
-**Multi-Organizer Event Ticketing Platform · Version 1.7 · 16 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.8 · 16 October 2026**
 
 **Status:** Draft for stakeholder confirmation
 
@@ -72,6 +72,7 @@ Rules for guard password accounts:
 
 - **3.1** An event goes through these stages: **draft** → **published** → **closed** or **cancelled** → **archived**. A published event closes automatically when its last gate closes, or at its end time if it has no gates. Only published events can be seen and bought by the public. A draft that was never published can be deleted; an event that was ever published is never deleted, only archived, so its sales and entry records are kept.
 - **3.2** Each event has: name, description, images, an event category from the platform's list, venue, date and time (with its timezone), ticket sales start and end, gate opening and closing times, total capacity, the attendee details required, ticket options, optional ticket waves for each category (rule 4.12), its own link and QR code (rule 5.12), optional seating, gates and guards, the identity number buyers must give (rule 5.7), whether checkout needs a CAPTCHA, and a cancellation and refund policy.
+- **3.2a** Organizers upload event images as JPEG, PNG or WebP photos of up to 10 MB. The platform shrinks each image to at most 1,920 pixels on its longest side and under 500 KB, and removes hidden details such as where the photo was taken. Each visitor gets a copy sized for their screen, so pages load quickly on phones. A very detailed photo may lose a little sharpness. Other formats, such as SVG or GIF, aren't accepted.
 - **3.3** Three sets of times are separate and independent:
   - **Ticket sales:** when buying starts and stops.
   - **Gates:** when entry starts and stops.
@@ -286,6 +287,7 @@ These were settled on 15 and 16 October 2026. Please confirm each one, or answer
 | C36 | What do tickets and receipts show about who runs the event? | The event name, the organizer's name and an optional "Presented by" name for each event, such as a sponsor. No organizer agreement or terms-of-sale checkbox is built in | |
 | C37 | Can an event lose its last manager?                    | No. While an event is on sale, its only manager can't be removed until a platform admin gives another staff member access | |
 | C38 | Can admins watch payments as they happen?             | Yes: a live table of every payment, with its status and the status of its order and tickets, updating every few seconds | |
+| C39 | How large can event images be?                         | Each image is shrunk to under 500 KB and at most 1,920 pixels on its longest side when it's uploaded, and each visitor gets a copy sized for their screen | |
 
 ---
 
