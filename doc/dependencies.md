@@ -87,13 +87,18 @@ The Laravel skeleton includes these packages for building Blade views. The API s
 | `next` | 16.4.1 (exact) | The React framework: App Router, server-side rendering and the routes for every role area |
 | `react` | 19.3.0 | The UI library |
 | `react-dom` | 19.3.0 | Renders React to the browser DOM |
-| `@base-ui/react` | ^1.9.0 → 1.9.0 | Headless, accessible primitives (dialogs, menus, popovers) underneath shadcn's `base-nova` style. Not imported yet; shadcn components added through the CLI will use it |
-| `class-variance-authority` | ^0.7.1 → 0.7.1 | Defines component variants such as size and colour. Used by `src/components/ui/button.tsx` |
+| `@base-ui/react` | ^1.9.0 → 1.9.0 | Headless, accessible primitives underneath shadcn's `base-nova` style |
+| `react-hook-form` | ^7.90.0 → 7.90.0 | Performant, flexible forms state and validation management |
+| `zod` | ^4.6.7 → 4.6.7 | TypeScript-first schema validation |
+| `@hookform/resolvers` | ^5.9.1 → 5.9.1 | Zod validation resolver for React Hook Form |
+| `sonner` | ^2.0.8 → 2.0.8 | Toast notifications component |
+| `next-themes` | ^0.4.6 → 0.4.6 | Light/dark theme management |
+| `class-variance-authority` | ^0.7.1 → 0.7.1 | Defines component variants such as size and colour |
 | `clsx` | ^2.1.1 → 2.1.1 | Builds `className` strings conditionally. Used by `cn()` in `src/lib/utils.ts` |
 | `tailwind-merge` | ^3.7.0 → 3.7.0 | Resolves conflicting Tailwind classes. Used by `cn()` in `src/lib/utils.ts` |
 | `lucide-react` | ^1.57.0 → 1.57.0 | Icon set, configured as shadcn's icon library in `components.json` |
 | `shadcn` | ^4.21.4 → 4.21.4 | The shadcn/ui CLI, which copies component source into `src/components/ui` |
-| `tw-animate-css` | ^1.4.0 → 1.4.0 | Tailwind v4 enter and exit animations that shadcn components use. Not yet imported in `globals.css` |
+| `tw-animate-css` | ^1.4.0 → 1.4.0 | Tailwind v4 enter and exit animations that shadcn components use |
 | `cn` | ^0.4.0 → 0.4.0 | A class-name merge utility. **Not imported anywhere**: it duplicates our own `cn()` helper. See [§6](#6-cleanup-candidates) |
 
 ### `devDependencies`
@@ -113,6 +118,8 @@ The Laravel skeleton includes these packages for building Blade views. The API s
 | `jsdom` | ^30.1.2 → 30.1.2 | Simulated browser DOM for component tests |
 | `@testing-library/react` | ^16.3.3 → 16.3.3 | Renders components in tests and queries them the way a user would |
 | `@testing-library/jest-dom` | ^7.0.1 → 7.0.1 | DOM assertions such as `toBeInTheDocument` |
+| `openapi-typescript` | ^7.13.0 → 7.13.0 | Generates TypeScript definitions (`src/lib/api-schema.ts`) from `openapi.yaml` |
+| `msw` | ^3.0.3 → 3.0.3 | Mock Service Worker for client and server mock API mode (`src/mocks/`) |
 
 ### shadcn/ui components
 
@@ -121,6 +128,17 @@ These are not packages. The shadcn CLI copies each component's source into the r
 | Component | File |
 | --- | --- |
 | Button | `src/components/ui/button.tsx` |
+| Input | `src/components/ui/input.tsx` |
+| Label | `src/components/ui/label.tsx` |
+| Form | `src/components/ui/form.tsx` |
+| Card | `src/components/ui/card.tsx` |
+| Dialog | `src/components/ui/dialog.tsx` |
+| Table | `src/components/ui/table.tsx` |
+| Toast & Sonner | `src/components/ui/toast.tsx`, `src/components/ui/sonner.tsx` |
+| Dropdown Menu | `src/components/ui/dropdown-menu.tsx` |
+| Badge | `src/components/ui/badge.tsx` |
+| Select | `src/components/ui/select.tsx` |
+| Tabs | `src/components/ui/tabs.tsx` |
 
 ---
 
@@ -128,7 +146,6 @@ These are not packages. The shadcn CLI copies each component's source into the r
 
 | Package or tool | Repo | Purpose | When |
 | --- | --- | --- | --- |
-| OpenAPI client generator and mock server | frontend | A typed API client and a mock server generated from `/api/docs/openapi.yaml` | Phase 1, frontend track step 16. Tool not chosen yet |
 | k6 | tooling | Concurrent-request tests (no overselling, no double redemption) and performance tests | Phase 3 and Phase 8 (implementation-plan.md §12) |
 | Playwright | frontend | End-to-end tests in a real browser | Phase 5 (implementation-plan.md §12) |
 | `intervention/image` | backend | Decodes, resizes and re-encodes event images as JPEGs under 500 KB, on PHP's GD extension | Phase 2, P2.1 (decision #46) |
@@ -164,6 +181,7 @@ Nothing here has been changed. Each item needs a decision first.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-16 | Implemented frontend foundation (implementation-plan.md Phase 1 steps 14–16, P1.7): added 12 shadcn/ui components (`button`, `input`, `label`, `form`, `card`, `dialog`, `table`, `toast`/`sonner`, `dropdown-menu`, `badge`, `select`, `tabs`); typed API client generated from `openapi.yaml` with server cookie/Origin forwarding and browser CSRF `/sanctum/csrf-cookie` handling; OpenAPI-driven MSW mock mode for browser and SSR; public site layout, header, footer, home page, Google sign-in, guard email/password sign-in with first-sign-in password change screen, invitation acceptance flow (`/invite/[token]`), `error=no_access` message (Decision #7), logout (`/logout`); role-protected app shell with sidebar and multi-organizer switcher (`/admin`, `/organizer`, `/event-owner`, `/guard`); component tests for all auth, guard, password change, invitation, and no-access flows. Added dependencies: `react-hook-form`, `zod`, `@hookform/resolvers`, `sonner`, `openapi-typescript`, `msw` |
 | 2026-10-16 | Added OpenAPI 3.1.0 contract (`/api/docs/openapi.yaml` and `ticketbackend/docs/openapi.yaml`) covering all MVP endpoints (v1.md §5); implemented unified JSON error format (`ApiResponse::error`), standard pagination envelope (`ApiResponse::paginated`), request correlation ID (`CorrelationIdMiddleware` accepting/returning `X-Request-Id` and logging safely without PII per Decisions #35, #36); implemented guest order checkout token protection (Hurdle H11); added `HealthController` (`/api/v1/health`); added `OpenApiContractTest` and `ApiConventionsTest` (P1.6) |
 | 2026-10-16 | Added audit retention database role migration (`audit_retention`), retention purge service and daily scheduler (`platform:purge-retention`) for logs past retention periods (Decision #35); hardened AuditLogger against buyer/attendee PII (Decision #36); implemented multi-organizer tenancy, model policies, and authorization safeguards (P1.5) |
 | 2026-10-16 | Planned `intervention/image`, `league/flysystem-aws-s3-v3` and Supabase Storage for event images (decision #46) |
