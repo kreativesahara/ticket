@@ -6,7 +6,7 @@ Every runtime, package and service this codebase depends on, and what each one i
 
 **Versions.** *Declared* is the constraint in `composer.json` or `package.json`. *Locked* is the version that `composer.lock` or `pnpm-lock.yaml` actually installed.
 
-Last checked: 2026-10-15.
+Last checked: 2026-10-16.
 
 ---
 
@@ -43,7 +43,7 @@ Last checked: 2026-10-15.
 | Package | Declared → locked | What it's for |
 | --- | --- | --- |
 | `laravel/framework` | ^13.17 → v13.36.0 | The Laravel framework: routing, Eloquent ORM, migrations, validation, policies, queues, scheduler and mail. It also brings in `guzzlehttp/guzzle` 8.2.0, the HTTP client behind Laravel's `Http` facade that we'll use to call Pesapal, and `nesbot/carbon` 3.14.2 for dates and times |
-| `laravel/sanctum` | ^4.3 → v4.3.3 | Cookie-based SPA session authentication for frontend requests (Next.js browser and SSR requests) |
+| `laravel/sanctum` | ^4.0 → v4.3.3 | Cookie-based SPA session authentication for frontend requests (Next.js browser and SSR requests) |
 | `laravel/socialite` | ^5.31 → v5.31.0 | Google OAuth 2.0 social sign-in provider |
 | `laravel/tinker` | ^3.0 → v3.0.2 | Interactive console (`php artisan tinker`) for inspecting models and data during development |
 
