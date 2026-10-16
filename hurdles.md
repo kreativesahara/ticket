@@ -61,7 +61,7 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 
 **Recommendation:** Raise the marketplace question with Pesapal during onboarding in Phase 0. Add a verification step before an organizer's first paid event can be published: business or ID details, and the account they'll be paid into.
 
-**Decision (15 October 2026):** as recommended: a platform admin verifies business or ID details and the payout account before an organizer's first paid event can be published. Still open: Pesapal's confirmation that one merchant account may collect for many organizers.
+**Decision (15 October 2026):** as recommended: a platform admin verifies business or ID details and the payout account before an organizer's first paid event can be published. Since 16 October 2026, only platform admins enter, change or see the payout account (implementation-plan.md §11, #33). Still open: Pesapal's confirmation that one merchant account may collect for many organizers.
 
 **Decide by:** Phase 0 · **Owner:** Client
 

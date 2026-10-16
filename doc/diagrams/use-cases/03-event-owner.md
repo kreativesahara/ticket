@@ -20,6 +20,7 @@ flowchart LR
         O3(["View the guest list of an assigned event"]):::usecase
         O4(["Filter by category, delegation, purchase date or check-in status"]):::usecase
         O5(["Export the guest list as CSV"]):::usecase
+        O6(["See who manages an assigned event"]):::usecase
     end
 
     Google["«system»<br/><b>Google</b><br/>OAuth"]:::external
@@ -29,6 +30,7 @@ flowchart LR
     Owner --- O3
     Owner --- O4
     Owner --- O5
+    Owner --- O6
 
     O2 -.->|"«include»"| O1
     O4 -.->|"«extend»"| O3
@@ -54,4 +56,5 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 ## Notes
 
 - The guest list shows each ticket holder's name, ticket category, delegation, check-in status and entry time only: no contact details, ID numbers, sales, payment or settlement figures.
+- Besides the guest list, event owners see only the names and email addresses of the staff who manage their assigned events: no other event owners, guards or users ([v1.md FR-02](../../../v1.md#fr-02--multi-organizer-tenancy)).
 - Event owners never change anything, and never trigger a state transition ([state-machines.md](../../state-machines.md#conventions)).

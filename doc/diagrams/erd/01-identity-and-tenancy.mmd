@@ -72,7 +72,7 @@ erDiagram
         key event_id FK
         key gate_id FK "optional, guards only"
         key user_id FK
-        string role "guard or event_owner"
+        string role "manager, guard or event_owner"
         string status
         int short_code_failures
         timestamp short_code_locked_at "locks after 5 invalid codes"

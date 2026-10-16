@@ -124,14 +124,14 @@ Create a Google OAuth client for each environment (local, staging and production
 | Role                | Access                                                                                                        |
 | ------------------- | ------------------------------------------------------------------------------------------------------------- |
 | **Platform admin**  | Full rights and privileges across the platform: manage platform users, organizer accounts, event oversight, dispute intervention, global configuration, and platform-wide reports |
-| **Organizer staff** | Full control of their organizer account: profile, members, events, pricing, offerings, ticket waves, delegations, guards, and settlement reports |
-| **Event owner**     | View, filter and export the names, ticket categories, delegations, check-in status and entry times of the ticket holders at their assigned events |
+| **Organizer staff** | Their organizer account (profile, members, guard accounts) and creating events; pricing, offerings, ticket waves, delegations, guard assignments, reports and settlement only for the events they manage: the ones they created or that a platform admin gave them access to. A read-only summary of their organizer's other events |
+| **Event owner**     | View, filter and export the names, ticket categories, delegations, check-in status and entry times of the ticket holders at their assigned events, and see who manages those events |
 | **Guard**           | Scan and redeem tickets only for assigned events and gates, signed in with a guard password account           |
 | **Attendee**        | Buy tickets as a guest and view their own orders and tickets through a secure retrieval link; accounts are not required for the initial release |
 
 The full permissions matrix is in v1.md §3. Use Laravel **Policies** and **Gates** to authorize operations. A role alone should never grant access to every record of that type.
 
-> **Example:** An organizer requesting `GET /api/v1/organizer/events/123` must not see event 123 simply because they are logged in. Laravel must verify that the event belongs to an organizer they are a member of, and that their role allows the action. An event owner passes only for the guest list of an event they are assigned to.
+> **Example:** An organizer requesting `GET /api/v1/organizer/events/123` must not see event 123 simply because they are logged in. Laravel must verify that the event belongs to an organizer they are a member of, that they manage the event (an `event_staff` row with role `manager`) for anything beyond the read-only summary, and that their role allows the action. An event owner passes only for the guest list of an event they are assigned to, and the list of its managers.
 
 ---
 

@@ -1,7 +1,7 @@
 # Role relationships
 
 **Type:** Flowchart  
-**Source:** [doc/roleandprivileage.md › 2. The Five System Roles](../../../doc/roleandprivileage.md#2-the-five-system-roles)  
+**Source:** [doc/roleandprivileage.md › 2. Summary of System Roles](../../../doc/roleandprivileage.md#2-summary-of-system-roles)  
 **Files:** [SVG](01-role-relationships.svg) · [PNG](01-role-relationships.png) · [Mermaid source](01-role-relationships.mmd)
 
 ```mermaid
@@ -19,10 +19,11 @@ graph TD
     BY[Buyer / Attendee]:::guest
 
     PA -->|Full System Authority| OS
+    PA -->|Grants Event Access| OS
     PA -->|Platform Oversight| EO
     OS -->|Assigns Guest Access| EO
     OS -->|Creates & Assigns| GD
     BY -->|Purchases & Redeems| GD
 ```
 
-This is a copy of the Mermaid block in [doc/roleandprivileage.md](../../../doc/roleandprivileage.md#2-the-five-system-roles). When it changes, update the source document, this file and `01-role-relationships.mmd` together, then re-render ([how](../../README.md#regenerating)).
+This is a copy of the Mermaid block in [doc/roleandprivileage.md](../../../doc/roleandprivileage.md#2-summary-of-system-roles). When it changes, update the source document, this file and `01-role-relationships.mmd` together, then re-render ([how](../../README.md#regenerating)).

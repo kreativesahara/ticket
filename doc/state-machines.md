@@ -18,7 +18,7 @@ The decisions behind these machines were settled on 15 October 2026 and are list
 - **Who:**
   - **Buyer:** a guest on the public website.
   - **Holder:** whoever holds a ticket's retrieval link.
-  - **Staff:** organizer staff of the event's organizer.
+  - **Staff:** organizer staff who manage the event: its creator, or staff a platform admin gave access to it (v1.md §3, rule 8). Other staff of the organizer trigger nothing.
   - **Admin:** a platform admin.
   - **Guard:** a guard password account assigned to the event, and to the gate if the assignment names one.
   - **System:** a scheduled job or the payment pipeline.

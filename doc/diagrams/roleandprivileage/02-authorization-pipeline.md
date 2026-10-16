@@ -1,7 +1,7 @@
 # Authorization pipeline
 
 **Type:** Sequence diagram  
-**Source:** [doc/roleandprivileage.md › 4.1 Enforcement Pipeline Flow](../../../doc/roleandprivileage.md#41-enforcement-pipeline-flow)  
+**Source:** [doc/roleandprivileage.md › 4.2 Enforcement Sequence Diagram](../../../doc/roleandprivileage.md#42-enforcement-sequence-diagram)  
 **Files:** [SVG](02-authorization-pipeline.svg) · [PNG](02-authorization-pipeline.png) · [Mermaid source](02-authorization-pipeline.mmd)
 
 ```mermaid
@@ -14,7 +14,7 @@ sequenceDiagram
     participant DB as Supabase PostgreSQL
 
     Client->>HTTP: Request (e.g. GET /api/v1/organizer/events/123/attendees/export)
-    HTTP->>Sanctum: Authenticate session cookie / token
+    HTTP->>Sanctum: Authenticate session cookie
     alt Unauthenticated
         Sanctum-->>Client: 401 Unauthorized
     end
@@ -26,11 +26,11 @@ sequenceDiagram
         alt Platform Admin
             Policy-->>HTTP: Approved (Full Rights)
         else Organizer Staff
-            Policy->>DB: Check user is staff for event's organizer
-            alt Is Active Staff
-                Policy-->>HTTP: Approved (Full Tenant Scope)
-            else Not Staff
-                Policy-->>Client: 403 Forbidden
+            Policy->>DB: Check event_staff for event_id + role == 'manager' (and active membership)
+            alt Manages This Event
+                Policy-->>HTTP: Approved (Managed Event)
+            else Staff Without Event Access
+                Policy-->>Client: 403 Forbidden (read-only summary only)
             end
         else Event Owner
             Policy->>DB: Check event_staff for event_id + role == 'event_owner'
@@ -48,4 +48,4 @@ sequenceDiagram
     HTTP-->>Client: 200 OK (Stream CSV or Return JSON)
 ```
 
-This is a copy of the Mermaid block in [doc/roleandprivileage.md](../../../doc/roleandprivileage.md#41-enforcement-pipeline-flow). When it changes, update the source document, this file and `02-authorization-pipeline.mmd` together, then re-render ([how](../../README.md#regenerating)).
+This is a copy of the Mermaid block in [doc/roleandprivileage.md](../../../doc/roleandprivileage.md#42-enforcement-sequence-diagram). When it changes, update the source document, this file and `02-authorization-pipeline.mmd` together, then re-render ([how](../../README.md#regenerating)).

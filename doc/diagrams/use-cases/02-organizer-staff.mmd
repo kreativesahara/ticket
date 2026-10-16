@@ -3,7 +3,7 @@ flowchart LR
     classDef external fill:#f3f4f6,stroke:#6b7280,stroke-width:1px,stroke-dasharray:4 3,color:#374151
     classDef usecase fill:#eef2ff,stroke:#4f46e5,stroke-width:1px,color:#1e1b4b
 
-    Staff["«actor»<br/><b>Organizer staff</b><br/>own organizer only"]:::actor
+    Staff["«actor»<br/><b>Organizer staff</b><br/>own organizer; event use cases<br/>only for events they manage"]:::actor
 
     subgraph SYS["Ticketing platform: organizer area"]
         subgraph P1["Account and team"]
@@ -13,6 +13,7 @@ flowchart LR
             S4(["Manage organizer profile and verification details"]):::usecase
             S5(["Invite and manage staff"]):::usecase
             S6(["Invite and assign event owners"]):::usecase
+            S7(["See the organizer's staff and guard accounts"]):::usecase
         end
         subgraph P2["Events and ticketing"]
             E1(["Create, edit or delete draft events"]):::usecase
@@ -28,6 +29,7 @@ flowchart LR
             E8(["Configure promotions"]):::usecase
             E9(["Approve or issue Media tickets"]):::usecase
             E10(["Revoke or reinstate tickets"]):::usecase
+            E14(["View another event's summary"]):::usecase
         end
         subgraph P3["Gate access"]
             G1(["Create guard accounts"]):::usecase
@@ -53,6 +55,7 @@ flowchart LR
     Staff --- S4
     Staff --- S5
     Staff --- S6
+    Staff --- S7
     Staff --- E1
     Staff --- E2
     Staff --- E11
@@ -66,6 +69,7 @@ flowchart LR
     Staff --- E8
     Staff --- E9
     Staff --- E10
+    Staff ---|"read-only, events they don't manage"| E14
     Staff --- G1
     Staff --- G2
     Staff --- G4

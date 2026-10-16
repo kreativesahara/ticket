@@ -1,7 +1,7 @@
 # STATEMENT OF WORK (SOW)
 ## Event Ticketing, Management and Access Control Platform
 
-**Document Version:** 1.7  
+**Document Version:** 1.8  
 **Date:** 16 October 2026  
 **Project Name:** Multi-Organizer Event Ticketing Platform  
 **Client:** [Client / Organization Name]  
@@ -58,8 +58,9 @@ Functional requirements include:
 - Guard sign-in only with an individual email and password account, created with the guard's own email address by organizer staff or a platform administrator. The guard shall set their own password at first sign-in, and passwords shall be stored only as secure hashes. Each guard password shall be valid only for the event it was issued for, and shall be revoked and deleted as soon as that event closes (when entry ends, or when it is cancelled or archived). Only guard accounts shall scan tickets.
 - User profile management.
 - Account activation and suspension.
-- Organizer account applications, approval and management, including verification of business or ID details and the payout account before an organizer's first paid event.
-- Organizer membership through the organizer staff role, with full control of the organizer account.
+- Organizer account applications, approval and management, including verification of business or ID details and the payout account before an organizer's first paid event. Only platform administrators enter, change or view an organizer's payout account; organizer staff see only whether a verified one is on file.
+- Organizer membership through the organizer staff role. Staff manage the organizer account and create events. A staff member manages an event, with its sales, orders, guest data and reports, only with access to that event: automatically for the events they create, and otherwise only when a platform administrator grants it. For their organizer's other events, staff see a read-only summary.
+- Member visibility: only platform administrators see the list of all users; staff see their own organizer's staff; event owners see the staff who manage their assigned events.
 - Event owners assigned to specific events, with access limited to viewing, filtering and exporting that event's guest data.
 - Staff and event owner invitations by email, accepted by signing in with a Google account that uses the invited email address, and guard password accounts created directly by organizer staff.
 - Platform administrator invitations by email, sent by an existing platform administrator and accepted the same way. Any platform administrator can remove another's rights, but never the last administrator's. The very first administrator is set up once with a setup command that stops working as soon as an administrator exists.
@@ -69,7 +70,7 @@ Functional requirements include:
 The platform shall support the following primary roles:
 
 - Platform Administrator (full rights across the platform)
-- Organizer Staff (full control of their organizer account)
+- Organizer Staff (their organizer account, and the events they manage)
 - Event Owner (view, filter and export guest data for assigned events only)
 - Guard / Gate Officer
 - Attendee / Ticket Purchaser
@@ -253,19 +254,19 @@ Reserved seating shall be optional and shall not be required for general-admissi
 
 The administrator interface shall provide authorized platform-wide management capabilities, including:
 
-- Organizer and user management, including inviting and removing platform administrators.
+- Organizer and user management, including inviting and removing platform administrators and granting organizer staff access to events.
 - Event oversight.
 - Account suspension and activation.
 - Platform-level transaction oversight.
 - Audit log access.
-- Organizer verification and the event category list.
+- Organizer verification, organizers' payout accounts and the event category list.
 - Refunds, settlement reports and the manual payout log.
 - Deletion of a person's personal data on request.
 - Operational and summary reports.
 
 **Organizer Dashboard**
 
-Organizers shall be able to access:
+Organizers shall be able to access the following for the events they manage, with a read-only summary of their organizer's other events:
 
 - Event creation and management.
 - Ticket pricing and inventory, including ticket waves and delegations' set-aside tickets.
@@ -276,7 +277,7 @@ Organizers shall be able to access:
 - Guard and gate assignments.
 - Event owner assignments.
 - Guest lists with filters and CSV export, which event owners can also access for their assigned events (limited to each ticket holder's name, ticket category, delegation, check-in status and entry time).
-- Sales list CSV export and the audit records of their own events.
+- Sales list CSV export and the audit records of the events they manage.
 - Attendance reports.
 - Ticket revocation controls.
 - Event-specific operational summaries.
@@ -363,6 +364,9 @@ The project shall be considered functionally complete when the following criteri
 - Guards can access only assigned events and permitted gates.
 - Event owners can view, filter and export the guest list only for their assigned events, and every other organizer action rejects them.
 - Only an existing platform administrator can make someone an administrator, by invitation, and the last administrator can't be removed.
+- Organizer staff can change an event, or see its sales, orders and guest data, only for the events they created or that a platform administrator gave them access to; other events of their organizer are read-only summaries.
+- Only platform administrators can see the list of all users. Staff see only their own organizer's staff, and event owners only the staff who manage their assigned events.
+- Only platform administrators can enter, change or view an organizer's payout account.
 - Unauthorized actions are rejected by the backend.
 
 ### 5.2 Event and Ticket Management
@@ -403,7 +407,7 @@ The project shall be considered functionally complete when the following criteri
 
 ### 5.6 Reporting and Handover
 
-- Organizers can view reports limited to their own events.
+- Organizer staff can view reports limited to the events they manage.
 - Administrative actions are auditable.
 - A platform administrator can delete a person's personal data on request, keeping the financial and entry records.
 - Agreed documentation and source code are delivered.

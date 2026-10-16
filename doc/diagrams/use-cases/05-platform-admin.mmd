@@ -8,7 +8,7 @@ flowchart LR
     subgraph SYS["Ticketing platform: admin area"]
         subgraph P1["Platform"]
             A1(["Sign in with Google"]):::usecase
-            A2(["Manage platform users and suspensions"]):::usecase
+            A2(["View all users and manage suspensions"]):::usecase
             A3(["Invite or remove platform admins"]):::usecase
             A4(["Manage event categories"]):::usecase
             A18(["Delete a person's data on request"]):::usecase
@@ -18,6 +18,7 @@ flowchart LR
             A6(["Verify organizer details and payout account"]):::usecase
             A7(["Suspend organizers"]):::usecase
             A8(["Act on any organizer's events and team"]):::usecase
+            A19(["Grant or remove staff access to events"]):::usecase
         end
         subgraph P3["Money"]
             A9(["Start refunds, ticket by ticket"]):::usecase
@@ -46,6 +47,7 @@ flowchart LR
     Admin --- A6
     Admin --- A7
     Admin ---|"every organizer staff use case"| A8
+    Admin --- A19
     Admin --- A9
     Admin --- A10
     Admin --- A11

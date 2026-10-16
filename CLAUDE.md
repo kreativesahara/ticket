@@ -8,7 +8,7 @@ SOURCE DOCUMENTS (they are the specification — read the relevant parts before 
 - sow.md — contractual scope. Never build anything listed in §9 "Out of scope".
 - hurdles.md — known gaps (H1–H14), each marked Open or Decided. An open hurdle is an undecided requirement: don't guess, ask me.
 - limitation.md — the client-facing business rules (Part A), accepted limitations (Part B) and client decisions (Part C). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
-- doc/roleandprivileage.md — roles, privileges and the authorization safeguards in detail, including the event owner boundaries (§5.1) and guard safeguards (§5.2). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
+- doc/roleandprivileage.md — roles, privileges and the authorization safeguards in detail, including the event owner boundaries (§5.1), staff event access and who sees whom (§5.2), and guard safeguards (§5.3). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
 
 STACK:
 - Two repositories. The backend repository (this one) holds /api and the specification; the frontend repository holds the Next.js app.
@@ -19,7 +19,7 @@ STACK:
 - Hosting, from Phase 8 — the API on cPanel (scheduler and queue run from cron), the Next.js app on Vercel.
 
 NON-NEGOTIABLE RULES:
-1. Tenant isolation: every organizer-owned resource is authorized through a Laravel policy that checks the authenticated user's organizer membership, or, for event owners and guards, their event assignment. Event owners may only view, filter and export the guest list of their assigned events. Never trust role, organizer_id, event_id or gate_id from the request without checking it.
+1. Tenant isolation: every organizer-owned resource is authorized through a Laravel policy. Organizer-level resources check the authenticated user's organizer membership; anything about a specific event checks their event assignment: manager for organizer staff (other staff of the organizer get only the event's read-only summary), event owner or guard. Only platform admins grant staff access to an event. Event owners may only view, filter and export the guest list of their assigned events, and see who manages them. Never trust role, organizer_id, event_id or gate_id from the request without checking it.
 2. Money is stored as integer minor units plus a currency code. Never floats.
 3. Inventory holds, payment confirmation, ticket issuance and ticket redemption use database transactions and atomic conditional updates. Never read-then-write checks.
 4. Tests run against PostgreSQL (the Supabase test project locally, a PostgreSQL service in CI), never SQLite, and never against the Supabase development project.

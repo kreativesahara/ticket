@@ -1,6 +1,6 @@
 # Implementation Plan: Multi-Organizer Event Ticketing Platform
 
-**Version 1.7 · 16 October 2026 · System design and analysis**
+**Version 1.8 · 16 October 2026 · System design and analysis**
 
 **Based on:** [v1.md](v1.md) (requirements specification), [sow.md](sow.md) (statement of work), [techstack.md](techstack.md) (architecture blueprint) and [v2.md](v2.md) (requirements review).
 
@@ -193,10 +193,10 @@ These items can delay launch no matter how fast development goes:
 7. **Continuous integration.** On every push, run linting, static analysis and the test suite against PostgreSQL.
 8. **Laravel foundation.** Install Laravel, connect to Supabase over SSL, and add migrations for the identity and tenancy tables. Use UUIDs for any record referenced from outside the system.
 9. **Google sign-in.** Sign users in through Google OAuth with Laravel Socialite, following the rules in techstack.md §3: verified Google emails only, users matched by Google account ID, and a Sanctum cookie session started after sign-in. Add logout, the `me` endpoint, account suspension, invitation acceptance (staff, event owners and platform admins), organizer applications that a platform admin approves, and a one-time setup command that creates the first platform admin's invitation and refuses to run once any admin exists (decision #30). Passwords exist only for guard password accounts (techstack.md §3): add guard sign-in with email and password (the only way guards sign in), the forced password change at first sign-in, rate limiting with temporary lockout, and shorter guard sessions. Use the database session driver, so a specific guard's sessions can be ended. There is no self-registration, email verification or email-based password reset. Configure stateful domains, the session cookie domain, CORS and CSRF for the `www` and `api` subdomains, including requests made by the Next.js server during server-side rendering.
-10. **Tenancy and authorization.** Build organizers, staff membership and event owner assignments, with a Laravel policy for every resource. Keep platform admin permissions separate from organizer permissions. Event owners pass only the guest-list policy (view, filter and export) for their assigned events.
+10. **Tenancy and authorization.** Build organizers, staff membership, event access for staff (`event_staff` role `manager`; decision #31) and event owner assignments, with a Laravel policy for every resource. Organizer-level resources check membership; anything about a specific event checks that the staff member manages it, and other staff get only the event's read-only summary. Only platform admins grant or remove event access, apart from the automatic access an event's creator gets. Keep platform admin permissions separate from organizer permissions. Event owners pass only the guest-list policy (view, filter and export) and the list of managers for their assigned events. Member lists follow decision #32: only admins see every user.
 11. **Audit log.** A single service call records who acted, the organizer, the event, the action, the affected resource and details.
 12. **API conventions.** The `/api/v1` prefix, the standard error format, rate limits on the sign-in routes, and a correlation ID on every request.
-13. **Tenant-isolation test suite.** For every resource, a test checks that a user from organizer B is refused access to organizer A's records, and that an event owner is refused everything except the guest list of their assigned events. The suite grows with every phase.
+13. **Tenant-isolation test suite.** For every resource, a test checks that a user from organizer B is refused access to organizer A's records, that a staff member of organizer A who doesn't manage an event gets only its read-only summary, and that an event owner is refused everything except the guest list and the managers of their assigned events. The suite grows with every phase.
 
 ### Frontend track
 
@@ -219,6 +219,7 @@ These items can delay launch no matter how fast development goes:
 
 - [ ] Organizers cannot read or change another organizer's resources, and the automated tests prove it.
 - [ ] Event owners can't change anything, and can reach guest data only for their assigned events.
+- [ ] Staff can change an event, or see its sales, orders and guest data, only when they manage it; only platform admins grant that access, and only platform admins see every user.
 - [ ] Every protected endpoint refuses requests that aren't logged in or aren't authorized.
 - [ ] Google sign-in works on staging, and the session holds across `www` and `api`, including during server-side rendering.
 - [ ] Unverified Google accounts, suspended users and users without an invitation or approved organizer can't reach the organizer, guard or admin areas.
@@ -243,15 +244,15 @@ These items can delay launch no matter how fast development goes:
 5a. **Ticket waves** (v1.md FR-04). For a category sold in waves, staff add waves, each with a name and start and end dates. A PostgreSQL exclusion constraint stops a category's waves from overlapping. Each wave holds one or more offerings (type, number of tickets, price) whose sales window is the wave's dates. Waves open on their start dates only, with no automatic advance or rollover. A "move unsold tickets" action lowers one offering's capacity with a conditional update and raises another's in the same category, in one transaction, and is audited.
 6. **Delegations** (hurdles.md H14, doc/sponsored.md). Each with its set-aside allocation: one or more offerings (type, category, number of tickets and price) that public endpoints never list, public checkout can't buy, and that sit outside the waves. Each has a private claim link and access code. Staff can return unclaimed tickets to public sale with the move action.
 7. **Attendee details setup.** The collection mode (purchaser only, or details for every ticket) and the field definitions, including event-specific questions. Staff choose the event's identity field when they create it (none, phone number or ID number; v1.md FR-07) and can change it only while the event is a draft. With a phone or ID number, details are collected for every ticket and each holder gives that field; phone and ID number can't be added as questions, so no event asks for both.
-8. **Gates and staff.** Create gates (optional: an event without gates admits people between its start and end times). Add guards by creating a guard password account with the guard's own email and giving the guard its temporary password; assign each guard to an event and optionally a gate, and remove assignments. An event can have several guards. A guard password account works for one event at a time. When that event closes (entry ends, or it is cancelled or archived), the password is deleted, the guard's sessions end and the assignment ends. A job runs this every minute, and every request from a password guard also checks the event is still open (techstack.md §3). Assign event owners to an event by email invitation (role `event_owner`, with the event attached), and remove them; removal ends their access to that event immediately.
+8. **Gates and staff.** Create gates (optional: an event without gates admits people between its start and end times). Add guards by creating a guard password account with the guard's own email and giving the guard its temporary password; assign each guard to an event and optionally a gate, and remove assignments. An event can have several guards. A guard password account works for one event at a time. When that event closes (entry ends, or it is cancelled or archived), the password is deleted, the guard's sessions end and the assignment ends. A job runs this every minute, and every request from a password guard also checks the event is still open (techstack.md §3). Assign event owners to an event by email invitation (role `event_owner`, with the event attached), and remove them; removal ends their access to that event immediately. Only the event's managers and platform admins assign guards and event owners to it.
 9. **Publishing rules.** An event can be published only if it has at least one active offering, valid time windows, capacity that covers its allocations, and, if any offering is paid, a verified organizer. Changes after publishing are audited. Changes that would affect existing orders, such as lowering capacity below tickets already sold, are blocked or need explicit confirmation.
 9a. **Event link, QR code and poster** (v1.md FR-14). Each event's public link is `/events/{slug}`, so event slugs are unique across the platform. Organizer staff download its QR code as PNG or SVG, and as a printable A4 PDF poster with the event's name, date, venue, QR code and link.
 10. **Admin.** List organizers, verify them before their first paid event (business or ID details and payout account), suspend or reactivate them, manage the event category list, and oversee events. Invite new platform admins by email and remove admin rights, never the last admin's (decision #30); both are audited.
 
 ### Frontend
 
-11. **Organizer dashboard:** an event list and a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), an offerings grid with a wave editor for each category sold in waves, a "move unsold tickets" dialog, delegation management with claim links and set-aside allocations, a share panel with the event link, QR code downloads and the poster, staff and event owner invitations, and guard accounts.
-12. **Admin dashboard:** organizers, users, platform admins (invite and remove), organizer verification, event categories and suspension controls.
+11. **Organizer dashboard:** an event list (every event of the organizer, with a read-only summary for the ones the user doesn't manage) and, for managed events, a step-by-step event editor (details → times → tickets → attendee fields → gates and staff → publish), an offerings grid with a wave editor for each category sold in waves, a "move unsold tickets" dialog, delegation management with claim links and set-aside allocations, a share panel with the event link, QR code downloads and the poster, staff and event owner invitations, and guard accounts.
+12. **Admin dashboard:** organizers, every user, platform admins (invite and remove), staff event access (grant and remove for each event), organizer verification, event categories and suspension controls.
 13. **Public website:** a landing page listing every public ticket option across published events (search by event name or venue, event category and date filters, sold-out options marked, upcoming waves greyed out, delegation tickets never listed), and event pages at `/events/{slug}` that show published events only (v1.md FR-14).
 
 ### Exit criteria
@@ -341,7 +342,7 @@ Pesapal is the single payment gateway. Buyers pay on Pesapal's hosted checkout, 
 5. **Payment after the hold expired.** Refund it automatically (decision #11); the buyer can order again.
 6. **Reconciliation job.** Every few minutes, ask Pesapal for the status of payments that have been pending longer than a set time, then resolve them or flag them. Produce a report of mismatches.
 7. **Refunds and reversals.** Only platform admins start refunds (decision #12), naming the tickets each covers; the system starts them only for rejected payments, and buyers can request one only through a postponement email. Request refunds through Pesapal's refund API where Pesapal supports refunds for the payment method, and track their status. Move the order to partially refunded or refunded, and decide ticket eligibility explicitly, for example by revoking tickets after a full refund. If Pesapal reports a completed payment as reversed, handle it the same way.
-8. **Payment history and reconciliation screens:** organizers see their own events, and platform admins see the whole platform. Store the payment method and confirmation code, never the paying account Pesapal reports.
+8. **Payment history and reconciliation screens:** staff see the events they manage, and platform admins see the whole platform. Store the payment method and confirmation code, never the paying account Pesapal reports.
 
 ### Frontend
 
@@ -474,9 +475,9 @@ Each part of this phase is built and tested on its own, and the core flow doesn'
 
 ### Reporting
 
-2. **Organizer reports**, for their own events only: sales by offering, payment status, remaining capacity, promotion performance, attendance and gate activity; a sales list CSV export; and a read-only list of the event's audit records.
-3. **Admin reports:** platform-wide summaries, transaction oversight, an audit log viewer, and a settlement report per organizer and event (sales, refunds, Pesapal fees, platform fee and amount owed) with a log for recording each manual payout (hurdles.md H1). Organizer staff see their own organizer's settlement report.
-4. **Guest list:** view the attendees of an event, filter them by ticket category, delegation, purchase date and check-in status, and export them as CSV. Available to organizer staff for their own events and to event owners for their assigned events only (doc/roleandprivileage.md). Event owners see only each holder's name, ticket category, delegation, check-in status and entry time (decision #29).
+2. **Organizer reports**, only for the events the staff member manages: sales by offering, payment status, remaining capacity, promotion performance, attendance and gate activity; a sales list CSV export; and a read-only list of the event's audit records.
+3. **Admin reports:** platform-wide summaries, transaction oversight, an audit log viewer, and a settlement report per organizer and event (sales, refunds, Pesapal fees, platform fee and amount owed) with a log for recording each manual payout (hurdles.md H1). Organizer staff see the settlement report only for the events they manage; organizer-wide totals are for admins.
+4. **Guest list:** view the attendees of an event, filter them by ticket category, delegation, purchase date and check-in status, and export them as CSV. Available to organizer staff for the events they manage and to event owners for their assigned events only (doc/roleandprivileage.md). Event owners see only each holder's name, ticket category, delegation, check-in status and entry time (decision #29).
 
 ### Personal data
 
@@ -492,7 +493,7 @@ Each part of this phase is built and tested on its own, and the core flow doesn'
 
 ### Exit criteria
 
-- [ ] Reports show only the organizer's own events, and their figures match the order and payment records.
+- [ ] Reports show only the events the staff member manages, and their figures match the order and payment records.
 - [ ] Event owners can view, filter and export the guest list of their assigned events only, and a CSV export matches the on-screen filters.
 - [ ] A platform admin's data deletion removes the person's details everywhere, and the reports still match the records.
 - [ ] A seat can't be sold twice, expired holds release seats, and general-admission events need no seat setup. If seating has been deferred by change control, this criterion moves with it.
@@ -545,7 +546,7 @@ These decisions affect the database, the integrations or the schedule. Each need
 
 | #  | Decision                              | Options                                                     | Recommendation                                                                       | Needed by |
 | -- | ------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ | --------- |
-| 1  | Naming baseline                       | —                                                           | **Decided:** v1.md names; platform admin (full rights), organizer staff (full control), event owner (guest data read-only), guard, and attendee roles; `/api/v1` paths; applied to v1.md and techstack.md | Decided   |
+| 1  | Naming baseline                       | —                                                           | **Decided:** v1.md names; platform admin (full rights), organizer staff (organizer account, and the events they manage; decision #31), event owner (guest data read-only), guard, and attendee roles; `/api/v1` paths; applied to v1.md and techstack.md | Decided   |
 | 2  | Booking or platform fees              | None; added to the buyer's total; deducted from the organizer | **Decided:** deducted from the organizer's settlement, never added to the buyer's total; Pesapal's fees are also deducted from the organizer. **Open:** how the platform fee is calculated (client) | Phase 7 |
 | 3  | Payment gateway                       | —                                                           | **Decided: Pesapal**, for both M-Pesa and card payments through its hosted checkout  | Decided   |
 | 4  | Paying organizers                     | Manual payouts outside the platform; automated payouts      | **Decided:** all buyer payments land in the platform's Pesapal merchant account; admins pay organizers manually from a settlement report per organizer and event, recording each payout in a payout log (hurdles.md H1). Automated payouts are out of scope (SOW §9) | Decided |
@@ -575,6 +576,8 @@ These decisions affect the database, the integrations or the schedule. Each need
 | 28 | Platform public name                  | —                                                           | **Open:** the client chooses the name used on the landing page, in emails and on posters | Phase 1 (designs) |
 | 29 | Event owner guest list columns        | The four in v1.md 1.8; add ticket type and entry time; add entry time only | **Decided (16 October 2026):** each holder's name, ticket category, delegation, check-in status and entry time; filters unchanged, including purchase date (v1.md FR-13) | Decided |
 | 30 | Appointing platform admins            | System command; admin endpoint; both                        | **Decided (16 October 2026):** any platform admin invites a new admin by email, accepted through Google sign-in with the invited address; any admin can remove another admin's rights, never the last admin's; a one-time setup command creates only the first admin's invitation (v1.md FR-01) | Decided |
+| 31 | Staff access to events                | Every staff member manages every event; per-event access    | **Decided (16 October 2026):** per-event access. Staff manage the organizer account and create events; they manage an event only if they created it or a platform admin gave them access (`event_staff` role `manager`), and only platform admins grant or remove it. Other events of their organizer show a read-only summary without sales, orders, guest data, reports or assignments. Staff see settlement figures only for the events they manage (v1.md FR-02, FR-13) | Decided |
+| 32 | Who sees which people                 | —                                                           | **Decided (16 October 2026):** only platform admins see every user; staff see their own organizer's staff and guard accounts, and the people assigned to the events they manage; event owners see the names and emails of the staff who manage their assigned events (v1.md FR-02, §3 rule 9) | Decided |
 
 ---
 

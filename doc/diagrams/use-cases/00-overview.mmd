@@ -28,7 +28,7 @@ flowchart LR
             J(["View sales, attendance and settlement reports"]):::usecase
         end
         subgraph ADM["Admin area"]
-            K(["Administer organizers, users, categories and personal data"]):::usecase
+            K(["Administer organizers, users, event access, categories and personal data"]):::usecase
             L(["Refund tickets"]):::usecase
         end
         subgraph BG["Background processing"]
@@ -49,9 +49,9 @@ flowchart LR
     Guard ---|"assigned events and gates"| I
     Staff --- D
     Staff --- F
-    Staff --- G
-    Staff --- J
-    Staff --- H
+    Staff ---|"events they manage"| G
+    Staff ---|"events they manage"| J
+    Staff ---|"events they manage"| H
     Owner --- D
     Owner ---|"assigned events only"| H
     Admin --- D

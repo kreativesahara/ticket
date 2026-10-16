@@ -1,6 +1,6 @@
 # Business Rules and Limitations
 
-**Multi-Organizer Event Ticketing Platform · Version 1.3 · 16 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.4 · 16 October 2026**
 
 **Status:** Draft for stakeholder confirmation
 
@@ -25,18 +25,21 @@ This document sets out how the platform will behave: the business rules it follo
   | Role                | What they do                                                                                   |
   | ------------------- | ---------------------------------------------------------------------------------------------- |
   | **Platform admin**  | Full rights and privileges across the entire platform: approves/suspends organizers, oversees events, settings, reports and overrides, and deletes a person's data on request |
-  | **Organizer staff** | Full control of their organizer account: events, prices, offerings, ticket waves, team members, delegations, guards and reports |
+  | **Organizer staff** | Run their organizer account (profile, team members and guard accounts) and create events. They manage an event's prices, offerings, ticket waves, delegations, guards and reports only for the events they created or that a platform admin gave them access to |
   | **Event owner**     | Assigned to specific events with access restricted to only viewing, filtering, and exporting guest and attendee data |
   | **Guard**           | Scans tickets at the gate, only for the events and gates assigned to them                      |
   | **Buyer**           | Buys tickets as a guest and receives them by email; no account needed                          |
 
 - **1.3** Every organizer must always have at least one active organizer staff member.
+- **1.3a** A staff member automatically manages the events they create. Only a platform admin can give a staff member access to another event, or take it away. For their organizer's other events, staff see a read-only summary (details and ticket setup) without sales, orders, guest lists or reports, and can't change anything.
+- **1.3b** Only platform admins see the list of everyone on the platform. Staff see their own organizer's staff and guard accounts, and the people assigned to the events they manage. Event owners see only the names and email addresses of the staff who manage their events.
 - **1.4** Event owners have read-only access to attendee data for their assigned events, with privileges to view, filter, and export to CSV, but cannot alter event configurations, tickets, pricing, guards, or financials.
 - **1.5** New organizers sign in, apply for an organizer account, and wait for a platform admin to approve them before they can create events.
 - **1.6** Platform admins are invited by email by an existing platform admin, and accept by signing in with a Google account that uses the invited address. Any admin can remove another admin's rights, but the last admin can't be removed. The very first admin is set up once, with a setup command run by the technical team. No one can make themselves an admin.
 - **1.7** Platform admins have full operational authority across the platform.
 - **1.8** Suspending an organizer stops new sales for their events and blocks their staff, event owners and guards from signing in. Their published events stay visible but can't be bought.
 - **1.9** Before an organizer's first paid event can go on sale, a platform admin checks their business or ID details and the account they'll be paid into.
+- **1.10** Only platform admins enter, change or see an organizer's payout account. Organizers send their bank details to a platform admin, and see only whether a verified payout account is on file. Every change is recorded.
 
 ### 2. Signing in
 
@@ -174,7 +177,7 @@ Rules for guard password accounts:
 
 ### 11. Reports and records
 
-- **11.1** Organizers see, for their own events only: ticket sales, payment status, tickets remaining, promotion performance, attendance, gate activity and the activity log. They can download guest and sales lists as spreadsheets (CSV).
+- **11.1** Organizer staff see, only for the events they manage: ticket sales, payment status, tickets remaining, promotion performance, attendance, gate activity and the activity log. They can download guest and sales lists as spreadsheets (CSV).
 - **11.2** Platform admins see platform-wide summaries, all transactions, the activity log, and each organizer's settlement and payouts.
 - **11.3** Report figures always match the underlying orders and payments.
 - **11.4** Sensitive actions are recorded with who did them and when: role changes, event cancellations, ticket cancellations, refunds, payment adjustments, and guard accounts and passwords.
@@ -183,7 +186,7 @@ Rules for guard password accounts:
 ### 12. Personal data
 
 - **12.1** The platform collects only the attendee details each event needs.
-- **12.2** Organizers see attendee details only for their own events, and event owners only for the events they are assigned to. Guards see only what they need to check entry.
+- **12.2** Organizer staff see attendee details only for the events they manage, and event owners only for the events they are assigned to. Guards see only what they need to check entry.
 - **12.3** Personal data is kept until someone asks for it to be deleted. Then their name, email, phone number and ID digits are removed, but the financial and entry records needed by law are kept without them. A platform admin carries out each request.
 
 ---
@@ -266,6 +269,9 @@ These were settled on 15 and 16 October 2026. Please confirm each one, or answer
 | C26 | What is the platform's public name?                    | **Still open:** used on the landing page, in emails and on the QR code posters                              | |
 | C27 | What do event owners see in the guest list?            | Each ticket holder's name, ticket category, delegation, check-in status and entry time; no contact details, ID numbers or money figures | |
 | C28 | Who can make someone a platform admin?                 | Only an existing platform admin, by email invitation; the last admin can't be removed; the very first admin is set up once with a setup command | |
+| C29 | Can every staff member manage every event of their organizer? | No. Staff manage the events they create; a platform admin grants access to any other event. Other events show a read-only summary without sales or guest data | |
+| C31 | Who can change an organizer's payout account?          | Only platform admins, who are also the only ones to see it; staff see only whether a verified payout account is on file | |
+| C30 | Who can see the list of people on the platform?        | Only platform admins see everyone; staff see their own organizer's staff; event owners see the staff who manage their events | |
 
 ---
 

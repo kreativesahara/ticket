@@ -103,8 +103,8 @@ Diagram 2, the short ERD that v1.md §4.5 used to show, was removed in v1.md 1.8
 
 | # | Diagram | Source section | Files |
 |---|---|---|---|
-| 1 | [Role relationships](diagrams/roleandprivileage/01-role-relationships.md) | §2 The Five System Roles | [md](diagrams/roleandprivileage/01-role-relationships.md) · [mmd](diagrams/roleandprivileage/01-role-relationships.mmd) · [svg](diagrams/roleandprivileage/01-role-relationships.svg) · [png](diagrams/roleandprivileage/01-role-relationships.png) |
-| 2 | [Authorization pipeline](diagrams/roleandprivileage/02-authorization-pipeline.md) | §4.1 Enforcement Pipeline Flow | [md](diagrams/roleandprivileage/02-authorization-pipeline.md) · [mmd](diagrams/roleandprivileage/02-authorization-pipeline.mmd) · [svg](diagrams/roleandprivileage/02-authorization-pipeline.svg) · [png](diagrams/roleandprivileage/02-authorization-pipeline.png) |
+| 1 | [Role relationships](diagrams/roleandprivileage/01-role-relationships.md) | §2 Summary of System Roles | [md](diagrams/roleandprivileage/01-role-relationships.md) · [mmd](diagrams/roleandprivileage/01-role-relationships.mmd) · [svg](diagrams/roleandprivileage/01-role-relationships.svg) · [png](diagrams/roleandprivileage/01-role-relationships.png) |
+| 2 | [Authorization pipeline](diagrams/roleandprivileage/02-authorization-pipeline.md) | §4.2 Enforcement Sequence Diagram | [md](diagrams/roleandprivileage/02-authorization-pipeline.md) · [mmd](diagrams/roleandprivileage/02-authorization-pipeline.mmd) · [svg](diagrams/roleandprivileage/02-authorization-pipeline.svg) · [png](diagrams/roleandprivileage/02-authorization-pipeline.png) |
 
 ## Sponsored tickets ([doc/sponsored.md](sponsored.md))
 

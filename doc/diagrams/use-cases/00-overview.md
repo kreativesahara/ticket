@@ -37,7 +37,7 @@ flowchart LR
             J(["View sales, attendance and settlement reports"]):::usecase
         end
         subgraph ADM["Admin area"]
-            K(["Administer organizers, users, categories and personal data"]):::usecase
+            K(["Administer organizers, users, event access, categories and personal data"]):::usecase
             L(["Refund tickets"]):::usecase
         end
         subgraph BG["Background processing"]
@@ -58,9 +58,9 @@ flowchart LR
     Guard ---|"assigned events and gates"| I
     Staff --- D
     Staff --- F
-    Staff --- G
-    Staff --- J
-    Staff --- H
+    Staff ---|"events they manage"| G
+    Staff ---|"events they manage"| J
+    Staff ---|"events they manage"| H
     Owner --- D
     Owner ---|"assigned events only"| H
     Admin --- D
@@ -98,6 +98,7 @@ Mermaid has no use case diagram type, so this is drawn as a flowchart that follo
 ## Notes
 
 - Platform admins can act on any organizer, but they don't scan tickets: only guard accounts scan.
+- Organizer staff manage only the events they created or that a platform admin gave them access to; they see a read-only summary of their organizer's other events.
 - Platform admins also carry out personal data deletion requests ([v1.md FR-15](../../../v1.md#fr-15--personal-data-deletion)).
 
 ## Use case diagrams

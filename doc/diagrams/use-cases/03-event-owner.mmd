@@ -11,6 +11,7 @@ flowchart LR
         O3(["View the guest list of an assigned event"]):::usecase
         O4(["Filter by category, delegation, purchase date or check-in status"]):::usecase
         O5(["Export the guest list as CSV"]):::usecase
+        O6(["See who manages an assigned event"]):::usecase
     end
 
     Google["«system»<br/><b>Google</b><br/>OAuth"]:::external
@@ -20,6 +21,7 @@ flowchart LR
     Owner --- O3
     Owner --- O4
     Owner --- O5
+    Owner --- O6
 
     O2 -.->|"«include»"| O1
     O4 -.->|"«extend»"| O3

@@ -7,7 +7,7 @@ sequenceDiagram
     participant DB as Supabase PostgreSQL
 
     Client->>HTTP: Request (e.g. GET /api/v1/organizer/events/123/attendees/export)
-    HTTP->>Sanctum: Authenticate session cookie / token
+    HTTP->>Sanctum: Authenticate session cookie
     alt Unauthenticated
         Sanctum-->>Client: 401 Unauthorized
     end
@@ -19,11 +19,11 @@ sequenceDiagram
         alt Platform Admin
             Policy-->>HTTP: Approved (Full Rights)
         else Organizer Staff
-            Policy->>DB: Check user is staff for event's organizer
-            alt Is Active Staff
-                Policy-->>HTTP: Approved (Full Tenant Scope)
-            else Not Staff
-                Policy-->>Client: 403 Forbidden
+            Policy->>DB: Check event_staff for event_id + role == 'manager' (and active membership)
+            alt Manages This Event
+                Policy-->>HTTP: Approved (Managed Event)
+            else Staff Without Event Access
+                Policy-->>Client: 403 Forbidden (read-only summary only)
             end
         else Event Owner
             Policy->>DB: Check event_staff for event_id + role == 'event_owner'

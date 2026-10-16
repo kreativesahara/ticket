@@ -51,7 +51,7 @@ SOURCE DOCUMENTS (they are the specification — read the relevant parts before 
 - sow.md — contractual scope. Never build anything listed in §9 "Out of scope".
 - hurdles.md — known gaps (H1–H14), each marked Open or Decided. An open hurdle is an undecided requirement: don't guess, ask me.
 - limitation.md — the client-facing business rules (Part A), accepted limitations (Part B) and client decisions (Part C). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
-- doc/roleandprivileage.md — roles, privileges and the authorization safeguards in detail, including the event owner boundaries (§5.1) and guard safeguards (§5.2). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
+- doc/roleandprivileage.md — roles, privileges and the authorization safeguards in detail, including the event owner boundaries (§5.1), staff event access and who sees whom (§5.2), and guard safeguards (§5.3). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
 
 STACK:
 - Two repositories. The backend repository (this one) holds /api and the specification; the frontend repository holds the Next.js app.
@@ -62,7 +62,7 @@ STACK:
 - Hosting, from Phase 8 — the API on cPanel (scheduler and queue run from cron), the Next.js app on Vercel.
 
 NON-NEGOTIABLE RULES:
-1. Tenant isolation: every organizer-owned resource is authorized through a Laravel policy that checks the authenticated user's organizer membership, or, for event owners and guards, their event assignment. Event owners may only view, filter and export the guest list of their assigned events. Never trust role, organizer_id, event_id or gate_id from the request without checking it.
+1. Tenant isolation: every organizer-owned resource is authorized through a Laravel policy. Organizer-level resources check the authenticated user's organizer membership; anything about a specific event checks their event assignment: manager for organizer staff (other staff of the organizer get only the event's read-only summary), event owner or guard. Only platform admins grant staff access to an event. Event owners may only view, filter and export the guest list of their assigned events, and see who manages them. Never trust role, organizer_id, event_id or gate_id from the request without checking it.
 2. Money is stored as integer minor units plus a currency code. Never floats.
 3. Inventory holds, payment confirmation, ticket issuance and ticket redemption use database transactions and atomic conditional updates. Never read-then-write checks.
 4. Tests run against PostgreSQL (the Supabase test project locally, a PostgreSQL service in CI), never SQLite, and never against the Supabase development project.
@@ -156,6 +156,7 @@ Requirements:
 - CHECK constraints where they're cheap: non-negative counts and amounts, capacity - sold_count - reserved_count >= 0, and an invitation has no organizer exactly when its role is platform_admin.
 - Money as bigint minor units plus a char(3) currency column.
 - Status columns as strings backed by PHP enums, one enum per state machine in doc/state-machines.md.
+- event_staff.role is manager, guard or event_owner (decision #31), and gate_id is set only on guard rows.
 
 Also create Eloquent models with relationships and enum casts, a factory for every model, and update the ERD in doc/diagrams/erd/ (each .mmd file, its .md file and the rendered images; see doc/README.md) so it matches the final schema.
 Enable btree_gist in a migration (Supabase supports it), and make sure migrate:fresh touches only the public schema, never Supabase's own schemas (auth, storage and the rest).
@@ -203,17 +204,19 @@ Implement guard password sign-in as described in techstack.md §3 ("Guard passwo
 ```text
 Implement tenancy and authorization as described in implementation-plan.md Phase 1 steps 10, 11 and 13.
 
-- Organizers, and organizer members with the role staff (v1.md §3 and §4.1). Staff have full control of their organizer account (profile, events, tickets, delegations, guards and reports). Organizers can also assign event owners to specific events (event_staff with role event_owner), whose role and privileges are strictly restricted to viewing, filtering, and exporting guest/attendee data. Platform admin is users.platform_role with full system-wide rights and privileges across all operations.
-- A policy for every model. Platform admins pass with full rights across all resources, except scanning, which only guard accounts can do. Organizer staff pass for their own organizer's resources. Event owners pass only to view/filter/export attendee data for their assigned events.
+- Organizers, and organizer members with the role staff (v1.md §3 and §4.1). Staff manage their organizer account (profile, payout account, verification, staff invitations and guard accounts) and can create events. They manage a specific event (its tickets, delegations, guard and event owner assignments, orders and reports) only with event access: an event_staff row with role manager, created automatically for the event's creator (P2.1) and otherwise only by a platform admin (decision #31). Organizers can also assign event owners to specific events (event_staff with role event_owner), whose role and privileges are strictly restricted to viewing, filtering, and exporting guest/attendee data. Platform admin is users.platform_role with full system-wide rights and privileges across all operations.
+- A policy for every model. Platform admins pass with full rights across all resources, except scanning, which only guard accounts can do. Organizer staff pass for their own organizer's organizer-level resources, and for a specific event's resources only when they manage it; for the organizer's other events they get only the read-only summary (v1.md §3, rule 8). Event owners pass only to view/filter/export attendee data and to list the managers of their assigned events.
 - A safeguard so no route can skip authorization, for example a test that fails if any /api/v1 route has no policy check.
 - An AuditLogger service recording the actor, organizer, event, action, resource type and ID, metadata and time.
 - Endpoints: apply to create an organizer (it stays pending until a platform admin approves it), list my organizers, invite a staff member or event owner, remove a member, and approve or reject organizer applications (platform admin only).
 - Invitations, for organizer staff, event owners and platform admins only (guards get password accounts in P2.4, never invitations): the invitations table from v1.md §4.1, with the token stored hashed, an expiry date and single use. POST /api/v1/invitations/{token}/accept succeeds only when the signed-in user's verified Google email matches the invited email.
 - Platform admins (v1.md FR-01, decision #30), for platform admins only: GET /api/v1/admin/admins lists them; POST /api/v1/admin/invitations invites a new admin by email; accepting that invitation sets users.platform_role; DELETE /api/v1/admin/admins/{userId} removes a user's admin rights, and refuses to remove the last admin (lock the admin rows so two admins removing each other at the same moment can't leave none). Audit every invitation, grant and removal. Tests: organizer staff, event owners and guards are refused; a non-matching Google email can't accept an admin invitation; the last admin can't be removed, even by two simultaneous requests; the setup command from P1.4a refuses once an admin exists.
-- A reusable tenant-isolation test helper: for a given endpoint, it asserts that a user from a different organizer is refused on read, update and delete, and that an event owner is refused on every endpoint except the guest list of their assigned events. Apply it to every endpoint built so far.
+- Event access (decision #31), for platform admins only: POST /api/v1/admin/events/{id}/managers with a user_id that must be an active staff member of the event's organizer (never a guard account), and DELETE /api/v1/admin/events/{id}/managers/{userId}. Both are audited. Removing a staff member from the organizer ends all their event access in the same transaction.
+- Who sees whom (decision #32, v1.md §3, rule 9): GET /api/v1/admin/users lists every user, for platform admins only (paginated, searchable by name and email). GET /api/v1/organizer/members lists only the current organizer's staff (name, email and status). GET /api/v1/organizer/events/{id}/managers lists an event's managers (name and email) for the organizer's staff and the event's event owners. No other endpoint returns people outside these scopes: an event's event owners and guard assignments appear only to its managers.
+- A reusable tenant-isolation test helper: for a given endpoint, it asserts that a user from a different organizer is refused on read, update and delete, that a staff member of the same organizer who doesn't manage the event gets at most its read-only summary, and that an event owner is refused on every endpoint except the guest list and the managers list of their assigned events. Apply it to every endpoint built so far.
 ```
 
-**Done when:** the tenant-isolation tests pass for every endpoint, and the route-coverage safeguard passes.
+**Done when:** the tenant-isolation tests pass for every endpoint, including for staff without access to the event, and the route-coverage safeguard passes.
 
 ### P1.6 — API contract and conventions
 
@@ -227,7 +230,7 @@ Then implement the conventions in /api:
 
 Add any endpoint v1.md §5 doesn't list yet, under its prefix rule, and update v1.md §5 to match.
 
-Guest buyers have no account, so an order must never be readable by its ID alone (hurdles.md H11). POST /api/v1/orders returns a random checkout token once, stored hashed; the buyer's checkout calls (order status, apply promotion, start payment) must send it. Tickets are reached only through the retrieval link. Organizer staff and admins view orders at GET /api/v1/organizer/orders/{id}.
+Guest buyers have no account, so an order must never be readable by its ID alone (hurdles.md H11). POST /api/v1/orders returns a random checkout token once, stored hashed; the buyer's checkout calls (order status, apply promotion, start payment) must send it. Tickets are reached only through the retrieval link. The managers of the order's event and admins view orders at GET /api/v1/organizer/orders/{id}.
 
 Add a test that checks the implemented endpoints match the contract (route list against the OpenAPI paths).
 ```
@@ -275,13 +278,14 @@ No real credentials in any file.
 Implement events in /api as described in implementation-plan.md Phase 2 steps 1–3.
 
 - Create, update, list and show events for organizers; public list and show return published events only.
+- Event access (decision #31): creating an event makes its creator a manager of it (an event_staff row with role manager, in the same transaction, audited). GET /api/v1/organizer/events lists every event of the organizer and marks the ones the user manages. GET /api/v1/organizer/events/{id} returns the full event to its managers, and to other staff of the organizer only the read-only summary: details and ticket setup, with no sold counts, orders, payments, guest data, reports, audit records, delegations, promotions or assignments. Every other organizer endpoint for an event requires a manager or a platform admin.
 - States follow the event state model in v1.md §4.6 and doc/state-machines.md (draft, published, closed, cancelled, archived), with transitions enforced by an enum and a single service. Every transition is audited.
 - A scheduled job runs every minute and moves published events to closed once their last gate closing time has passed, or their end time if they have no gates. No user can set or undo closed. Closed events can't be bought or scanned, and drop out of the public list.
 - DELETE /api/v1/organizer/events/{id} deletes a draft that was never published, with an audit log entry. Any other event returns a conflict response: once published, an event can only be archived (from closed or cancelled), never deleted.
 - Cancelling (hurdles.md H5): revoke every valid and pending-issuance ticket, cancel pending orders, end guard access, and write outbox records to email every buyer (P5.2 sends them). Admins refund the orders afterwards (P4.4). Changing a published event's dates is a postponement: tickets stay valid, refund_requests_until is set from the event's refund policy, and buyers are emailed a refund-request link.
 - Name, slug (unique across the platform; it forms the event's link, /events/{slug}), description, venue, timezone (an IANA name), the identity field (none, phone or id_number; see P2.3), capacity, refund policy, a category from the admins' list, the captcha_required flag and images stored in Supabase Storage with validated type and size.
 - Separate time windows, each validated: sales start and end, gate opening and closing, event start and end. Store times in UTC and return them together with the event's timezone.
-- Policies, tenant-isolation tests and feature tests for every rule.
+- Policies, tenant-isolation tests and feature tests for every rule, including: a staff member who didn't create an event and wasn't given access sees only its summary, which holds no sales figures, and can't change it.
 ```
 
 **Done when:** the lifecycle and time-window rules are tested, events close automatically when their last gate closes (or at their end time without gates), and the public endpoints never return draft or closed events.
@@ -325,12 +329,12 @@ Implement attendee information settings for each event, as described in implemen
 Implement gates and staff as described in implementation-plan.md Phase 2 step 8.
 
 - Gates for each event, with a name, opening and closing times, and a status. Gates are optional: an event without gates admits people between its start and end times.
-- Guard password accounts (techstack.md §3): POST /api/v1/organizer/guards creates the account (name and the guard's own email) with managed_by_organizer_id set to the creating organizer. Guards never use Google; the email may match a Google user's, and the two stay separate users. A password account is assigned to one event at a time. POST /api/v1/organizer/guards/{id}/password issues a temporary password for the guard's current assignment: it creates a guard_credentials row, returns the password once in the response and never again, and revokes any earlier credential and its sessions. PATCH /api/v1/organizer/guards/{id} disables or re-enables the account. Only the owning organizer or a platform admin can assign, issue passwords for or disable a password guard.
+- Guard password accounts (techstack.md §3): POST /api/v1/organizer/guards creates the account (name and the guard's own email) with managed_by_organizer_id set to the creating organizer. Guards never use Google; the email may match a Google user's, and the two stay separate users. A password account is assigned to one event at a time. POST /api/v1/organizer/guards/{id}/password issues a temporary password for the guard's current assignment: it creates a guard_credentials row, returns the password once in the response and never again, and revokes any earlier credential and its sessions. PATCH /api/v1/organizer/guards/{id} disables or re-enables the account. Any staff member of the owning organizer, or a platform admin, can create or disable a password guard; only an event's managers, or a platform admin, can assign a guard to that event or issue a password for that assignment.
 - Revocation when the event closes: a scheduled job runs every minute. For every event that has closed (entry ended, or cancelled or archived), it deletes the password hash of each of its guard credentials, sets revoked_at, deletes the guards' sessions, ends their assignments and writes an audit log entry. Cancelling or archiving an event triggers the same revocation immediately. Keep the guard's user record, so scan records still name them. Every guard assignment for the event ends.
-- Assignments link a guard to an event and, optionally, a gate. An event can have several guards. Organizers can remove assignments. Assignment changes are audited.
-- Event owner assignments: accepting an event_owner invitation creates an event_staff row with role event_owner and no gate. Organizers can list and remove an event's event owners; removal ends their access to that event immediately and is audited. Archiving an event ends every event owner assignment for it in the same way (doc/roleandprivileage.md §5.1.5); closing or cancelling it doesn't.
+- Assignments link a guard to an event and, optionally, a gate. An event can have several guards. The event's managers can remove assignments. Assignment changes are audited.
+- Event owner assignments: accepting an event_owner invitation creates an event_staff row with role event_owner and no gate. The event's managers can list and remove its event owners; removal ends their access to that event immediately and is audited. Archiving an event ends every event owner assignment for it in the same way (doc/roleandprivileage.md §5.1.5); closing or cancelling it doesn't.
 - An endpoint for a guard to list only their current assignments.
-- Tests: a guard sees only their own assignments and can't reach any organizer endpoint; an event owner sees only their assigned events, is refused on every organizer endpoint except the guest list, and can't invite users or change any role; archiving an event ends its event owners' access; an expired or reused event owner invitation fails; signing in with a different Google email doesn't accept it; another organizer can't assign or issue a password for a password guard; a temporary password can't be retrieved after it's issued; a password account can't be assigned to a second open event; once the last gate closes, the password hash is gone, the guard can't sign in and their session has ended; cancelling an event revokes its guard passwords immediately; and the guard's past scans still show their name.
+- Tests: a guard sees only their own assignments and can't reach any organizer endpoint; an event owner sees only their assigned events, is refused on every organizer endpoint except the guest list, and can't invite users or change any role; archiving an event ends its event owners' access; an expired or reused event owner invitation fails; signing in with a different Google email doesn't accept it; another organizer can't assign or issue a password for a password guard; a staff member who doesn't manage an event can't assign guards or event owners to it, or see them; an event owner sees the event's managers and no other users; a temporary password can't be retrieved after it's issued; a password account can't be assigned to a second open event; once the last gate closes, the password hash is gone, the guard can't sign in and their session has ended; cancelling an event revokes its guard passwords immediately; and the guard's past scans still show their name.
 ```
 
 **Done when:** guard account creation and assignment work end to end, event owner invitations work, and guards are confined to their assignments.
@@ -344,7 +348,7 @@ Implement publishing rules and admin controls as described in implementation-pla
 - After publishing: audit every change, and block or require explicit confirmation for changes that affect existing orders (lowering capacity below sold, changing the price of an offering that has sales, moving the event's dates).
 - Organizer verification (hurdles.md H2): organizers submit business or ID details and their payout account (stored encrypted); an admin verifies or rejects them.
 - Event categories: admins create, rename and disable categories; the public list endpoint returns active ones.
-- Admin endpoints: list organizers, suspend and reactivate organizers (suspension unpublishes nothing but blocks new sales and the sign-ins of its staff, event owners and guards, and ends their current sessions at once; doc/roleandprivileage.md §5.2), and view any event, with the access audited.
+- Admin endpoints: list organizers, suspend and reactivate organizers (suspension unpublishes nothing but blocks new sales and the sign-ins of its staff, event owners and guards, and ends their current sessions at once; doc/roleandprivileage.md §5.3), and view any event, with the access audited.
 - Tests for each rule, including: suspending an organizer signs out its staff, event owners and guards immediately.
 ```
 
@@ -356,7 +360,8 @@ Implement publishing rules and admin controls as described in implementation-pla
 Build the organizer and admin areas of the Next.js app for Phase 2, using shadcn/ui components.
 
 Organizer:
-- Event list with status badges and filters.
+- Event list with status badges and filters, showing every event of the organizer. Events the user doesn't manage open as a read-only summary with no edit actions and no sales figures.
+- The organizer's staff list, and on each managed event the list of its managers (read-only: only admins change them).
 - A step-by-step event editor: details → times → tickets (an offerings grid of type × category, a "sell in waves" switch for each category, and a wave editor: each wave's dates, then its rows of type, number of tickets and price, with upcoming, on-sale and ended waves labelled) → attendee fields → gates and staff → review and publish. The publish step shows the API's failing rules if there are any.
 - A "Move unsold tickets" dialog: choose the source, the target in the same category and the number to move.
 - Delegation management with claim links, access codes and set-aside allocations (type, category, number of tickets and price); staff and event owner invitations, and each event's event owners with a remove action; guard password accounts (create with the guard's email, assign, "Issue password" with a one-time copy dialog, disable); and guard assignments, showing when each password guard's access ends.
@@ -364,6 +369,7 @@ Organizer:
 Admin:
 - Organizer list with suspend and reactivate actions behind a confirmation dialog, the organizer verification queue, and the event category list.
 - Platform admin list, with an "Invite admin" form (email) and a remove action behind a confirmation dialog, disabled for the last admin.
+- A user list with search by name or email, and on each event an "Event access" panel to grant a staff member of its organizer access, or remove it, behind a confirmation dialog.
 
 Forms validate in the browser for convenience, but always show the API's validation errors. Add component tests for the editor steps.
 ```
@@ -397,11 +403,11 @@ Implement each event's link, QR code and poster (v1.md FR-14, decision #25).
 
 - The link is {public site URL}/events/{slug}, with the public site URL from config (http://localhost:3000 locally, the tunnel's Next.js hostname when testing with a phone). Slugs are unique across the platform (P2.1).
 - GET /api/v1/organizer/events/{id}/share returns the link. GET /api/v1/organizer/events/{id}/qr-code?format=png|svg returns a QR code that encodes only the link. GET /api/v1/organizer/events/{id}/poster returns a printable A4 PDF with the event's name, date and venue in the event's timezone, the QR code, "Scan to buy tickets" and the link printed beneath it.
-- Only organizer staff of the event's organizer and platform admins can call them.
+- Only the event's managers and platform admins can call them.
 - Generate the QR code and the PDF in /api with maintained libraries; tell me which ones you chose and why.
 - The platform's public name isn't decided (decision #28): read it from config, with a placeholder.
 - In the organizer area of the Next.js app, a Share panel on each event: copy the link, and download the QR code (PNG or SVG) and the poster (PDF).
-- Tests: the QR code decodes to the event's link; another organizer's staff, event owners and guards are refused; the poster renders for a draft event too, and its link shows the event once it's published.
+- Tests: the QR code decodes to the event's link; another organizer's staff, staff of the same organizer who don't manage the event, event owners and guards are refused; the poster renders for a draft event too, and its link shows the event once it's published.
 ```
 
 **Done when:** organizer staff can download the QR code and the poster, and, with the public site URL set to the tunnel's Next.js hostname, scanning the printed QR code with a phone opens the event page.
@@ -550,7 +556,7 @@ Implement implementation-plan.md Phase 4 steps 6–8.
 - Reconciliation job: every few minutes (configurable), query the provider about payments that have been pending longer than a threshold. Resolve them through the same transactional path as notifications, or flag them. Record a reconciliation report.
 - Refunds (decision #12): only platform admins start them, naming the tickets each covers; the system starts them only for rejected payments. Submit through Pesapal where it supports the payment method, or let an admin record a manual refund with its reference. Track their status. Revoke the covered tickets and move the order to partially refunded or refunded; a never-redeemed ticket's place goes back on sale if the event is still published. Audit every refund.
 - Cancelled and postponed events (hurdles.md H5): for a cancelled event, admins see a list of its orders awaiting refund and refund them one by one. For a postponed event, ticket holders request a refund through the link in the postponement email (POST /api/v1/ticket-access/{token}/refund-requests) until refund_requests_until; each request lands in an admin queue to approve or decline.
-- Payment history endpoints: organizers see their own events; platform admins see everything, with filters by status, provider and date.
+- Payment history endpoints: staff see the events they manage; platform admins see everything, with filters by status, provider and date.
 - Tests for each.
 ```
 
@@ -645,7 +651,7 @@ Redeem with one atomic update:
 1 row updated = admit. 0 rows = already redeemed (or the status changed).
 
 - The endpoint accepts either a QR token or a 6-character short code (case-insensitive; spaces and dashes ignored). A short code is looked up by its keyed hash within this event only, then goes through exactly the same checks and the same atomic update.
-- Short code entry is rate-limited per guard (for example, 10 per minute). After 5 invalid codes in a row, lock short code entry for that guard (event_staff.short_code_locked_at) until organizer staff unlock it with POST /api/v1/organizer/events/{id}/staff/{staffId}/unlock-short-codes, and notify the organizer. QR scanning keeps working during a lock.
+- Short code entry is rate-limited per guard (for example, 10 per minute). After 5 invalid codes in a row, lock short code entry for that guard (event_staff.short_code_locked_at) until one of the event's managers unlocks it with POST /api/v1/organizer/events/{id}/staff/{staffId}/unlock-short-codes, and notify the organizer. QR scanning keeps working during a lock.
 - Log every attempt in ticket_scans, including rejected ones: result, gate, guard, time and method (qr or short_code).
 - The response contains only: the result, the reason, the category, the attendee name where collected, the last 4 digits of the holder's phone or ID number when the event has an identity field, the seat or delegation, and, for a ticket already used, the earlier time and gate.
 - Rate-limit by guard.
@@ -678,7 +684,7 @@ Build the guard area of the Next.js app, designed for phones first:
 - Fail closed: a timeout (about 5 seconds, configurable) or a network error shows "Unable to verify — do not admit". It must never show success.
 - After each result, the scanner returns to scanning with one tap.
 - The scanner shows the live admission count for the guard's gate, from the P6.1 count endpoint.
-- Organizer view: live gate activity and attendance counts for each gate.
+- Organizer view, for the event's managers: live gate activity and attendance counts for each gate.
 Add component tests for each result state, including the network-error state.
 ```
 
@@ -697,18 +703,18 @@ Reserved seating comes last in this phase because it is the first item to defer 
 ```text
 Implement implementation-plan.md Phase 7 steps 1–4a.
 - Complete any promotion rules from SOW §2.8 that P3.4 didn't cover, plus redemption tracking.
-- Organizer report endpoints (own events only): sales by offering, payment status, remaining capacity, promotion performance, attendance, and gate activity by time and gate.
+- Organizer report endpoints (only for the events the staff member manages): sales by offering, payment status, remaining capacity, promotion performance, attendance, and gate activity by time and gate.
 - Admin report endpoints: platform-wide summaries, transaction oversight, and an audit log search filtered by actor, organizer, action and date.
-- Settlement (hurdles.md H1): a report per organizer and event (sales, refunds, Pesapal fees, platform fee and amount owed) for admins, and for organizer staff for their own organizer; and a payout log where admins record each manual payout. The platform fee calculation is still open (decision #2): ask me before building that column.
-- A read-only audit list for organizer staff, for their own events (GET /api/v1/organizer/events/{id}/audit-logs).
-- Guest list endpoints (v1.md §5): GET /api/v1/organizer/events/{id}/attendees with a search by holder name and filters for ticket category, delegation, purchase date and check-in status, and GET /api/v1/organizer/events/{id}/attendees/export, which streams the same filtered list as CSV. Organizer staff can use them for their own events and event owners for their assigned events only (doc/roleandprivileage.md §5.1). For event owners, every row and CSV export contains only the holder's name, ticket category, delegation, check-in status and entry time (the ticket's redeemed_at, empty until it's scanned in; decision #29): no ticket type, contact details, ID numbers, prices or order amounts. Event owners get no other report endpoint. Every guest list view, search, filter and export by an event owner writes an audit log entry with the event, the search and filters used and, for exports, the number of rows (doc/roleandprivileage.md §5.1.6).
+- Settlement (hurdles.md H1): a report per organizer and event (sales, refunds, Pesapal fees, platform fee and amount owed) for admins, and for organizer staff only for the events they manage (organizer-wide totals are for admins); and a payout log where admins record each manual payout. The platform fee calculation is still open (decision #2): ask me before building that column.
+- A read-only audit list for organizer staff, for the events they manage (GET /api/v1/organizer/events/{id}/audit-logs).
+- Guest list endpoints (v1.md §5): GET /api/v1/organizer/events/{id}/attendees with a search by holder name and filters for ticket category, delegation, purchase date and check-in status, and GET /api/v1/organizer/events/{id}/attendees/export, which streams the same filtered list as CSV. Organizer staff can use them for the events they manage and event owners for their assigned events only (doc/roleandprivileage.md §5.1). For event owners, every row and CSV export contains only the holder's name, ticket category, delegation, check-in status and entry time (the ticket's redeemed_at, empty until it's scanned in; decision #29): no ticket type, contact details, ID numbers, prices or order amounts. Event owners get no other report endpoint. Every guest list view, search, filter and export by an event owner writes an audit log entry with the event, the search and filters used and, for exports, the number of rows (doc/roleandprivileage.md §5.1.6).
 - A sales list CSV export for organizer staff (GET /api/v1/organizer/events/{id}/reports/sales/export).
 - Data deletion on request (implementation-plan.md Phase 7 step 4a, v1.md FR-15, hurdles.md H12): POST /api/v1/admin/data-deletions, for platform admins only. Given an email address or phone number, find the person across every organizer and remove their name, email, phone number and ID digits from orders, attendees, ticket transfers and promotion redemptions, keeping amounts, references, tickets and scan records. Audit it. Tests: the details are gone everywhere, report totals don't change, and organizer staff and event owners are refused.
 - Reports must match the order and payment records exactly. Write tests that compare report totals with direct sums.
 - Tenant-isolation tests for every report endpoint, including that an event owner can export only their assigned events' guest lists, that their rows and CSV carry no other column, and that each of their guest list requests is audited.
 ```
 
-**Done when:** report figures match the records, and organizers only ever see their own events.
+**Done when:** report figures match the records, and staff only ever see the events they manage.
 
 ### P7.2 — Report screens
 
@@ -718,7 +724,7 @@ Build report screens in the Next.js app for organizers, event owners and admins,
 - An audit log viewer for admins, and a read-only audit list per event for organizer staff.
 - Settlement screens for admins and organizer staff, and a payout log form for admins.
 - A data deletion screen for admins: search by email address or phone number, review what will be removed, then confirm.
-- A guest list screen with the P7.1 name search, filters and an "Export CSV" button, in the organizer area for each event and as the only screen in the event owner area, which shows no edit, revoke, refund or other write action.
+- A guest list screen with the P7.1 name search, filters and an "Export CSV" button, in the organizer area for each managed event and as the only screen in the event owner area, which shows no edit, revoke, refund or other write action. The event owner area also shows the names and email addresses of each assigned event's managers.
 - Every number is labeled with its unit and time range.
 ```
 
@@ -815,7 +821,7 @@ Add them to CI as a separate job.
 
 ```text
 Review the whole codebase for security, as described in implementation-plan.md Phase 8 step 3, then fix what you find.
-Check: authorization on every route (compare against v1.md §3); tenant isolation; event owners' read-only scope, the columns they can see and the auditing of their guest list access (doc/roleandprivileage.md §5.1); the Google sign-in flow (state check, verified emails only, linking by Google account ID, session regeneration, no open redirects); platform admin rights granted only through admin invitations and the one-time setup command, and never the last admin removed; guard password sign-in (hashing, rate limiting, lockout, identical errors, forced password change, guard-only scope, and deletion of the password when the event closes); that only guard accounts can scan; that the paying account from Pesapal is never stored or logged; mass assignment; input validation; SQL injection; XSS in both frontends; CSRF; CORS; session and cookie flags; rate limits on the sign-in callback, resend, scan and webhook endpoints; webhook forgery; secrets in the repository or logs; personal data in logs; security headers; and dependency vulnerabilities (composer audit, pnpm audit).
+Check: authorization on every route (compare against v1.md §3); tenant isolation; event owners' read-only scope, the columns they can see and the auditing of their guest list access (doc/roleandprivileage.md §5.1); staff event access, so no event data reaches staff who don't manage the event and only admins grant access, and that no endpoint lists people beyond decision #32 (§5.2); the Google sign-in flow (state check, verified emails only, linking by Google account ID, session regeneration, no open redirects); platform admin rights granted only through admin invitations and the one-time setup command, and never the last admin removed; guard password sign-in (hashing, rate limiting, lockout, identical errors, forced password change, guard-only scope, and deletion of the password when the event closes); that only guard accounts can scan; that the paying account from Pesapal is never stored or logged; mass assignment; input validation; SQL injection; XSS in both frontends; CSRF; CORS; session and cookie flags; rate limits on the sign-in callback, resend, scan and webhook endpoints; webhook forgery; secrets in the repository or logs; personal data in logs; security headers; and dependency vulnerabilities (composer audit, pnpm audit).
 First report your findings ranked by severity, each with its location and the fix. Wait for my go-ahead, then fix them one by one, adding a test for each.
 ```
 
