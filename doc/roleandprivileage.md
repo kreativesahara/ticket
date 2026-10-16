@@ -1,7 +1,7 @@
 # Roles, Privileges & Authorization Overview
 
 **Multi-Organizer Event Ticketing Platform · Version 1.5 · 16 October 2026**  
-**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#32). If this document disagrees with v1.md, v1.md wins.
+**References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#33). If this document disagrees with v1.md, v1.md wins.
 
 ---
 
@@ -50,6 +50,7 @@ graph TD
   * View platform-wide sales summary reports, financial transactions, and system activity logs.
   * Authorize ticket cancellations, event cancellations, and customer refunds.
   * Record manual financial settlements and payout records for event organizers.
+  * Enter, change and view each organizer's payout account. Only admins can, and every change is audited.
   * See the list of every user on the platform (only admins can).
   * Grant or remove an organizer staff member's access to an individual event (`POST` and `DELETE /api/v1/admin/events/{id}/managers`). Only admins can; both are audited.
   * Invite new Platform Admins by email, and remove another admin's rights (never the last admin's). Any admin can do both, and both are audited.
@@ -61,13 +62,13 @@ graph TD
 * **Scope:** Their own organization's profile, staff and guard accounts, plus the events they manage: the ones they created, and any a Platform Admin gave them access to (an `event_staff` row with role `manager`). A read-only summary of their organization's other events.
 * **Log In Method:** Google Sign-In.
 * **Key Capabilities:**
-  * Manage organization contact profile, public branding, and bank payout details.
+  * Manage organization contact profile and public branding. They see only whether a verified payout account is on file: a Platform Admin enters or changes it.
   * Invite and remove team members, and create or disable guard accounts.
   * See their own organization's staff (names, emails and status) and guard accounts.
   * Create events, and become a manager of each event they create.
   * For the events they manage: update, publish, cancel or archive them; configure ticket categories and pricing; issue complimentary, VIP, sponsor or promotional tickets; assign Event Owners and guards; and view sales reports, attendance figures and settlement statements.
   * For their organization's other events: see a read-only summary of the details and ticket setup.
-* **Restrictions:** Cannot initiate customer refunds (handled by Platform Admins) and cannot scan tickets directly using standard staff logins (must use an assigned guard account to work a gate). Cannot give themselves or anyone else access to an event (only Platform Admins can). Cannot see the sales, sold counts, orders, payments, guest data, reports, audit records, delegations, promotions or assignments of events they don't manage, or any user outside their organization.
+* **Restrictions:** Cannot initiate customer refunds (handled by Platform Admins) and cannot scan tickets directly using standard staff logins (must use an assigned guard account to work a gate). Cannot give themselves or anyone else access to an event (only Platform Admins can). Cannot see or change the organization's payout account. Cannot see the sales, sold counts, orders, payments, guest data, reports, audit records, delegations, promotions or assignments of events they don't manage, or any user outside their organization.
 
 ### 2.3 Event Owner
 * **Description:** External event hosts, client representatives, or guest artists who require real-time visibility into attendance for specific assigned events.
@@ -117,7 +118,8 @@ graph TD
 | | Invite or remove Platform Admins | Full | No | No | No | No |
 | | Approve or suspend organizers | Full | No | No | No | No |
 | | View platform financial totals | Full | No | No | No | No |
-| **Account & Staffing** | Edit profile & payout bank details | Full | Full (Own org) | No | No | No |
+| **Account & Staffing** | Edit organization profile | Full | Full (Own org) | No | No | No |
+| | Enter, change or view the payout account | Full | No (sees only whether one is on file) | No | No | No |
 | | Invite & manage Organizer Staff | Full | Full (Own org) | No | No | No |
 | | View Organizer Staff list | Full | Full (Own org) | Limited (Managers of assigned events) | No | No |
 | | Assign Event Owners to events | Full | Scoped (Managed events) | No | No | No |
@@ -381,6 +383,9 @@ Event Owners gain necessary real-time attendee visibility to coordinate event ho
    * Event Owners have zero ability to invite users, change roles, or grant permissions.
    * Organizer Staff can't give themselves or anyone else access to an event; only Platform Admins grant or remove event access, apart from the access an event's creator gets automatically.
    * Platform admin rights come only from accepting a platform admin invitation sent by an existing admin, or, for the very first admin, from the one-time setup command. The last admin can't be removed.
+4. **Payout Account Protection:**
+   * Only Platform Admins enter, change or read an organizer's payout account (`PUT /api/v1/admin/organizers/{id}/payout-account`), stored encrypted. Every change is audited.
+   * Organizer endpoints return only whether a verified payout account is on file, never its details, so a compromised staff login can't redirect an organizer's payouts.
 
 ---
 

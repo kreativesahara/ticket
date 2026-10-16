@@ -27,7 +27,7 @@ erDiagram
         string contact_email
         string verification_status "unverified, pending, verified, rejected"
         json business_details
-        text payout_account_encrypted "encrypted, never plain"
+        text payout_account_encrypted "encrypted, admins only"
         key verified_by FK
         timestamp verified_at
     }
