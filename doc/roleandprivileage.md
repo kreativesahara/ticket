@@ -386,6 +386,7 @@ Event Owners gain necessary real-time attendee visibility to coordinate event ho
 4. **Payout Account Protection:**
    * Only Platform Admins enter, change or read an organizer's payout account (`PUT /api/v1/admin/organizers/{id}/payout-account`), stored encrypted. Every change is audited.
    * Organizer endpoints return only whether a verified payout account is on file, never its details, so a compromised staff login can't redirect an organizer's payouts.
+   * Until a Platform Admin has entered it, the organizer's events with paid tickets stay in draft: staff can prepare them but can't publish them, or add paid tickets to an event already published. Free events aren't affected.
 
 ---
 

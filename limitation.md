@@ -38,8 +38,8 @@ This document sets out how the platform will behave: the business rules it follo
 - **1.6** Platform admins are invited by email by an existing platform admin, and accept by signing in with a Google account that uses the invited address. Any admin can remove another admin's rights, but the last admin can't be removed. The very first admin is set up once, with a setup command run by the technical team. No one can make themselves an admin.
 - **1.7** Platform admins have full operational authority across the platform.
 - **1.8** Suspending an organizer stops new sales for their events and blocks their staff, event owners and guards from signing in. Their published events stay visible but can't be bought.
-- **1.9** Before an organizer's first paid event can go on sale, a platform admin checks their business or ID details and the account they'll be paid into.
-- **1.10** Only platform admins enter, change or see an organizer's payout account. Organizers send their bank details to a platform admin, and see only whether a verified payout account is on file. Every change is recorded.
+- **1.9** Before an organizer's first paid event can go on sale, a platform admin checks their business or ID details and enters the account they'll be paid into.
+- **1.10** Only platform admins enter, change or see an organizer's payout account. Organizers send their bank details to a platform admin, and see only whether a verified payout account is on file. Until a platform admin has entered it, an event with paid tickets stays as a draft with the organizer: it can be prepared, but not published for buyers. Free events can still be published. Every change is recorded.
 
 ### 2. Signing in
 
@@ -78,7 +78,7 @@ Rules for guard password accounts:
   - **Event:** when the event itself starts and ends.
 
   Gates can open before the event starts and stay open after it begins.
-- **3.4** An event can be published only when it has at least one ticket option on sale, sensible times, and enough capacity for all its allocations.
+- **3.4** An event can be published only when it has at least one ticket option on sale, sensible times, and enough capacity for all its allocations. If any of its tickets is paid, the organizer must also be verified and have its payout account entered by a platform admin (1.9, 1.10).
 - **3.5** Every change to a published event is recorded. Changes that would affect tickets already sold need explicit confirmation or are blocked: for example, reducing capacity below the number sold, changing the price of a ticket that has sales, or moving the event's dates.
 - **3.6** When an event is **cancelled**, every ticket is cancelled, every buyer is emailed, and a platform admin refunds each order.
 - **3.7** When an event is **postponed** to new dates, tickets stay valid. Every buyer is emailed a link to ask for a refund, which works until a date set from the event's refund policy.
@@ -271,7 +271,7 @@ These were settled on 15 and 16 October 2026. Please confirm each one, or answer
 | C28 | Who can make someone a platform admin?                 | Only an existing platform admin, by email invitation; the last admin can't be removed; the very first admin is set up once with a setup command | |
 | C29 | Can every staff member manage every event of their organizer? | No. Staff manage the events they create; a platform admin grants access to any other event. Other events show a read-only summary without sales or guest data | |
 | C30 | Who can see the list of people on the platform?        | Only platform admins see everyone; staff see their own organizer's staff; event owners see the staff who manage their events | |
-| C31 | Who can change an organizer's payout account?          | Only platform admins, who are also the only ones to see it; staff see only whether a verified payout account is on file | |
+| C31 | Who can change an organizer's payout account?          | Only platform admins, who are also the only ones to see it; staff see only whether a verified payout account is on file. Until it's entered, events with paid tickets stay in draft | |
 
 ---
 

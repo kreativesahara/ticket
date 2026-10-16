@@ -58,7 +58,7 @@ Functional requirements include:
 - Guard sign-in only with an individual email and password account, created with the guard's own email address by organizer staff or a platform administrator. The guard shall set their own password at first sign-in, and passwords shall be stored only as secure hashes. Each guard password shall be valid only for the event it was issued for, and shall be revoked and deleted as soon as that event closes (when entry ends, or when it is cancelled or archived). Only guard accounts shall scan tickets.
 - User profile management.
 - Account activation and suspension.
-- Organizer account applications, approval and management, including verification of business or ID details and the payout account before an organizer's first paid event. Only platform administrators enter, change or view an organizer's payout account; organizer staff see only whether a verified one is on file.
+- Organizer account applications, approval and management, including verification of business or ID details and the payout account before an organizer's first paid event. Only platform administrators enter, change or view an organizer's payout account; organizer staff see only whether a verified one is on file. Until a platform administrator has entered it, the organizer's events with paid tickets stay in draft and can't be published.
 - Organizer membership through the organizer staff role. Staff manage the organizer account and create events. A staff member manages an event, with its sales, orders, guest data and reports, only with access to that event: automatically for the events they create, and otherwise only when a platform administrator grants it. For their organizer's other events, staff see a read-only summary.
 - Member visibility: only platform administrators see the list of all users; staff see their own organizer's staff; event owners see the staff who manage their assigned events.
 - Event owners assigned to specific events, with access limited to viewing, filtering and exporting that event's guest data.
@@ -371,7 +371,7 @@ The project shall be considered functionally complete when the following criteri
 
 ### 5.2 Event and Ticket Management
 
-- Organizers can create and publish events.
+- Organizers can create and publish events. Events with paid tickets can't be published until a platform administrator has entered the organizer's payout account.
 - Ticket types, categories, prices, deadlines and allocations are configurable.
 - Ticket waves open and close on their dates, and a category's waves never overlap.
 - Delegation tickets can't be bought through public checkout.
