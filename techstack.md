@@ -234,7 +234,7 @@ cPanel is a reasonable initial deployment target if your hosting plan supports t
 | **Live screens**         | Polling: the admin payment table asks the API for changes every few seconds, because shared hosting can't run a WebSocket server (decision #45) |
 | **Queues**               | Laravel database queue initially, if supported by your plan                                 |
 | **Long-running workers** | Verify whether the host permits them; otherwise use a controlled cron-based worker strategy |
-| **Assets**               | Event images in a public Supabase Storage bucket, written through Laravel's `s3` disk on Supabase's S3-compatible endpoint (see [Event images](#event-images)) |
+| **Assets**               | Event images in a public Supabase Storage bucket, written through Supabase Storage's HTTP API with Laravel's HTTP client (see [Event images](#event-images)) |
 | **Secrets**              | Environment configuration outside public access                                             |
 | **Monitoring**           | Laravel logs, payment/webhook audit records and external uptime monitoring, each kept for its period in v1.md §4.7 and free of personal data |
 
@@ -253,7 +253,7 @@ Event images are compressed once, when they are uploaded, and resized for each s
    - strips all metadata, including GPS location;
    - encodes a progressive JPEG at quality 82, lowering the quality in steps to 60 and then shrinking the dimensions by 20% at a time until the file is under 500 KB (512,000 bytes), and refuses the image if it still doesn't fit.
 
-   Re-encoding also drops anything hidden in the original file. The result goes to the public bucket as `events/{event_id}/{uuid}.jpg`, with `Cache-Control: public, max-age=31536000, immutable`, and the previous image is deleted. The work runs inside the upload request: the browser has usually shrunk the image already, and only an event's managers and platform admins upload.
+   Re-encoding also drops anything hidden in the original file. The result goes to the public bucket as `events/{event_id}/{uuid}.jpg`, with `Cache-Control: public, max-age=31536000, immutable`, and the previous image is deleted. One small class uploads and deletes objects through Supabase Storage's HTTP API (`/storage/v1/object/...`) with Laravel's HTTP client, and builds each image's public URL. It authenticates with the project's secret key, which stays in the backend's environment and never reaches the browser. The S3-compatible endpoint isn't used, so the backend doesn't need the AWS SDK (decision #46, revised 19 October 2026). The work runs inside the upload request: the browser has usually shrunk the image already, and only an event's managers and platform admins upload.
 3. **In Next.js.** Pages render the image with `next/image`. Vercel's image optimizer resizes it on the fly to the widths the `sizes` attribute asks for, serves AVIF or WebP to browsers that accept them, and caches each variant. `images.remotePatterns` allows only the bucket's public path. Every upload has a new name, so cached variants never go stale.
 
 The stored file stays a JPEG because link previews (WhatsApp, Facebook) and email clients that fetch the original all display JPEG; browsers get the smaller formats from the optimizer.
