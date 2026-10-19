@@ -135,16 +135,91 @@ if ($tokenValid) {
 
     foreach ($requiredExtensions as $ext => $description) {
         $loaded = extension_loaded($ext);
-        if (!$loaded) {
-            $results['summary']['go'] = false;
-            $results['summary']['reasons'][] = "Required extension '{$ext}' is missing.";
+        $extraNotes = '';
+        if ($ext === 'gd' && $loaded) {
+            $gdInfo = function_exists('gd_info') ? gd_info() : [];
+            $hasJpeg = !empty($gdInfo['JPEG Support']);
+            if (!$hasJpeg) {
+                $loaded = false;
+                $results['summary']['go'] = false;
+                $results['summary']['reasons'][] = "GD extension is loaded but lacks JPEG Support (required for event image processing).";
+                $extraNotes = ' (FAIL: Missing JPEG Support)';
+            } else {
+                $extraNotes = ' (JPEG Support verified)';
+            }
         }
+
         $results['extensions'][] = [
             'name' => $ext,
             'description' => $description,
             'status' => $loaded ? 'PASS' : 'FAIL',
-            'notes' => $loaded ? 'Loaded' : 'Not installed / not enabled in php.ini',
+            'notes' => ($loaded ? 'Loaded' : 'Not installed / not enabled in php.ini') . $extraNotes,
         ];
+    }
+
+    // -------------------------------------------------------------------------
+    // B2. PHP Configuration Limits (Memory & Upload Size for Event Images)
+    // -------------------------------------------------------------------------
+    $parseBytes = function (string $val): int {
+        $val = trim($val);
+        if ($val === '' || $val === '-1') return -1;
+        $unit = strtolower(substr($val, -1));
+        $num = (int) $val;
+        return match ($unit) {
+            'g' => $num * 1024 * 1024 * 1024,
+            'm' => $num * 1024 * 1024,
+            'k' => $num * 1024,
+            default => (int) $val,
+        };
+    };
+
+    $memoryLimitRaw = ini_get('memory_limit') ?: '';
+    $uploadMaxRaw = ini_get('upload_max_filesize') ?: '';
+    $postMaxRaw = ini_get('post_max_size') ?: '';
+
+    $memBytes = $parseBytes($memoryLimitRaw);
+    $uploadBytes = $parseBytes($uploadMaxRaw);
+    $postBytes = $parseBytes($postMaxRaw);
+
+    $memPass = ($memBytes === -1 || $memBytes >= 256 * 1024 * 1024);
+    $uploadPass = ($uploadBytes >= 10 * 1024 * 1024 || $uploadBytes === -1);
+    $postPass = ($postBytes >= 10 * 1024 * 1024 || $postBytes === -1);
+
+    $results['php_limits'] = [
+        [
+            'name' => 'memory_limit',
+            'current' => $memoryLimitRaw,
+            'required' => '>= 256M',
+            'status' => $memPass ? 'PASS' : 'WARN',
+            'notes' => $memPass ? 'Sufficient memory for GD image decoding' : 'Below 256M recommendation; high megapixel images may cause OOM',
+        ],
+        [
+            'name' => 'upload_max_filesize',
+            'current' => $uploadMaxRaw,
+            'required' => '>= 10M',
+            'status' => $uploadPass ? 'PASS' : 'FAIL',
+            'notes' => $uploadPass ? 'Accepts images up to 10 MB' : 'Below 10M requirement for event image uploads',
+        ],
+        [
+            'name' => 'post_max_size',
+            'current' => $postMaxRaw,
+            'required' => '>= 10M',
+            'status' => $postPass ? 'PASS' : 'FAIL',
+            'notes' => $postPass ? 'Accepts POST payload up to 10 MB' : 'Below 10M requirement for multipart image uploads',
+        ],
+    ];
+
+    if (!$uploadPass) {
+        $results['summary']['go'] = false;
+        $results['summary']['reasons'][] = "upload_max_filesize ({$uploadMaxRaw}) is below 10M requirement.";
+    }
+    if (!$postPass) {
+        $results['summary']['go'] = false;
+        $results['summary']['reasons'][] = "post_max_size ({$postMaxRaw}) is below 10M requirement.";
+    }
+    if (!$memPass) {
+        $results['summary']['conditional'] = true;
+        $results['summary']['reasons'][] = "memory_limit ({$memoryLimitRaw}) is below recommended 256M for image processing.";
     }
 
     // -------------------------------------------------------------------------
@@ -435,6 +510,11 @@ if ($isCli) {
     echo "\n[2] REQUIRED EXTENSIONS:\n";
     foreach ($results['extensions'] as $ext) {
         printf("  %-12s [%-4s] %s\n", $ext['name'], $ext['status'], $ext['notes']);
+    }
+
+    echo "\n[2b] PHP CONFIGURATION LIMITS (EVENT IMAGES):\n";
+    foreach ($results['php_limits'] ?? [] as $lim) {
+        printf("  %-22s [%-4s] Current: %-8s Required: %-8s (%s)\n", $lim['name'], $lim['status'], $lim['current'], $lim['required'], $lim['notes']);
     }
 
     echo "\n[3] FUNCTIONS (QUEUE & SCHEDULER):\n";

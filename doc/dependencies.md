@@ -46,6 +46,7 @@ Last checked: 2026-10-16.
 | `laravel/sanctum` | ^4.0 → v4.3.3 | Cookie-based SPA session authentication for frontend requests (Next.js browser and SSR requests) |
 | `laravel/socialite` | ^5.31 → v5.31.0 | Google OAuth 2.0 social sign-in provider |
 | `laravel/tinker` | ^3.0 → v3.0.2 | Interactive console (`php artisan tinker`) for inspecting models and data during development |
+| `intervention/image` | ^4.4 → v4.4.0 | Decodes, auto-orients, flattens transparency, strips EXIF metadata, and optimizes event images as progressive JPEGs under 500 KB on PHP's GD extension (decision #46, techstack.md §6) |
 
 ### Development (`require-dev`)
 
@@ -148,7 +149,6 @@ These are not packages. The shadcn CLI copies each component's source into the r
 | --- | --- | --- | --- |
 | k6 | tooling | Concurrent-request tests (no overselling, no double redemption) and performance tests | Phase 3 and Phase 8 (implementation-plan.md §12) |
 | Playwright | frontend | End-to-end tests in a real browser | Phase 5 (implementation-plan.md §12) |
-| `intervention/image` | backend | Decodes, resizes and re-encodes event images as JPEGs under 500 KB, on PHP's GD extension | Phase 2, P2.1 (decision #46) |
 | Supabase Storage | infrastructure | Public bucket for event images, written through Supabase Storage's HTTP API with Laravel's HTTP client (no extra package); Vercel's image optimizer resizes them for each screen | Phase 2, P2.1 and P2.7 (decision #46) |
 
 Packages for QR code images, guest-list export and the guard scanner's camera haven't been chosen. They'll be logged here when they're added.
@@ -180,6 +180,7 @@ Nothing here has been changed. Each item needs a decision first.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-19 | Implemented event lifecycle and image processing pipeline (P2.1): added intervention/image (v4.4.0) for event image compression and normalization |
 | 2026-10-19 | Dropped the planned `league/flysystem-aws-s3-v3`: event images go to Supabase Storage through its HTTP API, not its S3-compatible endpoint (decision #46, revised) |
 | 2026-10-16 | Completed Phase 1 Step 17 working skeleton (P1.8): configured `/api/v1/health` verifying database connectivity, scheduler heartbeat, queue heartbeat, and retention purge reporting; added concurrent background process supervisors for backend (`composer dev` starting API server, queue listener, and scheduler) and frontend (`pnpm dev`); documented Cloudflare Tunnel architecture for two HTTPS hostnames sharing parent cookie domain, environment switching templates (`.env.tunnel.example`), platform admin bootstrap flow (`platform:bootstrap-admin`), and database reset procedures in `doc/local-development.md` |
 | 2026-10-16 | Implemented frontend foundation (implementation-plan.md Phase 1 steps 14–16, P1.7): added 12 shadcn/ui components (`button`, `input`, `label`, `form`, `card`, `dialog`, `table`, `toast`/`sonner`, `dropdown-menu`, `badge`, `select`, `tabs`); typed API client generated from `openapi.yaml` with server cookie/Origin forwarding and browser CSRF `/sanctum/csrf-cookie` handling; OpenAPI-driven MSW mock mode for browser and SSR; public site layout, header, footer, home page, Google sign-in, guard email/password sign-in with first-sign-in password change screen, invitation acceptance flow (`/invite/[token]`), `error=no_access` message (Decision #7), logout (`/logout`); role-protected app shell with sidebar and multi-organizer switcher (`/admin`, `/organizer`, `/event-owner`, `/guard`); component tests for all auth, guard, password change, invitation, and no-access flows. Added dependencies: `react-hook-form`, `zod`, `@hookform/resolvers`, `sonner`, `openapi-typescript`, `msw` |
