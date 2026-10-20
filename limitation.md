@@ -90,7 +90,7 @@ Rules for guard password accounts:
 - **4.1** A **ticket type** describes how a ticket is sold: Early Bird, Normal, At the Gate, Group or Promoted. A **ticket category** describes the level of access: VVIP, VIP or Media. Organizers can add their own types and categories.
 - **4.2** What a buyer actually purchases is a combination of type and category, for example "Early Bird VIP". Each combination has its own price, number available, sales period and minimum and maximum per order. Only combinations the organizer turns on can be bought.
 - **4.3** Early Bird tickets stop selling when their sales period ends or when they sell out, whichever comes first.
-- **4.4** Group tickets are bought in a set number at a time (for example 4, 8 or 12 for a group of 4), at the ticket's normal price per ticket: a group of 4 at KES 1,000 costs KES 4,000. The organizer can give group tickets a discount, as a percentage or a fixed amount off each ticket: KES 200 off makes a group of 4 cost 4 × 800 = KES 3,200. Every ticket in a group has the same whole-shilling price, and each has its own QR code.
+- **4.4** Group tickets are bought in a set number at a time (for example 4, 8 or 12 for a group of 4), at the ticket's normal price per ticket: a group of 4 at KES 1,000 costs KES 4,000. The organizer can give group tickets a discount, as a percentage or a fixed amount off each ticket: KES 200 off makes a group of 4 cost 4 × 800 = KES 3,200. Every ticket in a group has the same price, rounded down to a whole shilling, and each has its own QR code.
 - **4.5** At the Gate tickets come from the same capacity as advance tickets. Buyers buy them on their own phones through the public site, by scanning the event's QR code poster at the gate (rule 5.12). There are no cash sales.
 - **4.6** Media tickets can be set to need the organizer's approval: the buyer pays first, and the tickets are issued only when the organizer approves them. A rejected request is refunded by a platform admin. Organizers can also issue Media tickets manually.
 - **4.7** Promoted tickets need clear rules about who can buy them and at what price.
@@ -112,7 +112,7 @@ Rules for guard password accounts:
 - **5.6** The platform calculates every price and total itself. It never relies on figures sent from the buyer's browser.
 - **5.7** When creating an event, the organizer chooses whether buyers must give a **phone number**, an **ID number**, or neither. Buyers can't choose: checkout asks for exactly what the event set, and never for both. With a phone or ID number, every ticket holder gives their name and that number; only the last 4 digits of an ID number are kept, and the guard checks the last 4 digits at the gate. The choice can be changed only while the event is still a draft.
 - **5.8** Any extra questions an organizer adds are pick-lists, checkboxes or dates. There are no free-text questions.
-- **5.9** Orders that cost nothing (free tickets, free sponsor tickets or a 100% discount) skip payment, and the tickets are issued straight away.
+- **5.9** Orders that cost nothing (free tickets or free sponsor tickets; promo codes cannot bring a ticket to zero) skip payment, and the tickets are issued straight away.
 - **5.10** For high-demand events, the organizer can require a CAPTCHA at checkout to stop bots.
 - **5.11** The platform's **landing page** lists every ticket option on sale across all published events: the event, date and venue, ticket type, category, wave and price, each with a Buy button. Buyers can search by event name or venue, and filter by event category and date. Sold-out options stay listed, marked "Sold out", and upcoming waves are shown greyed out with their start date and price. Sponsor (delegation) tickets are never listed.
 - **5.12** Every event has its own **link** and **QR code**, which open its event page. Organizer staff can copy the link, and download the QR code as an image or as a printable poster to put up at the gate. The link can be changed while the event is a draft, but not once it's published, so printed posters and shared links keep working.
@@ -123,7 +123,8 @@ Rules for guard password accounts:
 - **6.2** Each code can be limited to particular tickets, a date range, a total number of uses, a number of uses per buyer (by email address), and a minimum number of tickets or order value. It applies to one event.
 - **6.3** Promo codes and coupon codes work the same way.
 - **6.4** A code's use is counted as soon as it's applied to a held order. If the hold expires, the use is released.
-- **6.5** A promo code can be used on group tickets. It applies after the group discount, to the discounted total.
+- **6.5** A promo code can be used on group tickets. It applies after the group discount.
+- **6.6** A promo discount comes off each eligible ticket (a fixed code takes its amount off every ticket), rounded down to a whole shilling. A code can't make a ticket free; a code that would is refused. Minimum order values are checked before any discount.
 
 ### 7. Payments
 
@@ -297,7 +298,10 @@ These were settled on 15, 16 and 20 October 2026. Please confirm each one, or an
 | C43 | How does someone accept an invitation?                 | By opening the invitation link while signed in with the invited Google address; signing in alone isn't enough. A lost link can be replaced by whoever sent it | |
 | C44 | How are group tickets priced?                          | At the normal price per ticket, bought in multiples of the group size: a group of 4 at KES 1,000 costs KES 4,000 | |
 | C45 | What does a group discount's "fixed rate" mean?       | A fixed amount off each ticket: KES 200 off a group of 4 at KES 1,000 gives 4 × 800 = KES 3,200 | |
-| C46 | Can a promo code be used on top of a group discount?  | Yes. It applies after the group discount, to the discounted total, under the promotion's own rules | |
+| C46 | Can a promo code be used on top of a group discount?  | Yes. It applies after the group discount, off each eligible ticket, under the promotion's own rules | |
+| C47 | How is a percentage discount rounded?                 | Down to a whole shilling per ticket, in the buyer's favour | |
+| C48 | Can a promo code make a ticket free?                  | No. A code that would bring a ticket to zero is refused | |
+| C49 | Which total does a code's minimum order value use?    | The total before any discount | |
 
 ---
 

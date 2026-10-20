@@ -138,7 +138,7 @@ When `POST /api/v1/orders` is invoked with a `delegation_token` or `access_code`
 
 ### Stage 3: Zero-Total Bypass & Issuance (Resolution to Hurdle H3)
 1. **Bypass Logic:**
-   * Backend checks `final_amount == 0` (the allocation's price is zero, or a 100% discount applies).
+   * Backend checks `final_amount == 0` (the allocation's price is zero; promo codes cannot reduce ticket prices to zero per decision #53).
    * Standard redirect to Pesapal hosted checkout is skipped.
    * No payment record is written, because there is nothing to pay; the order records a zero total.
    * An allocation with a price above zero goes through the normal Pesapal payment flow instead.

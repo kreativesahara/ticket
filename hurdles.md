@@ -49,6 +49,8 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 
 **Decision (15 October 2026):** as recommended: a settlement report per organizer and event, and a payout log admins fill in. The platform fee is deducted from the organizer, never added to the buyer's total, and Pesapal's fees are deducted from the organizer too (decision #2). Still open: how the platform fee is calculated.
 
+**Update (20 October 2026):** until the platform fee calculation formula is finalized with the client, Phase 3 implements the platform fee as a configurable percentage defaulting to 0%, snapshotted per order item and deducted from the organizer (decision #54). This unblocks Phase 3 orders, snapshots and settlement logic.
+
 **Decide by:** Phase 0 · **Owner:** Client
 
 ### H2. Collecting for other businesses, and unverified organizers — Decided
@@ -80,6 +82,8 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 **Decision (15 October 2026):** as recommended. A delegation's allocation is a sub-quota of its offerings' capacity, so no ticket is counted twice (doc/sponsored.md).
 
 **Update (15 October 2026):** delegation tickets are now set aside as each delegation's own offerings, instead of a sub-quota of public offerings (H14).
+
+**Update (20 October 2026):** promo codes cannot reduce a ticket's price to zero or below (decision #53). Zero-total bypass applies to complimentary tickets and free delegation claims.
 
 **Decide by:** Phase 1 (database design) · **Owner:** Both
 
