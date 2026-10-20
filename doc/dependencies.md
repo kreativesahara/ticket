@@ -47,6 +47,8 @@ Last checked: 2026-10-16.
 | `laravel/socialite` | ^5.31 → v5.31.0 | Google OAuth 2.0 social sign-in provider |
 | `laravel/tinker` | ^3.0 → v3.0.2 | Interactive console (`php artisan tinker`) for inspecting models and data during development |
 | `intervention/image` | ^4.4 → v4.4.0 | Decodes, auto-orients, flattens transparency, strips EXIF metadata, and optimizes event images as progressive JPEGs under 500 KB on PHP's GD extension (decision #46, techstack.md §6) |
+| `endroid/qr-code` | ^6.1 → 6.1.3 | Generates each event's QR code as PNG or SVG, encoding only the event link (P2.8, v1.md FR-14) |
+| `dompdf/dompdf` | ^3.1 → v3.1.6 | Renders the printable A4 event poster as a PDF from an HTML template (P2.8) |
 
 ### Development (`require-dev`)
 
@@ -60,6 +62,7 @@ Last checked: 2026-10-16.
 | `larastan/larastan` | ^3.13 → v3.13.0 | Static analysis: PHPStan with Laravel support, configured in `phpstan.neon`. This is the backend type check |
 | `laravel/pint` | ^1.27 → v1.32.1 | Code formatter and style linter |
 | `symfony/yaml` | ^8.1 → v8.1.9 | YAML parser used by tests to parse and validate openapi.yaml against registered routes |
+| `khanamiryan/qrcode-detector-decoder` | ^2.0 → 2.0.3 | Decodes generated QR codes in tests, to prove each one encodes exactly the event's link (P2.8) |
 | `nunomaduro/collision` | ^8.6 → v8.9.5 | Readable error output in the console and test runner |
 | `laravel/pail` | ^1.2.5 → v1.2.7 | Follows the application log from the terminal (`php artisan pail`) |
 | `laravel/pao` | ^1.0.6 → v1.1.5 | Compact, agent-friendly output for the test and analysis tools. Ships with the Laravel 13 skeleton |
@@ -101,6 +104,8 @@ The Laravel skeleton includes these packages for building Blade views. The API s
 | `shadcn` | ^4.21.4 → 4.21.4 | The shadcn/ui CLI, which copies component source into `src/components/ui` |
 | `tw-animate-css` | ^1.4.0 → 1.4.0 | Tailwind v4 enter and exit animations that shadcn components use |
 | `cn` | ^0.4.0 → 0.4.0 | A class-name merge utility. **Not imported anywhere**: it duplicates our own `cn()` helper. See [§6](#6-cleanup-candidates) |
+| `qrcode` | ^1.5.4 → 1.5.4 | Draws the on-screen QR preview in the organizer's Share panel. The PNG, SVG and poster downloads come from the API (P2.8) |
+| `@types/qrcode` | ^1.5.6 → 1.5.6 | TypeScript types for `qrcode`. Type-only, so it belongs in `devDependencies`. See [§6](#6-cleanup-candidates) |
 
 ### `devDependencies`
 
@@ -163,6 +168,7 @@ Nothing here has been changed. Each item needs a decision first.
 2. **Backend Node packages.** An API-only backend doesn't use them. Removing them means deleting `package.json`, `vite.config.js`, `resources/css`, `resources/js`, the welcome view, and the `npm install` and `npm run build` steps in the `composer setup` script.
 3. **`tw-animate-css` (frontend).** It's installed but not imported. Add `@import "tw-animate-css";` to `globals.css` when the first animated component (dialog, dropdown) is added.
 4. **`shadcn` (frontend).** The CLI is only needed while adding components, so it could move to `devDependencies`. It should stay in `dependencies` if `globals.css` later imports `shadcn/tailwind.css`.
+5. **`@types/qrcode` (frontend).** Type definitions are only needed at build time. Move it with `pnpm remove @types/qrcode && pnpm add -D @types/qrcode`.
 
 ### CI Actions (GitHub Actions)
 
@@ -180,6 +186,7 @@ Nothing here has been changed. Each item needs a decision first.
 
 | Date | Change |
 | --- | --- |
+| 2026-10-20 | Logged the P2.8 packages: `endroid/qr-code` (v6.1.3) and `dompdf/dompdf` (v3.1.6) in the backend, `khanamiryan/qrcode-detector-decoder` (2.0.3) for backend tests, and `qrcode` (1.5.4) with `@types/qrcode` (1.5.6) in the frontend |
 | 2026-10-19 | Implemented event lifecycle and image processing pipeline (P2.1): added intervention/image (v4.4.0) for event image compression and normalization |
 | 2026-10-19 | Dropped the planned `league/flysystem-aws-s3-v3`: event images go to Supabase Storage through its HTTP API, not its S3-compatible endpoint (decision #46, revised) |
 | 2026-10-16 | Completed Phase 1 Step 17 working skeleton (P1.8): configured `/api/v1/health` verifying database connectivity, scheduler heartbeat, queue heartbeat, and retention purge reporting; added concurrent background process supervisors for backend (`composer dev` starting API server, queue listener, and scheduler) and frontend (`pnpm dev`); documented Cloudflare Tunnel architecture for two HTTPS hostnames sharing parent cookie domain, environment switching templates (`.env.tunnel.example`), platform admin bootstrap flow (`platform:bootstrap-admin`), and database reset procedures in `doc/local-development.md` |
