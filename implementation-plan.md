@@ -278,7 +278,7 @@ These items can delay launch no matter how fast development goes:
 
 ### Backend
 
-1. **Order creation.** Check the offering, the sales window (a wave's dates for a wave's offering), quantity limits, group rules (a quantity that is a multiple of the offering's `group_size`, priced per ticket; decision #50), delegation eligibility (a delegation's offerings only with its claim link or access code; public checkout can't buy them) and, when the event requires it, the CAPTCHA. Return a random checkout token, stored hashed, that the buyer's later calls must send.
+1. **Order creation.** Check the offering, the sales window (a wave's dates for a wave's offering), quantity limits, group rules (a quantity that is a multiple of the offering's `group_size`, priced per ticket, less any group discount; decisions #50 and #51), delegation eligibility (a delegation's offerings only with its claim link or access code; public checkout can't buy them) and, when the event requires it, the CAPTCHA. Return a random checkout token, stored hashed, that the buyer's later calls must send.
 2. **Inventory hold**, made in one transaction with an atomic conditional update:
 
    ```sql
@@ -295,8 +295,8 @@ These items can delay launch no matter how fast development goes:
 
 3. **Hold expiry.** Holds last 15 minutes by default, configurable (decision #10). A scheduled job runs every minute, releases expired holds and expires their orders. Build the hold mechanism generically so seat holds in Phase 7 can reuse it.
 4. **Attendee details.** Validate them against the event's field setup and collection mode, and store purchaser details separately from ticket-holder details.
-5. **Promotions (core).** Percentage or fixed discounts, eligible offerings, start and end dates, total and per-buyer limits, and minimum quantity or order value. Count each use against the hold so that orders placed at the same moment can't exceed a limit. Codes apply only to a held order (decision #27).
-6. **Pricing.** Only the backend calculates totals. Orders that total zero skip payment and issue their tickets directly (hurdles.md H3). The platform fee is deducted from the organizer, so it never changes what the buyer pays. Each order item stores a snapshot of the unit price, discount, fees and currency, so later price edits don't change past orders.
+5. **Promotions (core).** Percentage or fixed discounts, eligible offerings, start and end dates, total and per-buyer limits, and minimum quantity or order value. Count each use against the hold so that orders placed at the same moment can't exceed a limit. Codes apply only to a held order (decision #27). On group tickets a code applies after the group discount, to the discounted total, and minimum order values are checked against that total (decision #52).
+6. **Pricing.** Only the backend calculates totals. Orders that total zero skip payment and issue their tickets directly (hurdles.md H3). The platform fee is deducted from the organizer, so it never changes what the buyer pays. Calculate in this order: the offering's price per ticket, then the group discount off each ticket (a percentage or a fixed amount, leaving a whole-shilling price; decision #51), then the promo code on the discounted total (decision #52). Each order item stores a snapshot of the unit price, group discount, promo discount, fees and currency, so later price edits don't change past orders.
 7. **Order states.** Pending → paid → completed, plus expired and cancelled (doc/state-machines.md §2).
 
 ### Frontend
@@ -308,7 +308,7 @@ These items can delay launch no matter how fast development goes:
 
 10. **Overselling:** for example, send 50 simultaneous requests for the last 10 tickets. Exactly 10 must be held and the rest refused. Run this against PostgreSQL.
 11. **Expiry:** expired holds return their tickets to inventory.
-12. **Pricing:** promotions, group pricing, and snapshots that stay unchanged after an organizer edits prices.
+12. **Pricing:** promotions, group pricing (percentage and fixed-rate group discounts, and a promo code applied after the group discount), and snapshots that stay unchanged after an organizer edits prices.
 
 ### Exit criteria
 
@@ -598,6 +598,8 @@ These decisions affect the database, the integrations or the schedule. Each need
 | 48 | Refund-request deadline on postponement | Set by staff; a fixed period after postponing             | **Decided (20 October 2026):** staff set it. `refund_policy` is free text, so nothing can calculate a date from it: when staff move a published event's dates they confirm the postponement and enter the deadline (`refund_requests_until`), guided by the event's refund policy (v1.md FR-03) | Decided |
 | 49 | Accepting and delivering invitations  | Accept on any sign-in; accept only through the link         | **Decided (20 October 2026):** an invitation is accepted only by opening its single-use link while signed in with the invited Google address; signing in alone doesn't accept it. A signed-in user who has a pending invitation but no role is told to open their link (`GET /api/v1/auth/me` lists pending invitations, never their tokens). Platform admins can issue a new staff invitation link for any organizer, and staff for their own. Until invitation emails are built with the other emails in Phase 5 (P5.2), the inviter is shown the link once and passes it on | Decided |
 | 50 | Group ticket pricing                  | Per ticket in multiples of the group size; one price per group | **Decided (20 October 2026):** per ticket. An offering's `group_size` is how many tickets must be bought together: buyers buy multiples of it, and `price` is per ticket, so a group of 4 at KES 1,000 costs KES 4,000. Each ticket is still its own ticket with its own QR code (v1.md FR-04) | Decided |
+| 51 | Group discount "fixed rate"           | Fixed amount off each ticket; fixed amount off the group; fixed group price | **Decided (20 October 2026):** a fixed amount off each ticket. A group offering's discount is a percentage or a fixed rate (`group_discount_type`, `group_discount_value`): KES 200 off a group of 4 at KES 1,000 gives 4 × 800 = KES 3,200. The discounted price per ticket must be a whole shilling above zero, or the setup is refused, so every ticket in a group has the same price and refunding one ticket is simple (v1.md FR-04) | Decided |
+| 52 | Promo codes on group tickets          | Allowed, applied after the group discount; not allowed      | **Decided (20 October 2026):** allowed. The group discount sets the ticket price; the promo code's discount then applies to the discounted total, under the promotion's own rules and limits (v1.md FR-11) | Decided |
 
 ---
 

@@ -90,7 +90,7 @@ Rules for guard password accounts:
 - **4.1** A **ticket type** describes how a ticket is sold: Early Bird, Normal, At the Gate, Group or Promoted. A **ticket category** describes the level of access: VVIP, VIP or Media. Organizers can add their own types and categories.
 - **4.2** What a buyer actually purchases is a combination of type and category, for example "Early Bird VIP". Each combination has its own price, number available, sales period and minimum and maximum per order. Only combinations the organizer turns on can be bought.
 - **4.3** Early Bird tickets stop selling when their sales period ends or when they sell out, whichever comes first.
-- **4.4** Group tickets are bought in a set number at a time (for example 4, 8 or 12 for a group of 4), at the ticket's normal price per ticket: a group of 4 at KES 1,000 costs KES 4,000. Each ticket in the group has its own QR code.
+- **4.4** Group tickets are bought in a set number at a time (for example 4, 8 or 12 for a group of 4), at the ticket's normal price per ticket: a group of 4 at KES 1,000 costs KES 4,000. The organizer can give group tickets a discount, as a percentage or a fixed amount off each ticket: KES 200 off makes a group of 4 cost 4 × 800 = KES 3,200. Every ticket in a group has the same whole-shilling price, and each has its own QR code.
 - **4.5** At the Gate tickets come from the same capacity as advance tickets. Buyers buy them on their own phones through the public site, by scanning the event's QR code poster at the gate (rule 5.12). There are no cash sales.
 - **4.6** Media tickets can be set to need the organizer's approval: the buyer pays first, and the tickets are issued only when the organizer approves them. A rejected request is refunded by a platform admin. Organizers can also issue Media tickets manually.
 - **4.7** Promoted tickets need clear rules about who can buy them and at what price.
@@ -123,6 +123,7 @@ Rules for guard password accounts:
 - **6.2** Each code can be limited to particular tickets, a date range, a total number of uses, a number of uses per buyer (by email address), and a minimum number of tickets or order value. It applies to one event.
 - **6.3** Promo codes and coupon codes work the same way.
 - **6.4** A code's use is counted as soon as it's applied to a held order. If the hold expires, the use is released.
+- **6.5** A promo code can be used on group tickets. It applies after the group discount, to the discounted total.
 
 ### 7. Payments
 
@@ -295,6 +296,8 @@ These were settled on 15, 16 and 20 October 2026. Please confirm each one, or an
 | C42 | Who decides how long buyers can ask for a refund after a postponement? | Staff, when they confirm the new dates, following the event's refund policy | |
 | C43 | How does someone accept an invitation?                 | By opening the invitation link while signed in with the invited Google address; signing in alone isn't enough. A lost link can be replaced by whoever sent it | |
 | C44 | How are group tickets priced?                          | At the normal price per ticket, bought in multiples of the group size: a group of 4 at KES 1,000 costs KES 4,000 | |
+| C45 | What does a group discount's "fixed rate" mean?       | A fixed amount off each ticket: KES 200 off a group of 4 at KES 1,000 gives 4 × 800 = KES 3,200 | |
+| C46 | Can a promo code be used on top of a group discount?  | Yes. It applies after the group discount, to the discounted total, under the promotion's own rules | |
 
 ---
 
