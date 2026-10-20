@@ -109,7 +109,7 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 - **Cancellation:** all tickets are revoked, refunds are issued in bulk through Pesapal (following the refund policy), and every buyer is emailed.
 - **Postponement:** tickets stay valid for the new date, buyers are emailed, and those who can't attend can request a refund within a set period.
 
-**Decision (15 October 2026):** as recommended, except that refunds are not automatic: only platform admins start refunds (decision #12). After a cancellation, an admin refunds each order. After a postponement, buyers request a refund through a link in the email, valid until a date set from the event's refund policy, and an admin approves each request.
+**Decision (15 October 2026):** as recommended, except that refunds are not automatic: only platform admins start refunds (decision #12). After a cancellation, an admin refunds each order. After a postponement, buyers request a refund through a link in the email, valid until a date set from the event's refund policy, and an admin approves each request. (Updated 20 October 2026: staff enter that date when they confirm the new dates; implementation-plan.md §11, #48.)
 
 **Decide by:** Phase 1 · **Owner:** Client
 

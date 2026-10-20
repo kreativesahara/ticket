@@ -57,6 +57,10 @@ The local system comprises two repositories and shared backing services:
 | `DB_PASSWORD` | Supabase project database password | `your_database_password` | `your_database_password` |
 | `DB_SSLMODE` | Required SSL mode for Supabase pooler | `require` | `require` |
 | `SUPABASE_DEV_PROJECT_REF` | Supabase development project reference | `YOUR_PROJECT_REF` | `YOUR_PROJECT_REF` |
+| `SUPABASE_URL` | Supabase API URL, for event images in Storage (decision #46) | `https://YOUR_PROJECT_REF.supabase.co` | `https://YOUR_PROJECT_REF.supabase.co` |
+| `SUPABASE_SECRET_KEY` | Supabase secret key (`sb_secret_...`), server-only; never commit it or put it in the frontend | `sb_secret_...` | `sb_secret_...` |
+| `SUPABASE_STORAGE_BUCKET` | Public Storage bucket for event images | `event-images` | `event-images` |
+| `PLATFORM_PUBLIC_NAME` | Platform name on posters and emails; the final name is still open (decision #28) | `Ticketa` | `Ticketa` |
 | `SESSION_DRIVER` | Database-backed sessions for guards & Google users | `database` | `database` |
 | `SESSION_LIFETIME` | Session duration in minutes | `120` | `120` |
 | `SESSION_DOMAIN` | Wildcard domain for cookie sharing. Empty for localhost; `.domain.com` for tunnel/prod | *Empty* | `.yourdomain.com` |
@@ -175,6 +179,17 @@ php artisan platform:bootstrap-admin admin@example.com
 5. Sign in with the Google account for `admin@example.com`.
 6. The invitation is accepted, granting `platform_role = admin`, and redirects to `/admin`.
 7. All subsequent platform admins and organizers are invited through the authenticated admin dashboard.
+
+### Onboarding a test organizer
+
+Invitation emails aren't sent until Phase 5 (decision #49), so every invitation shows its link once, to whoever created it.
+
+1. As the admin, open **Organizers** (`/admin`), create an event category if there is none, then fill in **New Organizer**. Copy the invitation link it shows.
+2. Open the link **in a browser signed in to (or about to sign in to) the invited Google account**. The link signs you in if needed and accepts the invitation; signing in from the normal Login page doesn't. If you do sign in first, the Dashboard tells you to open your link.
+3. Lost the link? On the organizer's row, **Invite staff** issues a new one. The old link stays valid until it expires.
+4. As the staff member, `/organizer` opens the Events section; `/organizer?tab=staff` lists and invites staff. Submit the verification details there; then, as the admin, verify the organizer and enter its payout account before publishing a paid event.
+
+Use a different browser profile (or a private window) for each account, so one sign-in doesn't replace another's session. In development, React mounts pages twice to catch bugs; the invitation page sends its accept request only once, so that is safe.
 
 ---
 

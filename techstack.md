@@ -262,7 +262,11 @@ The stored file stays a JPEG because link previews (WhatsApp, Facebook) and emai
 
 ## 7. API structure
 
-All endpoints are versioned under `/api/v1` and follow v1.md §5, which has the full list. Public endpoints sit at the top level, organizer endpoints under `/api/v1/organizer` and platform admin endpoints under `/api/v1/admin`. The main endpoints:
+All endpoints are versioned under `/api/v1` and follow v1.md §5, which has the full list. Public endpoints sit at the top level, organizer endpoints under `/api/v1/organizer` and platform admin endpoints under `/api/v1/admin`.
+
+**Date-times.** The API accepts ISO 8601 date-times only with an explicit offset (`2027-03-01T19:00:00+03:00` or `…Z`) and refuses any without one, stores them in PostgreSQL `timestamptz` columns as UTC, and returns them in UTC together with the event's IANA timezone. The Next.js app reads and shows every event time in the event's timezone, not the browser's: a `datetime-local` value is taken as wall-clock time in the event's timezone and sent with that zone's offset (`src/lib/datetime.ts`).
+
+The main endpoints:
 
 | Module               | Example endpoints                                                                                          |
 | -------------------- | ---------------------------------------------------------------------------------------------------------- |

@@ -267,7 +267,7 @@ These were settled on 15, 16 and 20 October 2026. Please confirm each one, or an
 | C12 | What if a payment arrives after the hold expired?      | Refund it automatically; the buyer orders again                                                             | |
 | C13 | Who approves refunds?                                  | Only platform admins make refunds                                                                           | |
 | C14 | Must guards change their temporary password?           | Yes, at first sign-in for each event, so only the guard knows it                                            | |
-| C15 | Should ticket prices be whole shillings?               | Yes: whole shillings only, with no cents; percentage discounts round to the nearest shilling | |
+| C15 | Should ticket prices be whole shillings?               | Yes: whole shillings only, with no cents; percentage discounts round down to a whole shilling per ticket, in the buyer's favour (see C47) | |
 | C16 | How do we protect popular sales from bots?             | The organizer can require a CAPTCHA at checkout for each event. Your largest expected event is 1,000 to 5,000 tickets, and we load-test for 5,000. **Still open:** how many buyers arrive in the first minutes of a big sale | |
 | C17 | Ticket transfers or name changes                       | Allowed until the event starts, except for events that ask for ID numbers                                  | |
 | C18 | Can organizers download attendee and sales lists?      | Yes, as spreadsheet (CSV) files; event owners can download the guest list of their assigned events          | |
