@@ -1,6 +1,6 @@
 # Business Rules and Limitations
 
-**Multi-Organizer Event Ticketing Platform · Version 1.9 · 16 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.10 · 20 October 2026**
 
 **Status:** Draft for stakeholder confirmation
 
@@ -45,7 +45,7 @@ This document sets out how the platform will behave: the business rules it follo
 
 - **2.1** Platform admins, organizer staff and event owners sign in with their **Google account**. They have no separate password for the platform.
 - **2.2** Only Google accounts with a verified email address are accepted.
-- **2.3** Staff, event owners and platform admins are invited by email and must accept by signing in with a Google account that uses that same email address. Invitations expire and can be used only once.
+- **2.3** Staff, event owners and platform admins are invited by email and accept by opening their invitation link while signed in with a Google account that uses that same email address. Signing in on its own doesn't accept an invitation. Invitations expire after 7 days and can be used only once; if a link is lost, whoever invited the person can send a new one.
 - **2.4** A suspended user can't sign in, even with a valid Google account.
 - **2.4a** Anyone else who signs in with Google without an invitation or a role is turned away, and no account is made for them. Someone whose roles have all ended is turned away too, until they're invited again.
 - **2.5** Buyers never sign in. They buy as guests and reach their tickets through an emailed link.
@@ -83,14 +83,14 @@ Rules for guard password accounts:
 - **3.4** An event can be published only when it has at least one ticket option on sale, sensible times, and enough capacity for all its allocations. If any of its tickets is paid, the organizer must also be verified and have its payout account entered by a platform admin (1.9, 1.10).
 - **3.5** Every change to a published event is recorded. Changes that would affect tickets already sold need explicit confirmation or are blocked: for example, reducing capacity below the number sold, changing the price of a ticket that has sales, or moving the event's dates.
 - **3.6** When an event is **cancelled**, every ticket is cancelled, every buyer is emailed, and a platform admin refunds each order.
-- **3.7** When an event is **postponed** to new dates, tickets stay valid. Every buyer is emailed a link to ask for a refund, which works until a date set from the event's refund policy.
+- **3.7** When an event is **postponed** to new dates, tickets stay valid. Staff confirm the change and choose the last day buyers can ask for a refund, following the event's refund policy. Every buyer is emailed a link to ask for a refund, which works until that day.
 
 ### 4. Tickets, prices and capacity
 
 - **4.1** A **ticket type** describes how a ticket is sold: Early Bird, Normal, At the Gate, Group or Promoted. A **ticket category** describes the level of access: VVIP, VIP or Media. Organizers can add their own types and categories.
 - **4.2** What a buyer actually purchases is a combination of type and category, for example "Early Bird VIP". Each combination has its own price, number available, sales period and minimum and maximum per order. Only combinations the organizer turns on can be bought.
 - **4.3** Early Bird tickets stop selling when their sales period ends or when they sell out, whichever comes first.
-- **4.4** Group tickets require a set number of tickets and use the group price.
+- **4.4** Group tickets are bought in a set number at a time (for example 4, 8 or 12 for a group of 4), at the ticket's normal price per ticket: a group of 4 at KES 1,000 costs KES 4,000. Each ticket in the group has its own QR code.
 - **4.5** At the Gate tickets come from the same capacity as advance tickets. Buyers buy them on their own phones through the public site, by scanning the event's QR code poster at the gate (rule 5.12). There are no cash sales.
 - **4.6** Media tickets can be set to need the organizer's approval: the buyer pays first, and the tickets are issued only when the organizer approves them. A rejected request is refunded by a platform admin. Organizers can also issue Media tickets manually.
 - **4.7** Promoted tickets need clear rules about who can buy them and at what price.
@@ -115,7 +115,7 @@ Rules for guard password accounts:
 - **5.9** Orders that cost nothing (free tickets, free sponsor tickets or a 100% discount) skip payment, and the tickets are issued straight away.
 - **5.10** For high-demand events, the organizer can require a CAPTCHA at checkout to stop bots.
 - **5.11** The platform's **landing page** lists every ticket option on sale across all published events: the event, date and venue, ticket type, category, wave and price, each with a Buy button. Buyers can search by event name or venue, and filter by event category and date. Sold-out options stay listed, marked "Sold out", and upcoming waves are shown greyed out with their start date and price. Sponsor (delegation) tickets are never listed.
-- **5.12** Every event has its own **link** and **QR code**, which open its event page. Organizer staff can copy the link, and download the QR code as an image or as a printable poster to put up at the gate.
+- **5.12** Every event has its own **link** and **QR code**, which open its event page. Organizer staff can copy the link, and download the QR code as an image or as a printable poster to put up at the gate. The link can be changed while the event is a draft, but not once it's published, so printed posters and shared links keep working.
 
 ### 6. Promotions and discount codes
 
@@ -247,7 +247,7 @@ Please confirm that each of these is acceptable for launch.
 
 ## Part C — Decisions
 
-These were settled on 15 and 16 October 2026. Please confirm each one, or answer it where it's still open.
+These were settled on 15, 16 and 20 October 2026. Please confirm each one, or answer it where it's still open.
 
 | #   | Decision                                               | Decision recorded                                                                                           | Confirmed? |
 | --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------- |
@@ -291,6 +291,10 @@ These were settled on 15 and 16 October 2026. Please confirm each one, or answer
 | C38 | Can admins watch payments as they happen?             | Yes: a live table of every payment, with its status and the status of its order and tickets, updating every few seconds | |
 | C39 | How large can event images be?                         | Each image is shrunk to under 500 KB and at most 1,920 pixels on its longest side when it's uploaded, and each visitor gets a copy sized for their screen | |
 | C40 | Can anyone sign up as an organizer?                    | No. A platform admin creates each organizer and invites its first staff member, who then invites the rest of the team. Anyone who signs in with Google without an invitation or a role is turned away | |
+| C41 | Can an event's link change after it's published?      | No. Staff can change it while the event is a draft; once published it's fixed, so printed posters and shared links keep working | |
+| C42 | Who decides how long buyers can ask for a refund after a postponement? | Staff, when they confirm the new dates, following the event's refund policy | |
+| C43 | How does someone accept an invitation?                 | By opening the invitation link while signed in with the invited Google address; signing in alone isn't enough. A lost link can be replaced by whoever sent it | |
+| C44 | How are group tickets priced?                          | At the normal price per ticket, bought in multiples of the group size: a group of 4 at KES 1,000 costs KES 4,000 | |
 
 ---
 

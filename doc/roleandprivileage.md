@@ -1,6 +1,6 @@
 # Roles, Privileges & Authorization Overview
 
-**Multi-Organizer Event Ticketing Platform · Version 1.9 · 16 October 2026**  
+**Multi-Organizer Event Ticketing Platform · Version 1.10 · 20 October 2026**  
 **References:** [limitation.md](../limitation.md) (§1, §2, §11), [v1.md](../v1.md) (§FR-01, §FR-02, §FR-04, §FR-13, §FR-14, §FR-15, §3, §4.1), [techstack.md](../techstack.md) (§3), [implementation-plan.md](../implementation-plan.md) (Phase 1, Phase 2, §11 #29–#45). If this document disagrees with v1.md, v1.md wins.
 
 ---
@@ -389,6 +389,7 @@ Event Owners gain necessary real-time attendee visibility to coordinate event ho
    * Organizer Staff can't give themselves or anyone else access to an event; only Platform Admins grant or remove event access, apart from the access an event's creator gets automatically.
    * Platform admin rights come only from accepting a platform admin invitation sent by an existing admin, or, for the very first admin, from the one-time setup command. The last admin can't be removed.
    * No one signs up. A Google sign-in is accepted only from a Platform Admin, active Organizer Staff, an active Event Owner, or someone with a pending invitation; anyone else is refused and no account is created. Only Platform Admins create organizers.
+   * Signing in never grants a role by itself. An invitation is accepted only by opening its single-use link while signed in with the invited address, so the person holding the link and the Google account must match (decision #49). `GET /api/v1/auth/me` tells a signed-in user without a role about their pending invitations, but never returns a token. Platform Admins can issue a new staff invitation link for any organizer, and staff for their own organizer.
 4. **Payout Account Protection:**
    * Only Platform Admins enter, change or read an organizer's payout account (`PUT /api/v1/admin/organizers/{id}/payout-account`), stored encrypted. Every change is audited.
    * Organizer endpoints return only whether a verified payout account is on file, never its details, so a compromised staff login can't redirect an organizer's payouts.

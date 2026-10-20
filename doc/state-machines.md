@@ -1,6 +1,6 @@
 # State Machines
 
-**Multi-Organizer Event Ticketing Platform · Version 1.2 · 15 October 2026**
+**Multi-Organizer Event Ticketing Platform · Version 1.3 · 20 October 2026**
 
 **Based on:** [v1.md](../v1.md) §4.6 (version 1.8), [implementation-plan.md](../implementation-plan.md), [limitation.md](../limitation.md), [hurdles.md](../hurdles.md) and [techstack.md](../techstack.md) §5.
 
@@ -68,7 +68,7 @@ stateDiagram-v2
 - Automatic archiving.
 
 **Not states:**
-- A **postponed** event stays `published` with new dates. Changing dates after publishing needs explicit confirmation and is audited (limitation.md 3.5). Every buyer is emailed a refund-request link, valid until the date in `events.refund_requests_until`, set from the event's refund policy. Tickets stay `valid`.
+- A **postponed** event stays `published` with new dates. Changing dates after publishing needs explicit confirmation and is audited (limitation.md 3.5). When confirming, staff enter the refund-request deadline, guided by the event's refund policy, and it is stored in `events.refund_requests_until` (implementation-plan.md §11, #48). Every buyer is emailed a refund-request link valid until that date. Tickets stay `valid`. The event's slug, and so its link, can't change once it is published (#47).
 - A **suspended organizer**'s events stay `published` and visible, but can't be bought, and its staff, event owners and guards can't sign in (limitation.md 1.8).
 
 ---
