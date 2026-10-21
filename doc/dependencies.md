@@ -175,7 +175,7 @@ Nothing here has been changed. Each item needs a decision first.
 | Action | Version | Used for |
 | --- | --- | --- |
 | `actions/checkout` | v4 | Checks out the repository in CI runner |
-| `shivammathur/setup-php` | v2 | Installs PHP 8.3 with required PostgreSQL extensions in backend CI |
+| `shivammathur/setup-php` | v2 | Installs PHP 8.4 with required PostgreSQL extensions in backend CI |
 | `actions/cache` | v4 | Caches Composer dependencies across CI runs |
 | `pnpm/action-setup` | v4 | Installs pinned `pnpm` (12.11.2) in frontend CI |
 | `actions/setup-node` | v4 | Installs Node.js 20 with pnpm cache in frontend CI |
