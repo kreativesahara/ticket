@@ -1,12 +1,12 @@
 # Hurdles: Gaps, Risks and Limitations
 
-**Version 1.4 · 16 October 2026**
+**Version 1.5 · 20 October 2026**
 
 **Based on:** [v1.md](v1.md) (version 1.13), [sow.md](sow.md) (version 1.11), [techstack.md](techstack.md) and [implementation-plan.md](implementation-plan.md) (version 1.11).
 
 This document lists what the current specification doesn't yet cover, and the limitations that come with decisions already made. The specification handles the core flow well: publishing events, buying and paying, issuing tickets and scanning them at the gate. The gaps are mostly in what happens to the money after a sale, unusual situations at the gate, and messages to buyers.
 
-Most hurdles need a decision, not extra code. Once a hurdle is decided, record the decision in the decision log (implementation-plan.md §11) and update v1.md, which is the source of truth. Every hurdle below was decided on 15 October 2026, and three were updated on 16 October 2026 with the answers received. Two items still wait on someone outside the team: Pesapal's written confirmation of the platform-as-seller arrangement (H2), and the accountant's confirmation that the tax answer still holds under it (H10).
+Most hurdles need a decision, not extra code. Once a hurdle is decided, record the decision in the decision log (implementation-plan.md §11) and update v1.md, which is the source of truth. Hurdles H1 to H14 were decided on 15 October 2026, and three were updated on 16 October 2026 with the answers received. H15, added on 20 October 2026, is still open. Two items still wait on someone outside the team: Pesapal's written confirmation of the platform-as-seller arrangement (H2), and the accountant's confirmation that the tax answer still holds under it (H10).
 
 ---
 
@@ -30,6 +30,7 @@ Most hurdles need a decision, not extra code. Once a hurdle is decided, record t
 | H12 | No rules for keeping or deleting personal data  | Compliance        | Medium | Phase 1   | Both     | Decided |
 | H13 | Sale-day rush and ticket bots                   | Operations        | Medium | Phase 0   | Both     | Decided |
 | H14 | Sponsor tickets weren't set aside from public sale | Money          | Medium | Phase 1   | Client   | Decided |
+| H15 | One person as both manager and event owner of an event | Access     | Medium | Phase 2   | Client   | Open    |
 
 ---
 
@@ -173,7 +174,7 @@ Recorded in v1.md (FR-09, FR-10 and §4.3), sow.md (Modules Six and Seven, §5.5
 
 ---
 
-## 3. Buyers and compliance
+## 3. Buyers, compliance and access
 
 ### H9. No buyer messages beyond the ticket email; SMS undecided — Decided
 
@@ -238,6 +239,16 @@ Recorded in v1.md (FR-09, FR-10 and §4.3), sow.md (Modules Six and Seven, §5.5
 **Update (16 October 2026):** the largest expected event is 1,000 to 5,000 tickets, so the load tests are sized for 5,000. Still open: how many buyers arrive in the first minutes of a big sale.
 
 **Decide by:** Phase 0 (estimate), Phase 3 (bot protection) · **Owner:** Both
+
+### H15. One person as both manager and event owner of an event — Open
+
+**Gap:** The specification doesn't say whether one person can hold more than one role on the same event, such as manager and event owner. It also doesn't say whether a staff member of the event's organizer can be made that event's event owner. `event_staff` (v1.md §4.1) has no rule against two active rows for the same person and event.
+
+**Why it matters:** Only platform admins give staff access to an event (decision #31), but the event's managers assign its event owners. If a manager can make a colleague from the same organizer the event owner, that colleague gets the event's guest list without an admin's approval, which gets around decision #31. If one person holds both roles, an admin who removes their manager access leaves their guest-list access in place through the other role, and the app has to decide whether they see the organizer area or the event owner area for that event.
+
+**Recommendation:** One role per person per event: at most one active `event_staff` row for each event and user, so a second role is refused. Staff of the event's organizer can't be its event owner; they get access only through a manager row that a platform admin grants. People outside the organizer, including staff of another organizer, can still be event owners. The alternative is to allow both roles, with the person getting the rights of both and each role removed separately.
+
+**Decide by:** Phase 2 (event owner assignment) · **Owner:** Client
 
 ---
 
@@ -305,3 +316,4 @@ These are corrections to the documents themselves, not decisions.
 3. The client's lawyer prepares the contract between the platform and each organizer (H2).
 4. The client decides how the platform fee is calculated (decision #2) and chooses the platform's public name (decision #28).
 5. Before Phase 8, the client gets the cPanel host's hourly email sending limit (decision #9).
+6. Before Phase 2, the client decides whether one person can be both manager and event owner of an event, and whether staff of the event's organizer can be its event owner (H15).

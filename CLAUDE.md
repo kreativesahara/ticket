@@ -6,7 +6,7 @@ SOURCE DOCUMENTS (they are the specification — read the relevant parts before 
 - doc/state-machines.md — complete state machines for events, orders, payments, tickets, seats and reservations (created in P0.1).
 - techstack.md — architecture and stack.
 - sow.md — contractual scope. Never build anything listed in §9 "Out of scope".
-- hurdles.md — known gaps (H1–H14), each marked Open or Decided. An open hurdle is an undecided requirement: don't guess, ask me.
+- hurdles.md — known gaps (H1–H15), each marked Open or Decided. An open hurdle is an undecided requirement: don't guess, ask me.
 - limitation.md — the client-facing business rules (Part A), accepted limitations (Part B) and client decisions (Part C). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
 - doc/roleandprivileage.md — roles, privileges and the authorization safeguards in detail, including the event owner boundaries (§5.1), staff event access and who sees whom (§5.2), and guard safeguards (§5.3). If it disagrees with v1.md, v1.md wins; tell me about the mismatch.
 
